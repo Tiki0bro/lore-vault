@@ -147,10 +147,33 @@ This document contains the primary user personas established for **LoreWeaver**.
 
 ---
 
+## 🎨 7. Maya Lin — Lead UI/UX & Product App Designer
+
+> *"An app can have incredible features under the hood, but if UI buttons overflow off the screen, navigation is cluttered, or settings are scattered arbitrarily, the user experience breaks. UI must be responsive, visually balanced, and organized with intuitive progressive disclosure."*
+
+### Background & Profile
+* **Role**: Lead UI/UX Architect & Product Design Specialist.
+* **Responsibilities**: Interface layout hierarchy, component responsiveness, visual spacing/contrast, action grouping, preventing screen clipping, and ensuring high-density desktop tools feel elegant and readable.
+* **Core Goal**: Guarantee that LoreVault's interface scales cleanly across all screen sizes (from 1080p laptops to 4K displays), eliminating horizontal overflow, organizing settings logically, and keeping primary actions front-and-center.
+
+### Key Pain Points
+* **Header / Navbar Overload**: Too many buttons packed inline into the top navigation bar, causing rightmost actions (`AI Settings`, `World Doctor`, `Import`, `New Article`) to get clipped or cut off.
+* **Vertical Tag Cloud Sprawl**: Unconstrained tag lists taking up half of the sidebar and forcing excessive scrolling.
+* **Inconsistent Control Grouping**: Action buttons (`Edit`, `Delete`, `Move to World`) floating without clean container grouping.
+* **Horizontal Scrollbar Bugs**: Unchecked flex containers causing page-level horizontal overflow (`overflow-x`).
+
+### UI/UX Wishlist & Design Directives
+1. **Responsive Navbar Restructuring**: Streamline top header into 3 clean zones: Brand/Title, Core View Switcher (`Lore Codex`, `Narrative Slate`, `Weave Matrix`), and a consolidated `⚙️ Tools & World Actions` dropdown menu paired with a single prominent `+ New Article` primary CTA button.
+2. **Compact Sidebar Accordion**: Wrap tag clouds into a collapsible accordion or horizontal filter chip strip so Categories stay prominent.
+3. **Parchment Action Header**: Encapsulate article viewing/editing controls (`Edit`, `Move to World`, `Delete`) inside a clean toolbar above the article reader.
+4. **Zero-Overflow Layout Contract**: Enforce strict `overflow-x: hidden` and responsive flex wrapping so no UI element is ever clipped off screen.
+
+---
+
 ## 🛠️ Summary Matrix for Feature & QA Evaluation
 
-| Feature / Consideration | Ethen (PO) | Riley (QA / Debugging) | Alex (Developer / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing / Growth) |
-|---|---|---|---|---|---|---|
-| **Primary Goal** | Balanced Scope & UX | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality, Audience Conversion & Lore Distribution |
-| **Primary Interface** | Presets & Progressive UI | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Cross-link Search | Scene Slate & Style Chips | Promo Slates, Hook Chips & Excerpt Exports |
-| **Key Metric** | User Adoption & Roadmap | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates, Kickstarter Conversions & List Growth |
+| Feature / Consideration | Ethen (PO) | Maya (UI/UX) | Riley (QA / Debugging) | Alex (Developer / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing) |
+|---|---|---|---|---|---|---|---|
+| **Primary Goal** | Balanced Scope & UX | Zero-Overflow & Clean Visual Hierarchy | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality & Lore Distribution |
+| **Primary Interface** | Presets & Progressive UI | Streamlined Navbar & Responsive Grids | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Cross-link Search | Scene Slate & Style Chips | Promo Slates & Excerpt Exports |
+| **Key Metric** | User Adoption & Roadmap | Screen Compliance & Zero Clipping | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates & Conversion |
