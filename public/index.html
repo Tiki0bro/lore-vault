@@ -105,10 +105,15 @@
             </ul>
           </div>
 
-          <div class="sidebar-section">
-            <h3>Tags</h3>
-            <div id="tag-cloud" class="tag-cloud">
-              <!-- Dynamically populated -->
+          <div class="sidebar-section tags-accordion">
+            <button id="tags-accordion-toggle" class="tags-accordion-header" onclick="window.app ? window.app.toggleTagsAccordion() : window.toggleTagsAccordion()">
+              <span>🏷️ Tags</span>
+              <span class="accordion-arrow">▸</span>
+            </button>
+            <div id="tags-accordion-body" class="tags-accordion-body collapsed">
+              <div id="tag-cloud" class="tag-cloud">
+                <!-- Dynamically populated -->
+              </div>
             </div>
           </div>
         </aside>
@@ -144,12 +149,12 @@
                   <span id="view-category-badge" class="badge">Category</span>
                   <span id="view-updated-date" class="meta-date">Updated: --</span>
                 </div>
-                <div class="action-buttons" style="display:flex; gap:0.4rem; align-items:center;">
-                  <select id="move-world-select" style="background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem; font-size:0.75rem; font-weight:600; cursor:pointer;" onchange="window.app.moveCurrentArticleToWorld(this.value)">
+                <div class="article-viewer-toolbar">
+                  <select id="move-world-select" class="toolbar-select" onchange="window.app.moveCurrentArticleToWorld(this.value)">
                     <option value="" disabled selected>🌍 Move to World...</option>
                   </select>
-                  <button class="btn btn-secondary" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
-                  <button class="btn btn-danger" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
+                  <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
+                  <button class="btn btn-danger toolbar-btn" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
                 </div>
               </div>
 

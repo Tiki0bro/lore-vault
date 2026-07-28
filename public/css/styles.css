@@ -529,6 +529,53 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   color: var(--text-muted);
 }
 
+/* --- TAGS ACCORDION --- */
+.tags-accordion {
+  display: flex;
+  flex-direction: column;
+}
+
+.tags-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tags-accordion-header:hover {
+  color: var(--text-primary);
+}
+
+.tags-accordion-header .accordion-arrow {
+  font-size: 0.75rem;
+  color: var(--accent-primary);
+  transition: transform 0.2s ease;
+}
+
+.tags-accordion-body {
+  overflow: hidden;
+  max-height: 500px;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  opacity: 1;
+}
+
+.tags-accordion-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
@@ -693,6 +740,49 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* --- ARTICLE READER TOOLBAR --- */
+.article-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-card);
+  padding: 0.4rem 0.75rem;
+  border: var(--border-filigree);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  margin-left: auto;
+}
+
+.article-viewer-toolbar .toolbar-select {
+  background: var(--surface-sidebar, #0f172a);
+  color: var(--accent-primary, #38bdf8);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.article-viewer-toolbar .toolbar-select:hover,
+.article-viewer-toolbar .toolbar-select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.article-viewer-toolbar .toolbar-btn {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.article-viewer-toolbar .toolbar-btn:hover {
+  box-shadow: var(--shadow-glow);
 }
 
 .meta-date {
@@ -1623,5 +1713,113 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   text-align: center;
   border-top: 1px solid var(--border-color);
 }
+
+/* ==========================================================================
+   ZERO-OVERFLOW LAYOUT CONTRACT & RESPONSIVE MEDIA QUERIES
+   ========================================================================== */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+#app-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.navbar {
+  max-width: 100vw;
+}
+
+.navbar-zone-left {
+  flex-shrink: 1;
+}
+
+.navbar-zone-center {
+  flex-shrink: 0;
+}
+
+.navbar-zone-right {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1400px) {
+  .navbar {
+    padding: 0.6rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .brand-text .subtext {
+    display: none;
+  }
+
+  .search-bar-container {
+    max-width: 260px;
+  }
+
+  .nav-tabs .tab-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .world-theme-container select {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .navbar {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .brand-text h1 {
+    font-size: 1.1rem;
+  }
+
+  .search-bar-container {
+    max-width: 180px;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .nav-tabs {
+    gap: 0.2rem;
+    padding: 0.2rem;
+  }
+
+  .nav-tabs .tab-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .world-theme-container {
+    padding: 0.2rem 0.4rem;
+  }
+
+  .world-theme-container select {
+    max-width: 90px;
+    font-size: 0.75rem;
+  }
+
+  .tools-dropdown-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-primary {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .sidebar {
+    width: 200px;
+    padding: 1rem 0.75rem;
+  }
+
+  .article-list-column {
+    width: 300px;
+  }
+}
+
 
 

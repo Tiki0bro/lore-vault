@@ -692,6 +692,19 @@ class LoreApp {
     container.innerHTML = html;
   }
 
+  toggleTagsAccordion() {
+    const body = document.getElementById('tags-accordion-body');
+    const toggleBtn = document.getElementById('tags-accordion-toggle');
+    if (body) {
+      body.classList.toggle('collapsed');
+      const isCollapsed = body.classList.contains('collapsed');
+      if (toggleBtn) {
+        const arrow = toggleBtn.querySelector('.accordion-arrow');
+        if (arrow) arrow.textContent = isCollapsed ? '▸' : '▾';
+      }
+    }
+  }
+
   renderArticlesList() {
     const container = document.getElementById('articles-cards');
     const countEl = document.getElementById('article-count');
@@ -2736,4 +2749,23 @@ document.addEventListener('click', function(e) {
     window.closeToolsMenu();
   }
 });
+
+/* --- Tags Accordion Global Helper --- */
+window.toggleTagsAccordion = function() {
+  if (window.app && typeof window.app.toggleTagsAccordion === 'function') {
+    window.app.toggleTagsAccordion();
+  } else {
+    const body = document.getElementById('tags-accordion-body');
+    const toggleBtn = document.getElementById('tags-accordion-toggle');
+    if (body) {
+      body.classList.toggle('collapsed');
+      const isCollapsed = body.classList.contains('collapsed');
+      if (toggleBtn) {
+        const arrow = toggleBtn.querySelector('.accordion-arrow');
+        if (arrow) arrow.textContent = isCollapsed ? '▸' : '▾';
+      }
+    }
+  }
+};
+
 
