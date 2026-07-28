@@ -21,7 +21,7 @@
       <!-- Zone 1: Left (Brand Logo & Global Search) -->
       <div class="navbar-zone-left">
         <div class="brand">
-          <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
+          <div class="brand-icon">📜</div>
           <div class="brand-text">
             <h1>LoreVault</h1>
             <span class="subtext">The Intelligence Engine for Worlds, Games & Stories</span>
@@ -29,12 +29,11 @@
         </div>
 
         <div class="search-bar-container" id="search-container">
-          <span class="search-icon" data-badge="search" data-badge-size="16">🔍</span>
+          <span class="search-icon-static">🔍</span>
           <input type="text" id="global-search" placeholder="Search lore..." autocomplete="off">
           <div class="search-actions-right">
             <span class="search-kbd-badge"><kbd>Ctrl K</kbd></span>
             <button id="search-clear-btn" class="search-action-btn hidden" title="Clear search">✕</button>
-            <button id="search-fulltext-toggle" class="search-action-btn" title="Toggle Full-Text Content Search">📝</button>
           </div>
           <div id="search-results-dropdown" class="search-dropdown hidden"></div>
         </div>
@@ -43,15 +42,9 @@
       <!-- Zone 2: Center (View Switcher Tabs) -->
       <div class="navbar-zone-center">
         <nav class="nav-tabs">
-          <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
-            <span class="tab-icon">📚</span> Lore Codex
-          </button>
-          <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
-            <span class="tab-icon">🎬</span> Narrative Slate
-          </button>
-          <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
-            <span class="tab-icon">⚡</span> Weave Matrix
-          </button>
+          <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')"><span class="tab-icon">📚</span> Lore Codex</button>
+          <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')"><span class="tab-icon">🎬</span> Narrative Slate</button>
+          <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')"><span class="tab-icon">⚡</span> Weave Matrix</button>
         </nav>
       </div>
 
@@ -59,12 +52,10 @@
       <div class="navbar-zone-right header-actions">
         <!-- World & Theme Selector Dropdown -->
         <div class="world-theme-container">
-          <span data-badge="compass" data-badge-size="18" style="display:inline-flex; align-items:center; color:var(--accent-primary);">🌍</span>
+          <span class="world-icon">🌍</span>
           <select id="world-select-dropdown" style="background:transparent; color:var(--accent-primary, #38bdf8); border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
             <option value="default">Primary World</option>
           </select>
-          <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openCreateWorldModal()" title="Create New World"><span data-badge="plus" data-badge-size="14">➕</span> World</button>
-          <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openEditWorldModal()" title="Edit Current World Theme &amp; Settings"><span data-badge="gear" data-badge-size="14">⚙️</span> Theme</button>
         </div>
 
         <!-- Consolidated Tools Dropdown -->
@@ -91,6 +82,7 @@
           </div>
         </div>
 
+        <button id="weave-matrix-btn" class="btn btn-secondary">🕸️ Weave Matrix</button>
         <button class="btn btn-primary" onclick="window.app.openEditor()">
           <span data-badge="quill" data-badge-size="18">+</span> New Article
         </button>
@@ -1218,6 +1210,75 @@
       </div>
     </div>
   </div>
+
+  <!-- WEAVE MATRIX SLIDE-OVER DRAWER -->
+  <aside id="weave-matrix-drawer" class="weave-drawer hidden">
+    <div class="drawer-header">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-size:1.1rem;">🕸️</span>
+        <h3 style="font-size:0.95rem; font-weight:700; color:#fff; margin:0;">Weave Matrix Context Engine</h3>
+      </div>
+      <button class="close-btn" onclick="window.toggleWeaveMatrixDrawer()">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Serializer Format Chips -->
+      <div class="drawer-section">
+        <label>Serializer Format</label>
+        <div class="format-chip-group" id="weave-format-chips">
+          <button class="format-chip active" data-format="markdown">Markdown</button>
+          <button class="format-chip" data-format="xml">XML</button>
+          <button class="format-chip" data-format="json">JSON</button>
+          <button class="format-chip" data-format="yaml">YAML</button>
+        </div>
+      </div>
+
+      <!-- Visibility Switch -->
+      <div class="drawer-section">
+        <label>Article Visibility</label>
+        <div class="visibility-switch-container">
+          <label class="visibility-switch">
+            <input type="checkbox" id="weave-visibility-toggle">
+            <span class="switch-slider"></span>
+            <span id="weave-visibility-label" class="switch-label">Public Only (Secrets Stripped)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Token Budget Slider & Gauge -->
+      <div class="drawer-section">
+        <div class="slider-header">
+          <label for="weave-token-slider">Token Budget Limit</label>
+          <span id="weave-token-badge" class="token-badge">0 / 4,000 tokens</span>
+        </div>
+        <input type="range" id="weave-token-slider" min="500" max="32000" step="500" value="4000" class="token-slider">
+        <div class="token-progress-bar">
+          <div id="weave-token-progress-fill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Pinned Articles List -->
+      <div class="drawer-section">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label>Pinned High-Priority Articles</label>
+          <span id="weave-pinned-count" style="font-size:0.75rem; color:var(--text-muted);">0 pinned</span>
+        </div>
+        <div id="weave-pinned-articles" class="pinned-articles-list">
+          <div style="color:var(--text-muted); font-size:0.75rem; padding:0.4rem; text-align:center;">No articles pinned. Pin articles to prioritize them.</div>
+        </div>
+      </div>
+
+      <!-- Compiled Context Live Output Preview -->
+      <div class="drawer-section" style="flex:1; display:flex; flex-direction:column;">
+        <label for="weave-output-preview">Compiled Context Output</label>
+        <textarea id="weave-output-preview" readonly placeholder="Compiled context preview will appear here..."></textarea>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <button id="weave-copy-btn" class="btn btn-primary" style="width:100%;">📋 Copy Compiled Context</button>
+    </div>
+  </aside>
 
   <!-- Scripts -->
   <script src="js/badges.js?v=13"></script>
