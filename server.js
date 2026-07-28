@@ -27,6 +27,36 @@ if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
 
+// Configure multer disk storage for image uploads
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    cb(null, imagesDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const nameWithoutExt = path.basename(file.originalname, ext);
+    const sanitized = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/(^-|-$)/g, '') || 'image';
+    const filename = `${Date.now()}-${sanitized}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid image MIME type. Allowed types: JPEG, PNG, WebP, GIF, SVG.'));
+    }
+  }
+});
+
 function getAIConfig() {
   if (fs.existsSync(configPath)) {
     try {
@@ -65,6 +95,7 @@ db.serialize(() => {
       summary TEXT,
       content TEXT NOT NULL,
       tags TEXT,
+      header_image TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -85,6 +116,7 @@ db.serialize(() => {
   db.run("ALTER TABLE articles ADD COLUMN world_id TEXT DEFAULT 'default'", (err) => {});
   db.run("UPDATE articles SET world_id = 'default' WHERE world_id IS NULL", (err) => {});
   db.run("ALTER TABLE worlds ADD COLUMN theme TEXT DEFAULT 'ancient-codex'", (err) => {});
+  db.run("ALTER TABLE articles ADD COLUMN header_image TEXT", (err) => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS personas (
@@ -202,6 +234,21 @@ function syncFileToStorage(id, content) {
 
 // --- API ENDPOINTS ---
 
+// POST /api/upload/image - Upload single image
+app.post('/api/upload/image', (req, res) => {
+  imageUpload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Image upload failed' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+    const filename = req.file.filename;
+    const url = `/uploads/images/${filename}`;
+    res.json({ url, filename });
+  });
+});
+
 // GET /api/worlds - List all worlds
 app.get('/api/worlds', (req, res) => {
   const query = `
@@ -280,7 +327,7 @@ app.put('/api/articles/:id/move-world', (req, res) => {
 // GET /api/articles - List & Search (with world_id filter)
 app.get('/api/articles', (req, res) => {
   const { search, category, tag, world_id } = req.query;
-  let query = 'SELECT id, title, category, sub_category, world_id, summary, tags, created_at, updated_at FROM articles WHERE 1=1';
+  let query = 'SELECT id, title, category, sub_category, world_id, summary, header_image, tags, created_at, updated_at FROM articles WHERE 1=1';
   const params = [];
 
   if (world_id && world_id !== 'all') {
@@ -347,7 +394,7 @@ app.get('/api/articles/:id', (req, res) => {
 
 // POST /api/articles - Create new article
 app.post('/api/articles', (req, res) => {
-  const { title, category, summary, content, tags } = req.body;
+  const { title, category, summary, content, tags, header_image } = req.body;
   if (!title || !category || !content) {
     return res.status(400).json({ error: 'Title, category, and content are required' });
   }
@@ -357,11 +404,11 @@ app.post('/api/articles', (req, res) => {
   const now = new Date().toISOString();
 
   const query = `
-    INSERT INTO articles (id, title, category, summary, content, tags, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO articles (id, title, category, summary, content, tags, header_image, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.run(query, [id, title, category, summary || '', content, tagsJson, now, now], function (err) {
+  db.run(query, [id, title, category, summary || '', content, tagsJson, header_image || null, now, now], function (err) {
     if (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         return res.status(409).json({ error: 'An article with a similar title/ID already exists.' });
@@ -372,24 +419,24 @@ app.post('/api/articles', (req, res) => {
     extractCrossLinks(id, content);
     syncFileToStorage(id, content);
 
-    res.status(201).json({ id, message: 'Article created successfully' });
+    res.status(201).json({ id, header_image: header_image || null, message: 'Article created successfully' });
   });
 });
 
 // PUT /api/articles/:id - Update existing article
 app.put('/api/articles/:id', (req, res) => {
   const { id } = req.params;
-  const { title, category, summary, content, tags } = req.body;
+  const { title, category, summary, content, tags, header_image } = req.body;
   const tagsJson = JSON.stringify(tags || []);
   const now = new Date().toISOString();
 
   const query = `
     UPDATE articles
-    SET title = ?, category = ?, summary = ?, content = ?, tags = ?, updated_at = ?
+    SET title = ?, category = ?, summary = ?, content = ?, tags = ?, header_image = ?, updated_at = ?
     WHERE id = ?
   `;
 
-  db.run(query, [title, category, summary || '', content, tagsJson, now, id], function (err) {
+  db.run(query, [title, category, summary || '', content, tagsJson, header_image || null, now, id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: 'Article not found' });
 
@@ -406,9 +453,17 @@ app.delete('/api/articles/:id', (req, res) => {
   db.run('DELETE FROM articles WHERE id = ?', [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     
-    // Remove local file if exists
-    const filePath = path.join(storageDir, `${id}.md`);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    // Clean up associated relations and personas
+    db.run('DELETE FROM relations WHERE source_id = ? OR target_id = ?', [id, id]);
+    db.run('DELETE FROM personas WHERE article_id = ?', [id]);
+
+    // Remove local file if exists (safely wrapped in try/catch)
+    try {
+      const filePath = path.join(storageDir, `${id}.md`);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (fileErr) {
+      console.warn(`Could not remove storage file for article ${id}:`, fileErr.message);
+    }
 
     res.json({ message: 'Article deleted successfully' });
   });
