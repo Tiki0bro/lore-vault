@@ -18,34 +18,41 @@
   <div id="app-container">
     <!-- Top Navigation Header -->
     <header class="navbar">
-      <div class="brand">
-        <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
-        <div class="brand-text">
-          <h1>LoreWeaver</h1>
-          <span class="subtext">The Intelligence Engine for Worlds, Games & Stories</span>
+      <!-- Zone 1: Left (Brand Logo & Global Search) -->
+      <div class="navbar-zone-left">
+        <div class="brand">
+          <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
+          <div class="brand-text">
+            <h1>LoreVault</h1>
+            <span class="subtext">The Intelligence Engine for Worlds, Games & Stories</span>
+          </div>
+        </div>
+
+        <div class="search-bar-container">
+          <span class="search-icon" data-badge="search" data-badge-size="16">🔍</span>
+          <input type="text" id="global-search" placeholder="Search world lore, characters, locations, factions..." oninput="window.app.handleSearch(this.value)">
         </div>
       </div>
 
-      <div class="search-bar-container">
-        <span class="search-icon" data-badge="search" data-badge-size="16">🔍</span>
-        <input type="text" id="global-search" placeholder="Search world lore, characters, locations, factions..." oninput="window.app.handleSearch(this.value)">
+      <!-- Zone 2: Center (View Switcher Tabs) -->
+      <div class="navbar-zone-center">
+        <nav class="nav-tabs">
+          <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
+            <span data-badge="scroll" data-badge-size="18">📚</span> Lore Codex
+          </button>
+          <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
+            <span data-badge="shield" data-badge-size="18">🎬</span> Narrative Slate
+          </button>
+          <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
+            <span data-badge="crystal" data-badge-size="18">⚡</span> Weave Matrix
+          </button>
+        </nav>
       </div>
 
-      <nav class="nav-tabs">
-        <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
-          <span data-badge="scroll" data-badge-size="18">📚</span> Lore Codex
-        </button>
-        <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
-          <span data-badge="shield" data-badge-size="18">🎬</span> Narrative Slate
-        </button>
-        <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
-          <span data-badge="crystal" data-badge-size="18">⚡</span> Weave Matrix
-        </button>
-      </nav>
-
-      <div class="header-actions" style="display:flex; gap:0.5rem; align-items:center;">
-        <!-- World Selector Dropdown -->
-        <div style="display:flex; align-items:center; gap:0.4rem; background:var(--surface-sidebar, #0f172a); padding:0.25rem 0.6rem; border-radius:6px; border:1px solid var(--border-color);">
+      <!-- Zone 3: Right (World & Theme Dropdown, Consolidated Tools Dropdown, Primary CTA) -->
+      <div class="navbar-zone-right header-actions">
+        <!-- World & Theme Selector Dropdown -->
+        <div class="world-theme-container">
           <span data-badge="compass" data-badge-size="18" style="display:inline-flex; align-items:center; color:var(--accent-primary);">🌍</span>
           <select id="world-select-dropdown" style="background:transparent; color:var(--accent-primary, #38bdf8); border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
             <option value="default">Primary World</option>
@@ -54,21 +61,30 @@
           <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openEditWorldModal()" title="Edit Current World Theme &amp; Settings"><span data-badge="gear" data-badge-size="14">⚙️</span> Theme</button>
         </div>
 
-        <button class="btn btn-secondary" style="background:var(--surface-card-hover, #0284c7); color:#fff; font-weight:600;" onclick="window.toggleAIChatDrawer()">
-          <span data-badge="crystal" data-badge-size="18">💬</span> Ask AI
-        </button>
-        <button class="btn btn-secondary" style="background:var(--surface-sidebar, #334155); color:var(--text-primary);" onclick="window.app.openAISettings()">
-          <span data-badge="gear" data-badge-size="18">⚙️</span> AI Settings
-        </button>
-        <button id="world-doctor-btn" class="btn btn-secondary" style="background:rgba(30,27,75,0.7); color:var(--accent-primary); border:var(--border-filigree); cursor:pointer;" onclick="window.openDoctorModal()">
-          <span data-badge="healer" data-badge-size="18">🩺</span> Canon Guard
-        </button>
-        <button class="btn btn-secondary" onclick="window.app.openMediaVault()">
-          <span data-badge="scroll" data-badge-size="18">🖼️</span> Media Vault
-        </button>
-        <button class="btn btn-secondary" onclick="window.app.openImportModal()">
-          <span data-badge="import" data-badge-size="18">📥</span> Import World
-        </button>
+        <!-- Consolidated Tools Dropdown -->
+        <div class="tools-dropdown-container">
+          <button id="tools-dropdown-btn" class="btn btn-secondary tools-dropdown-btn" onclick="window.toggleToolsMenu(event)">
+            <span data-badge="gear" data-badge-size="18">⚙️</span> Tools ▾
+          </button>
+          <div id="tools-dropdown-menu" class="tools-dropdown-menu hidden">
+            <button class="dropdown-item" onclick="window.openDoctorModal(); window.closeToolsMenu();">
+              <span data-badge="healer" data-badge-size="18">🩺</span> World Doctor
+            </button>
+            <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">
+              <span data-badge="scroll" data-badge-size="18">🖼️</span> Media Vault
+            </button>
+            <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">
+              <span data-badge="crystal" data-badge-size="18">💬</span> Ask AI Assistant
+            </button>
+            <button class="dropdown-item" onclick="window.app.openAISettings(); window.closeToolsMenu();">
+              <span data-badge="gear" data-badge-size="18">⚙️</span> AI Settings
+            </button>
+            <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">
+              <span data-badge="import" data-badge-size="18">📥</span> Import World
+            </button>
+          </div>
+        </div>
+
         <button class="btn btn-primary" onclick="window.app.openEditor()">
           <span data-badge="quill" data-badge-size="18">+</span> New Article
         </button>

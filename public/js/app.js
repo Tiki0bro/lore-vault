@@ -2710,5 +2710,30 @@ window.closeImageLightbox = function() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     window.closeImageLightbox();
+    window.closeToolsMenu();
   }
 });
+
+/* --- Tools Dropdown Menu Helpers --- */
+window.toggleToolsMenu = function(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('tools-dropdown-menu');
+  if (menu) {
+    menu.classList.toggle('hidden');
+  }
+};
+
+window.closeToolsMenu = function() {
+  const menu = document.getElementById('tools-dropdown-menu');
+  if (menu) {
+    menu.classList.add('hidden');
+  }
+};
+
+document.addEventListener('click', function(e) {
+  const container = document.querySelector('.tools-dropdown-container');
+  if (container && !container.contains(e.target)) {
+    window.closeToolsMenu();
+  }
+});
+
