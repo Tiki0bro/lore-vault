@@ -317,9 +317,9 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
 }
 
 .search-bar-container {
-  flex: 1;
-  max-width: 480px;
-  min-width: 220px;
+  width: 300px;
+  max-width: 320px;
+  flex-shrink: 1;
   position: relative;
   display: flex;
   align-items: center;
@@ -348,6 +348,25 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   width: 100%;
   outline: none;
   font-size: 0.85rem;
+}
+
+#search-container input[type="text"], #global-search {
+  padding-right: 85px !important;
+}
+
+.search-actions-right {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.search-actions-right button,
+.search-actions-right .search-kbd-badge {
+  pointer-events: auto;
 }
 
 .search-kbd-badge {
@@ -487,6 +506,10 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   text-align: center;
   font-size: 0.85rem;
   color: var(--text-secondary, #94a3b8);
+}
+
+.navbar-zone-center, .nav-tabs {
+  flex-shrink: 0 !important;
 }
 
 .nav-tabs {
