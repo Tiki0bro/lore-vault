@@ -789,8 +789,8 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   height: 100%;
 }
 
-/* --- TAB 3: LLM CONTEXT BUILDER --- */
-.context-builder-layout {
+/* --- TAB 2: WEAVE MATRIX --- */
+.weave-matrix-layout {
   display: flex;
   width: 100%;
   height: 100%;

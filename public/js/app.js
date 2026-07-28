@@ -1,5 +1,5 @@
 /**
- * LoreVault Frontend Application Controller
+ * LoreWeaver Frontend Application Controller
  */
 
 class LoreApp {
@@ -257,7 +257,7 @@ class LoreApp {
     }
   }
 
-  // --- PHASE 3 SCENE STUDIO & PERSONA CONTROLLERS ---
+  // --- PHASE 3 NARRATIVE SLATE & PERSONA CONTROLLERS ---
   async fetchScenes() {
     try {
       const res = await fetch('/api/scenes');
@@ -1542,11 +1542,11 @@ Overview paragraph describing the location, faction, or character.
     alert('Removed unlinked broken image tags from article content!');
   }
 
-  // --- WORLD DOCTOR & AUDITOR METHODS ---
+  // --- CANON GUARD & AUDITOR METHODS ---
   openDoctorModal() {
     const modal = document.getElementById('doctor-modal');
     if (!modal) {
-      alert('World Doctor modal container not found in DOM. Please do a hard refresh (Ctrl + Shift + R or Ctrl + F5).');
+      alert('Canon Guard modal container not found in DOM. Please do a hard refresh (Ctrl + Shift + R or Ctrl + F5).');
       return;
     }
     modal.classList.remove('hidden');
@@ -2364,7 +2364,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.app = new LoreApp();
 });
 
-// Global fail-safe helpers for World Doctor modal
+// Global fail-safe helpers for Canon Guard modal
 window.openDoctorModal = function() {
   const modal = document.getElementById('doctor-modal');
   if (modal) {

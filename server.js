@@ -27,6 +27,21 @@ if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
 
+function safeParseTags(tagsRaw) {
+  if (!tagsRaw) return [];
+  if (Array.isArray(tagsRaw)) return tagsRaw;
+  if (typeof tagsRaw === 'string') {
+    try {
+      const parsed = JSON.parse(tagsRaw);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === 'string') return parsed.split(',').map(t => t.trim()).filter(Boolean);
+    } catch (e) {
+      return tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 // Configure multer disk storage for image uploads
 const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -134,7 +149,7 @@ db.serialize(() => {
 
   db.get('SELECT COUNT(*) as count FROM worlds', (err, row) => {
     if (!err && (!row || row.count === 0)) {
-      db.run("INSERT INTO worlds (id, name, description, color, theme) VALUES ('default', 'Primary World', 'Main world lore vault', '#38bdf8', 'ancient-codex')");
+      db.run("INSERT INTO worlds (id, name, description, color, theme) VALUES ('default', 'Primary World', 'Main world lore codex', '#38bdf8', 'ancient-codex')");
     }
   });
 
@@ -445,7 +460,7 @@ app.get('/api/articles', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.map(r => ({
       ...r,
-      tags: r.tags ? JSON.parse(r.tags) : []
+      tags: safeParseTags(r.tags)
     })));
   });
 });
@@ -475,7 +490,7 @@ app.get('/api/articles/:id', (req, res) => {
       db.all(inboundQuery, [id], (err, inbound) => {
         res.json({
           ...article,
-          tags: article.tags ? JSON.parse(article.tags) : [],
+          tags: safeParseTags(article.tags),
           outboundLinks: outbound || [],
           inboundLinks: inbound || []
         });
@@ -604,13 +619,13 @@ app.get('/api/graph', (req, res) => {
   });
 });
 
-// --- LLM Context Builder Pipeline & Helper Utilities ---
+// --- Weave Matrix Pipeline & Helper Utilities ---
 
 function stripSecretBlocks(text) {
   if (!text) return '';
   return text
-    .replace(/\[box=secret\][\s\S]*?\[\/box\]/gi, '')
-    .replace(/\[secret\][\s\S]*?\[\/secret\]/gi, '')
+    .replace(/\[box=secret\][\s\S]*?(?:\[\/box\]|$)/gi, '')
+    .replace(/\[secret\][\s\S]*?(?:\[\/secret\]|$)/gi, '')
     .trim();
 }
 
@@ -630,7 +645,10 @@ function estimateTokens(text) {
 }
 
 function serializeContextEngine({ system, slateArticles, hopArticles, personas, workingState }, serializer = 'markdown') {
-  const normSerializer = (serializer || 'markdown').toLowerCase();
+  let normSerializer = String(serializer || 'markdown').toLowerCase();
+  if (!['xml', 'json', 'yaml', 'markdown'].includes(normSerializer)) {
+    normSerializer = 'markdown';
+  }
 
   let systemStr = '';
   let worldStr = '';
@@ -829,7 +847,7 @@ function serializeContextEngine({ system, slateArticles, hopArticles, personas, 
 }
 
 function compileContextEngine(db, config, callback) {
-  const normSerializer = (config.serializer || 'markdown').toLowerCase();
+  const normSerializer = String(config.serializer || 'markdown').toLowerCase();
   const includeSecrets = config.includeSecrets !== false;
   const includePersonas = config.includePersonas !== false && config.buckets?.slate?.includePersonas !== false;
 
@@ -1413,7 +1431,7 @@ ${question}`;
     return res.json({ answer: extractedAnswer, sources: contextArticles.map(r => ({ id: r.id, title: r.title })) });
 }
 
-// ALL /api/audit/run - World Doctor AI Audit Scanner (Supports GET & POST with world_id scoping)
+// ALL /api/audit/run - Canon Guard AI Audit Scanner (Supports GET & POST with world_id scoping)
 app.all('/api/audit/run', (req, res) => {
   const world_id = req.body?.world_id || req.query?.world_id;
   let sql = 'SELECT id, title, category, sub_category, world_id, summary, content, tags FROM articles WHERE 1=1';

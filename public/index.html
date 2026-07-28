@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoreVault — Local World Lore & Writing Context Engine</title>
+  <title>LoreWeaver — The Intelligence Engine for Worlds, Games & Stories</title>
   
   <!-- Fantasy & Modern Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,8 +21,8 @@
       <div class="brand">
         <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
         <div class="brand-text">
-          <h1>LoreVault</h1>
-          <span class="subtext">Offline World Lore & LLM Context Engine</span>
+          <h1>LoreWeaver</h1>
+          <span class="subtext">The Intelligence Engine for Worlds, Games & Stories</span>
         </div>
       </div>
 
@@ -33,13 +33,13 @@
 
       <nav class="nav-tabs">
         <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
-          <span data-badge="scroll" data-badge-size="18">📚</span> Lore Library
+          <span data-badge="scroll" data-badge-size="18">📚</span> Lore Codex
         </button>
         <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
-          <span data-badge="shield" data-badge-size="18">🎬</span> Scene Studio
+          <span data-badge="shield" data-badge-size="18">🎬</span> Narrative Slate
         </button>
         <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
-          <span data-badge="crystal" data-badge-size="18">⚡</span> LLM Context Builder
+          <span data-badge="crystal" data-badge-size="18">⚡</span> Weave Matrix
         </button>
       </nav>
 
@@ -61,7 +61,7 @@
           <span data-badge="gear" data-badge-size="18">⚙️</span> AI Settings
         </button>
         <button id="world-doctor-btn" class="btn btn-secondary" style="background:rgba(30,27,75,0.7); color:var(--accent-primary); border:var(--border-filigree); cursor:pointer;" onclick="window.openDoctorModal()">
-          <span data-badge="healer" data-badge-size="18">🩺</span> World Doctor
+          <span data-badge="healer" data-badge-size="18">🩺</span> Canon Guard
         </button>
         <button class="btn btn-secondary" onclick="window.app.openMediaVault()">
           <span data-badge="scroll" data-badge-size="18">🖼️</span> Media Vault
@@ -78,7 +78,7 @@
     <!-- Main Workspace Area -->
     <main class="main-content">
       
-      <!-- TAB 1: LORE LIBRARY -->
+      <!-- TAB 1: LORE CODEX -->
       <section id="view-library" class="view-panel active">
         <!-- Category Sidebar -->
         <aside class="sidebar">
@@ -163,13 +163,13 @@
         </div>
       </section>
 
-      <!-- TAB 2: LLM CONTEXT BUILDER -->
+      <!-- TAB 2: WEAVE MATRIX -->
       <section id="view-context" class="view-panel hidden">
         <div class="cb-wrapper">
           <!-- Header Bar -->
           <header class="cb-header">
             <div class="cb-header-left">
-              <h2><span class="icon">🔮</span> LLM Context Builder</h2>
+              <h2><span class="icon">🔮</span> The Weave Matrix</h2>
               <span class="preset-badge" id="cb-current-preset-badge">🧙‍♂️ Session Prep Mode</span>
             </div>
 
@@ -446,7 +446,7 @@
         </div>
       </section>
 
-      <!-- TAB 3: SCENE STUDIO & CHAPTER CO-WRITER -->
+      <!-- TAB 3: NARRATIVE SLATE & CHAPTER CO-WRITER -->
       <section id="view-studio" class="view-panel">
         <div style="display:grid; grid-template-columns: 290px 1fr; gap:1.25rem; height:calc(100vh - 140px);">
           <!-- LEFT SIDEBAR: OUTLINE & PERSONA SYNC -->
@@ -636,7 +636,7 @@
         
         <div class="modal-body">
           <p style="color:var(--text-secondary); font-size:0.85rem;">
-            Upload your World Anvil <code>.zip</code> archive or <code>.json</code> export file below. LoreVault's <strong>Smart AI Categorization Engine</strong> will extract all articles, analyze their contents, and sort them into optimal vault categories.
+            Upload your World Anvil <code>.zip</code> archive or <code>.json</code> export file below. LoreWeaver's <strong>Smart AI Categorization Engine</strong> will extract all articles, analyze their contents, and sort them into optimal categories.
           </p>
 
           <div class="form-group" style="margin-top:1rem;">
@@ -683,7 +683,7 @@
           <div class="form-group" style="margin-top:1rem;">
             <label>LLM Provider</label>
             <select id="ai-provider-select" onchange="window.app.toggleAIFields(this.value)">
-              <option value="offline">LoreVault Local Engine (100% Offline & Free)</option>
+              <option value="offline">LoreWeaver Local Engine (100% Offline & Free)</option>
               <option value="ollama">Ollama (Local LLM - localhost:11434)</option>
               <option value="gemini">Google Gemini API</option>
               <option value="openai">OpenAI API (GPT-4o)</option>
@@ -716,13 +716,13 @@
       </div>
     </div>
 
-    <!-- WORLD DOCTOR & AI AUDITOR MODAL -->
+    <!-- CANON GUARD & AI AUDITOR MODAL -->
     <div id="doctor-modal" class="modal hidden">
       <div class="modal-backdrop" onclick="window.app.closeDoctorModal()"></div>
       <div class="modal-card doctor-modal-card" style="max-width: 1024px; width: 95%;">
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
           <div style="display:flex; align-items:center; gap:0.75rem;">
-            <h2 style="margin:0;">🩺 World Doctor & Vault Auditor</h2>
+            <h2 style="margin:0;">🛡️ Canon Guard & Lore Auditor</h2>
             <select id="doctor-world-scope" class="doctor-scope-select" onchange="window.app.setDoctorWorldScope(this.value)">
               <option value="all">🌐 All Worlds (Global Scope)</option>
               <option value="default">📜 Default Vault Scope</option>
@@ -930,7 +930,7 @@
         </div>
         <div class="modal-body">
           <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
-            Your world package has been imported! The World Doctor has performed an immediate diagnostic sweep of the imported articles.
+            Your world package has been imported! Canon Guard has performed an immediate diagnostic sweep of the imported articles.
           </p>
           <div id="import-triage-stats" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-bottom:1rem;">
             <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Analyzing imported items...</div>
