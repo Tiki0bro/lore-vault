@@ -28,9 +28,13 @@
           </div>
         </div>
 
-        <div class="search-bar-container">
+        <div class="search-bar-container" id="search-container">
           <span class="search-icon" data-badge="search" data-badge-size="16">🔍</span>
-          <input type="text" id="global-search" placeholder="Search world lore, characters, locations, factions..." oninput="window.app.handleSearch(this.value)">
+          <input type="text" id="global-search" placeholder="Search world lore (or cat:Category, #tag)..." autocomplete="off">
+          <span class="search-kbd-badge"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+          <button id="search-clear-btn" class="search-action-btn hidden" title="Clear search">✕</button>
+          <button id="search-fulltext-toggle" class="search-action-btn" title="Toggle Full-Text Content Search">📝</button>
+          <div id="search-results-dropdown" class="search-dropdown hidden"></div>
         </div>
       </div>
 
@@ -185,7 +189,7 @@
       </section>
 
       <!-- TAB 2: WEAVE MATRIX -->
-      <section id="view-context" class="view-panel hidden">
+      <section id="view-context" class="view-panel">
         <div class="cb-wrapper">
           <!-- Header Bar -->
           <header class="cb-header">

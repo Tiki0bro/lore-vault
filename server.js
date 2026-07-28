@@ -433,7 +433,9 @@ app.put('/api/articles/:id/move-world', (req, res) => {
 
 // GET /api/articles - List & Search (with world_id filter)
 app.get('/api/articles', (req, res) => {
-  const { search, category, tag, world_id } = req.query;
+  const { q, search, category, tag, content, world_id } = req.query;
+  const searchTerm = (q || search || '').trim();
+
   let query = 'SELECT id, title, category, sub_category, world_id, summary, header_image, tags, created_at, updated_at FROM articles WHERE 1=1';
   const params = [];
 
@@ -449,9 +451,14 @@ app.get('/api/articles', (req, res) => {
     query += ' AND tags LIKE ?';
     params.push(`%${tag}%`);
   }
-  if (search) {
-    query += ' AND (title LIKE ? OR summary LIKE ? OR content LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  if (searchTerm) {
+    if (content === 'true' || content === '1') {
+      query += ' AND (title LIKE ? OR summary LIKE ? OR content LIKE ?)';
+      params.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+    } else {
+      query += ' AND (title LIKE ? OR summary LIKE ?)';
+      params.push(`%${searchTerm}%`, `%${searchTerm}%`);
+    }
   }
 
   query += ' ORDER BY updated_at DESC';

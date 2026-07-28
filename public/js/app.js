@@ -16,6 +16,10 @@ class LoreApp {
     this.doctorWorldScope = 'all';
     this.guidedQueue = [];
     this.guidedQueueIndex = 0;
+    this.fullTextSearch = false;
+    this.searchDebounceTimer = null;
+    this.searchResults = [];
+    this.selectedIndex = -1;
 
     this.init();
   }
@@ -45,6 +49,8 @@ class LoreApp {
         window.LoreBadges.renderAll();
       }
     }
+
+    this.setupSearchBar();
   }
 
   async fetchWorlds() {
@@ -747,6 +753,7 @@ class LoreApp {
       if (!res.ok) return;
 
       this.currentArticle = await res.json();
+      this.recordRecentArticle(this.currentArticle.id, this.currentArticle.title, this.currentArticle.category);
       
       const emptyState = document.getElementById('article-viewer-empty');
       const viewer = document.getElementById('article-viewer');
@@ -844,6 +851,314 @@ class LoreApp {
   handleSearch(val) {
     this.searchQuery = val.trim();
     this.fetchArticles();
+    if (val.trim()) {
+      this.handleSearchInput(val.trim());
+    } else {
+      this.renderRecentArticlesDropdown();
+    }
+  }
+
+  recordRecentArticle(id, title, category) {
+    if (!id || !title) return;
+    try {
+      let recent = JSON.parse(localStorage.getItem('lorevault_recent_articles')) || [];
+      if (!Array.isArray(recent)) recent = [];
+      recent = recent.filter(item => item.id !== id);
+      recent.unshift({ id, title, category: category || 'General' });
+      recent = recent.slice(0, 5);
+      localStorage.setItem('lorevault_recent_articles', JSON.stringify(recent));
+    } catch (e) {
+      console.warn('Failed to save recent article to localStorage:', e);
+    }
+  }
+
+  getRecentArticles() {
+    try {
+      const recent = JSON.parse(localStorage.getItem('lorevault_recent_articles'));
+      return Array.isArray(recent) ? recent : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  setupSearchBar() {
+    const searchInput = document.getElementById('global-search');
+    const clearBtn = document.getElementById('search-clear-btn');
+    const fulltextToggle = document.getElementById('search-fulltext-toggle');
+    const dropdown = document.getElementById('search-results-dropdown');
+    const container = document.getElementById('search-container');
+
+    if (!searchInput) return;
+
+    // Global hotkey listeners (Ctrl+K, Cmd+K, /)
+    document.addEventListener('keydown', (e) => {
+      const isK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k';
+      const isSlash = e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable;
+
+      if (isK || isSlash) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+    });
+
+    searchInput.addEventListener('focus', () => {
+      const val = searchInput.value.trim();
+      if (!val) {
+        this.renderRecentArticlesDropdown();
+      } else if (this.searchResults.length > 0) {
+        this.showSearchDropdown();
+      }
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', !e.target.value);
+      }
+      if (!val) {
+        this.renderRecentArticlesDropdown();
+        return;
+      }
+
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = setTimeout(() => {
+        this.handleSearchInput(val);
+      }, 200);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (dropdown && !dropdown.classList.contains('hidden')) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.moveSelection(1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.moveSelection(-1);
+        } else if (e.key === 'Enter') {
+          if (this.selectedIndex >= 0 && this.searchResults[this.selectedIndex]) {
+            e.preventDefault();
+            this.loadArticle(this.searchResults[this.selectedIndex].id);
+            this.hideSearchDropdown();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          this.hideSearchDropdown();
+          searchInput.blur();
+        }
+      }
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.clearSearch();
+      });
+    }
+
+    if (fulltextToggle) {
+      fulltextToggle.addEventListener('click', () => {
+        this.toggleFullTextSearch();
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (container && !container.contains(e.target)) {
+        this.hideSearchDropdown();
+      }
+    });
+  }
+
+  clearSearch() {
+    const searchInput = document.getElementById('global-search');
+    const clearBtn = document.getElementById('search-clear-btn');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.classList.add('hidden');
+    this.searchResults = [];
+    this.selectedIndex = -1;
+    this.renderRecentArticlesDropdown();
+    if (searchInput) searchInput.focus();
+  }
+
+  toggleFullTextSearch() {
+    this.fullTextSearch = !this.fullTextSearch;
+    const fulltextToggle = document.getElementById('search-fulltext-toggle');
+    if (fulltextToggle) {
+      fulltextToggle.classList.toggle('active', this.fullTextSearch);
+    }
+    const searchInput = document.getElementById('global-search');
+    if (searchInput && searchInput.value.trim()) {
+      this.handleSearchInput(searchInput.value.trim());
+    }
+  }
+
+  renderRecentArticlesDropdown() {
+    const recent = this.getRecentArticles();
+    const dropdown = document.getElementById('search-results-dropdown');
+    if (!dropdown) return;
+
+    if (recent.length === 0) {
+      dropdown.innerHTML = '<div class="search-no-results">🕒 No recently viewed lore</div>';
+      dropdown.classList.remove('hidden');
+      this.searchResults = [];
+      this.selectedIndex = -1;
+      return;
+    }
+
+    this.searchResults = recent;
+    this.selectedIndex = -1;
+
+    let html = `<div class="search-dropdown-header"><span>🕒 RECENTLY VIEWED LORE</span></div>`;
+    html += recent.map((art, i) => {
+      const catIcon = this.getCategoryIcon(art.category);
+      return `
+        <div class="search-result-item ${i === this.selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.app.loadArticle('${art.id}'); window.app.hideSearchDropdown();" onmouseenter="window.app.setSelectedIndex(${i})">
+          <div class="search-result-header">
+            <span class="search-result-title">${catIcon} ${this.escapeHtml(art.title)}</span>
+            <span class="search-result-badge">${this.escapeHtml(art.category || 'Lore')}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hidden');
+  }
+
+  async handleSearchInput(val) {
+    let queryStr = val.trim();
+    let catFilter = null;
+    let tagFilter = null;
+
+    const catMatch = queryStr.match(/(?:^|\s)cat:([^\s#]+)/i);
+    if (catMatch) {
+      catFilter = catMatch[1];
+      queryStr = queryStr.replace(catMatch[0], '').trim();
+    }
+
+    const tagMatch = queryStr.match(/(?:^|\s)#([^\s#]+)/i);
+    if (tagMatch) {
+      tagFilter = tagMatch[1];
+      queryStr = queryStr.replace(tagMatch[0], '').trim();
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (queryStr) params.append('q', queryStr);
+      if (catFilter) params.append('category', catFilter);
+      if (tagFilter) params.append('tag', tagFilter);
+      if (this.currentWorldId && this.currentWorldId !== 'all') params.append('world_id', this.currentWorldId);
+      if (this.fullTextSearch) params.append('content', 'true');
+
+      const res = await fetch(`/api/articles?${params.toString()}`);
+      const data = await res.json();
+      this.searchResults = data || [];
+      this.selectedIndex = -1;
+
+      this.renderSearchResultsDropdown(this.searchResults, queryStr, catFilter, tagFilter);
+    } catch (err) {
+      console.error('Failed to search articles:', err);
+    }
+  }
+
+  renderSearchResultsDropdown(results, queryStr, catFilter, tagFilter) {
+    const dropdown = document.getElementById('search-results-dropdown');
+    if (!dropdown) return;
+
+    if (!results || results.length === 0) {
+      dropdown.innerHTML = '<div class="search-no-results">🔍 No matching lore found</div>';
+      dropdown.classList.remove('hidden');
+      return;
+    }
+
+    let filterChips = [];
+    if (catFilter) filterChips.push(`Category: ${catFilter}`);
+    if (tagFilter) filterChips.push(`#${tagFilter}`);
+    if (this.fullTextSearch) filterChips.push(`Full-Text`);
+
+    let headerLabel = `MATCHING LORE (${results.length})`;
+    if (filterChips.length > 0) {
+      headerLabel += ` <span style="font-weight:normal; opacity:0.8; text-transform:none;">[${filterChips.join(', ')}]</span>`;
+    }
+
+    let html = `<div class="search-dropdown-header"><span>${headerLabel}</span></div>`;
+    html += results.map((art, i) => {
+      const catIcon = this.getCategoryIcon(art.category);
+      const hasSecret = /\[box=secret\]|\[secret\]/i.test(art.summary || '') || /\[box=secret\]|\[secret\]/i.test(art.content || '');
+      
+      let summaryText = art.summary || '';
+      summaryText = summaryText.replace(/\[box=secret\][\s\S]*?(?:\[\/box\]|$)/gi, '')
+                               .replace(/\[secret\][\s\S]*?(?:\[\/secret\]|$)/gi, '')
+                               .replace(/<[^>]+>/g, '')
+                               .trim();
+      if (summaryText.length > 100) summaryText = summaryText.substring(0, 100) + '...';
+
+      return `
+        <div class="search-result-item ${i === this.selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.app.loadArticle('${art.id}'); window.app.hideSearchDropdown();" onmouseenter="window.app.setSelectedIndex(${i})">
+          <div class="search-result-header">
+            <span class="search-result-title">${catIcon} ${this.escapeHtml(art.title)} ${hasSecret ? '<span class="search-secret-badge" title="Contains secret lore">🔒</span>' : ''}</span>
+            <span class="search-result-badge">${this.escapeHtml(art.category || 'Lore')}</span>
+          </div>
+          ${summaryText ? `<div class="search-result-summary">${this.escapeHtml(summaryText)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hidden');
+  }
+
+  getCategoryIcon(cat) {
+    if (!cat) return '📜';
+    const c = cat.toLowerCase();
+    if (c.includes('character') || c.includes('person') || c.includes('hero')) return '👤';
+    if (c.includes('location') || c.includes('place') || c.includes('city') || c.includes('realm')) return '🏰';
+    if (c.includes('faction') || c.includes('guild') || c.includes('nation') || c.includes('order')) return '🛡️';
+    if (c.includes('magic') || c.includes('spell') || c.includes('artifact')) return '🔮';
+    if (c.includes('item') || c.includes('weapon') || c.includes('gear')) return '⚔️';
+    if (c.includes('species') || c.includes('creature') || c.includes('beast')) return '🐉';
+    return '📜';
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  moveSelection(direction) {
+    if (this.searchResults.length === 0) return;
+    this.selectedIndex += direction;
+    if (this.selectedIndex < 0) this.selectedIndex = 0;
+    if (this.selectedIndex >= this.searchResults.length) this.selectedIndex = this.searchResults.length - 1;
+    this.updateSelectedState();
+  }
+
+  setSelectedIndex(i) {
+    this.selectedIndex = i;
+    this.updateSelectedState();
+  }
+
+  updateSelectedState() {
+    const dropdown = document.getElementById('search-results-dropdown');
+    if (!dropdown) return;
+    const items = dropdown.querySelectorAll('.search-result-item');
+    items.forEach((item, idx) => {
+      if (idx === this.selectedIndex) {
+        item.classList.add('selected');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  showSearchDropdown() {
+    const dropdown = document.getElementById('search-results-dropdown');
+    if (dropdown) dropdown.classList.remove('hidden');
+  }
+
+  hideSearchDropdown() {
+    const dropdown = document.getElementById('search-results-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
   }
 
   handleSort(mode) {
