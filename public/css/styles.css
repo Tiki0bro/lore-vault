@@ -1304,3 +1304,102 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   background: rgba(56, 189, 248, 0.08);
 }
 
+/* --- FANTASY IMAGE SURFACING & HERO BANNER --- */
+.wa-article-banner {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-filigree);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.wa-article-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.wa-article-banner .banner-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(12, 10, 8, 0.2) 0%, rgba(12, 10, 8, 0.85) 100%);
+  pointer-events: none;
+}
+
+.wa-image-card {
+  margin: 1.25rem 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-filigree);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.wa-image-card.align-left {
+  float: left;
+  margin-right: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.wa-image-card.align-right {
+  float: right;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.wa-image-card.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.wa-image-card.align-full {
+  display: block;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.wa-image-frame {
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  position: relative;
+}
+
+.wa-image-frame img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.wa-image-frame:hover img {
+  transform: scale(1.02);
+}
+
+.wa-image-caption {
+  font-family: var(--font-article-body);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* LIGHTBOX MODAL */
+.lightbox-backdrop {
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(8px);
+}
+

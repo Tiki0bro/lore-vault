@@ -74,13 +74,56 @@ const WAParser = {
       return `<a href="#" class="wa-cross-link" data-title="${cleanTitle}" onclick="event.preventDefault(); window.app.loadArticleByTitle('${cleanTitle}');">${cleanTitle}</a>`;
     });
 
-    // 8. Images: [img]src[/img] & Markdown ![alt](src)
-    html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (match, src) => {
-      const cleanSrc = src.trim();
-      return `<div class="wa-image-wrapper"><img src="${cleanSrc}" class="wa-image" alt="Article Media" onerror="this.style.display='none'" /></div>`;
+    // 8. Images: WorldAnvil [img] & Markdown ![caption](src)
+    html = html.replace(/\[img\b([^\]]*)\]([\s\S]*?)\[\/img\]/gi, (match, attrsStr, src) => {
+      const cleanSrc = (src || '').trim();
+      if (!cleanSrc) return '';
+
+      let align = 'center';
+      let caption = '';
+      let width = '';
+
+      const alignMatch = attrsStr.match(/align=["']?([a-z]+)["']?/i);
+      if (alignMatch) align = alignMatch[1].toLowerCase();
+
+      const captionMatch = attrsStr.match(/caption=["']?([^"']+)["']?/i);
+      if (captionMatch) caption = captionMatch[1];
+
+      const widthMatch = attrsStr.match(/width=["']?([^"']+)["']?/i);
+      if (widthMatch) width = widthMatch[1];
+
+      const escapedCaption = caption.replace(/'/g, "\\'");
+      const styleAttr = width ? `style="max-width:${width};"` : '';
+
+      return `<figure class="wa-image-card align-${align}" ${styleAttr}>
+        <div class="wa-image-frame" onclick="window.openImageLightbox('${cleanSrc}', '${escapedCaption}')">
+          <img src="${cleanSrc}" class="wa-image" alt="${caption || 'Article Media'}" onerror="this.style.display='none'" />
+        </div>
+        ${caption ? `<figcaption class="wa-image-caption">${caption}</figcaption>` : ''}
+      </figure>`;
     });
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-      return `<div class="wa-image-wrapper"><img src="${src.trim()}" class="wa-image" alt="${alt}" onerror="this.style.display='none'" /></div>`;
+
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, altStr, srcStr) => {
+      const cleanSrc = (srcStr || '').trim();
+      if (!cleanSrc) return '';
+
+      let caption = altStr.trim();
+      let align = 'center';
+
+      if (caption.includes('|')) {
+        const parts = caption.split('|');
+        caption = parts[0].trim();
+        align = parts[1].trim().toLowerCase() || 'center';
+      }
+
+      const escapedCaption = caption.replace(/'/g, "\\'");
+
+      return `<figure class="wa-image-card align-${align}">
+        <div class="wa-image-frame" onclick="window.openImageLightbox('${cleanSrc}', '${escapedCaption}')">
+          <img src="${cleanSrc}" class="wa-image" alt="${caption || 'Article Media'}" onerror="this.style.display='none'" />
+        </div>
+        ${caption ? `<figcaption class="wa-image-caption">${caption}</figcaption>` : ''}
+      </figure>`;
     });
 
     // Standard Markdown Headings & Quotes

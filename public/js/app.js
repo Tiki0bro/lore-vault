@@ -730,7 +730,7 @@ class LoreApp {
 
   async loadArticle(id) {
     try {
-      const res = await fetch(`/api/articles/${id}`);
+      const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
       if (!res.ok) return;
 
       this.currentArticle = await res.json();
@@ -758,7 +758,17 @@ class LoreApp {
 
       // Render WorldAnvil Simplified Standard Markup to HTML
       if (bodyEl) {
-        bodyEl.innerHTML = WAParser.parse(this.currentArticle.content);
+        let parsedHtml = WAParser.parse(this.currentArticle.content);
+        if (this.currentArticle.header_image) {
+          const heroBanner = `
+            <div class="wa-article-banner">
+              <img src="${this.currentArticle.header_image}" alt="Hero Cover" onerror="this.parentNode.style.display='none'" />
+              <div class="banner-overlay"></div>
+            </div>
+          `;
+          parsedHtml = heroBanner + parsedHtml;
+        }
+        bodyEl.innerHTML = parsedHtml;
         this.loadPersonaData(this.currentArticle);
       }
 
@@ -854,12 +864,12 @@ class LoreApp {
     this.editingId = articleId;
     const modal = document.getElementById('editor-modal');
     const titleHeader = document.getElementById('modal-title');
-
     const titleIn = document.getElementById('edit-title');
     const catIn = document.getElementById('edit-category');
     const summaryIn = document.getElementById('edit-summary');
     const tagsIn = document.getElementById('edit-tags');
     const contentIn = document.getElementById('edit-content');
+    const headerImgIn = document.getElementById('edit-header-image');
 
     if (articleId && this.currentArticle) {
       titleHeader.textContent = 'Edit Lore Article';
@@ -868,12 +878,14 @@ class LoreApp {
       summaryIn.value = this.currentArticle.summary || '';
       tagsIn.value = (this.currentArticle.tags || []).join(', ');
       contentIn.value = this.currentArticle.content;
+      if (headerImgIn) headerImgIn.value = this.currentArticle.header_image || '';
     } else {
       titleHeader.textContent = 'New Lore Article';
       titleIn.value = '';
       catIn.value = 'Locations';
       summaryIn.value = '';
       tagsIn.value = '';
+      if (headerImgIn) headerImgIn.value = '';
       contentIn.value = `[quote]“Enter thematic quote here” | — Source[/quote]
 
 [row]
@@ -897,6 +909,7 @@ Overview paragraph describing the location, faction, or character.
     }
 
     modal.classList.remove('hidden');
+    this.setupEditorDragAndDrop();
     this.updateEditorPreview();
   }
 
@@ -939,6 +952,7 @@ Overview paragraph describing the location, faction, or character.
     const summary = document.getElementById('edit-summary').value.trim();
     const tagsRaw = document.getElementById('edit-tags').value;
     const content = document.getElementById('edit-content').value.trim();
+    const header_image = document.getElementById('edit-header-image') ? document.getElementById('edit-header-image').value.trim() : '';
 
     if (!title || !category || !content) {
       alert('Please fill out Title, Category, and Content.');
@@ -946,12 +960,12 @@ Overview paragraph describing the location, faction, or character.
     }
 
     const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-    const payload = { title, category, summary, content, tags };
+    const payload = { title, category, summary, content, tags, header_image };
 
     try {
       let res;
       if (this.editingId) {
-        res = await fetch(`/api/articles/${this.editingId}`, {
+        res = await fetch(`/api/articles/${encodeURIComponent(this.editingId)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -985,7 +999,7 @@ Overview paragraph describing the location, faction, or character.
     if (!confirm(`Are you sure you want to delete "${this.currentArticle.title}"?`)) return;
 
     try {
-      const res = await fetch(`/api/articles/${this.currentArticle.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/articles/${encodeURIComponent(this.currentArticle.id)}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
@@ -2505,3 +2519,101 @@ window.switchTab = function(tabName) {
     }
   }
 };
+
+// --- IMAGE UPLOAD, DRAG & DROP, AND LIGHTBOX HELPERS ---
+if (window.app) {
+  window.app.uploadHeaderImage = async function(file) {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const input = document.getElementById('edit-header-image');
+      if (input) input.value = data.url;
+    } catch (err) {
+      alert('Failed to upload cover image: ' + err.message);
+    }
+  };
+
+  window.app.uploadBodyImage = async function(file) {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      this.insertMarkup(`[img]${data.url}[/img]\n`);
+    } catch (err) {
+      alert('Failed to upload image: ' + err.message);
+    }
+  };
+
+  window.app.setupEditorDragAndDrop = function() {
+    const textarea = document.getElementById('edit-content');
+    if (!textarea || textarea.dataset.dragBound) return;
+    textarea.dataset.dragBound = 'true';
+
+    textarea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      textarea.style.borderColor = 'var(--accent-blue)';
+    });
+
+    textarea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      textarea.style.borderColor = '';
+    });
+
+    textarea.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      textarea.style.borderColor = '';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type.startsWith('image/')) {
+          await window.app.uploadBodyImage(file);
+        }
+      }
+    });
+  };
+
+  window.app.generateAIImagePrompt = function() {
+    const title = document.getElementById('edit-title').value.trim() || 'Fantasy Lore Location';
+    const category = document.getElementById('edit-category').value || 'Locations';
+    const promptText = `An epic fantasy digital painting of ${title}, ${category} in WorldAnvil concept art style, highly detailed, dramatic atmospheric lighting, 8k resolution --v 6.0`;
+
+    const choice = confirm(`Generated AI Image Prompt:\n\n"${promptText}"\n\nClick OK to insert this concept prompt into your article content.`);
+    if (choice) {
+      this.insertMarkup(`[img align="center" caption="${title} concept art"]${promptText}[/img]\n`);
+    }
+  };
+}
+
+window.openImageLightbox = function(src, caption) {
+  const modal = document.getElementById('article-image-lightbox');
+  const img = document.getElementById('lightbox-img');
+  const cap = document.getElementById('lightbox-caption');
+  if (img) img.src = src;
+  if (cap) cap.textContent = caption || '';
+  if (modal) modal.classList.remove('hidden');
+};
+
+window.closeImageLightbox = function() {
+  const modal = document.getElementById('article-image-lightbox');
+  if (modal) modal.classList.add('hidden');
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    window.closeImageLightbox();
+  }
+});

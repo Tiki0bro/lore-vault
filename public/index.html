@@ -21,7 +21,7 @@
         <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
         <div class="brand-text">
           <h1>LoreVault</h1>
-          <span class="subtext">Offline World Anvil & LLM Context Engine</span>
+          <span class="subtext">Offline World Lore & LLM Context Engine</span>
         </div>
       </div>
 
@@ -313,10 +313,20 @@
             <input type="text" id="edit-tags" placeholder="e.g. Empire, Sun-Magic, Capital">
           </div>
 
-          <!-- WorldAnvil Tag Helper & Live AI Assistant Toolbar -->
+          <!-- Hero Cover Banner Field -->
+          <div class="form-group">
+            <label>Hero Cover Banner Image</label>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" id="edit-header-image" placeholder="e.g. /uploads/images/castle-banner.jpg or https://..." style="flex:1;">
+              <button type="button" class="btn btn-secondary" style="font-size:0.8rem;" onclick="document.getElementById('header-image-file-input').click()">📷 Upload Cover</button>
+              <input type="file" id="header-image-file-input" accept="image/*" style="display:none;" onchange="window.app.uploadHeaderImage(this.files[0])">
+            </div>
+          </div>
+
+          <!-- Lore Tag Helper & Live AI Assistant Toolbar -->
           <div class="form-group">
             <div class="toolbar-label" style="display:flex; justify-content:space-between; align-items:center;">
-              <label>WorldAnvil Markup Content *</label>
+              <label>Lore Markup Content *</label>
               <div style="display:flex; gap:0.4rem; align-items:center;">
                 <span class="sub-label" style="color:var(--accent-purple); font-weight:600;">🤖 Live AI Assistant:</span>
                 <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('format_worldanvil')">✨ Auto-Format Notes</button>
@@ -332,12 +342,15 @@
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[b]Label:[/b] Details here\n')">Label [b]</button>
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[hr]\n')">Divider [hr]</button>
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('@[Article Title](id)')">@[Cross-Link]</button>
+              <button type="button" class="tool-btn" style="background:#0284c7; color:#fff;" onclick="document.getElementById('body-image-file-input').click()">🖼️ Insert Image</button>
+              <input type="file" id="body-image-file-input" accept="image/*" style="display:none;" onchange="window.app.uploadBodyImage(this.files[0])">
+              <button type="button" class="tool-btn btn-ai" onclick="window.app.generateAIImagePrompt()">🪄 AI Image Prompt</button>
             </div>
 
             <div class="editor-split">
-              <textarea id="edit-content" rows="12" placeholder="Write or paste raw unstructured notes here, then click '✨ Auto-Format Notes'..." oninput="window.app.updateEditorPreview()"></textarea>
+              <textarea id="edit-content" rows="12" placeholder="Write notes or drag & drop image files directly here... Type [[ to insert links." oninput="window.app.updateEditorPreview()"></textarea>
               <div class="editor-preview-container">
-                <div class="preview-title">Live WorldAnvil Preview</div>
+                <div class="preview-title">Live Article Preview</div>
                 <div id="editor-preview-render" class="wa-article-body"></div>
               </div>
             </div>
@@ -348,6 +361,18 @@
           <button class="btn btn-secondary" onclick="window.app.closeEditor()">Cancel</button>
           <button class="btn btn-primary" onclick="window.app.saveArticle()">Save Article</button>
         </div>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE LIGHTBOX MODAL -->
+    <div id="article-image-lightbox" class="modal hidden">
+      <div class="modal-backdrop lightbox-backdrop" onclick="window.closeImageLightbox()"></div>
+      <div class="modal-card lightbox-card" style="max-width: 90vw; max-height: 90vh; background: rgba(12, 10, 8, 0.95); border: 1px solid var(--border-filigree); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <button class="close-btn" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; color: var(--text-primary); cursor: pointer;" onclick="window.closeImageLightbox()">✕</button>
+        <div style="max-width: 100%; max-height: 75vh; overflow: hidden; display: flex; justify-content: center; align-items: center;">
+          <img id="lightbox-img" src="" alt="Zoom View" style="max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-filigree); box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+        </div>
+        <div id="lightbox-caption" style="margin-top: 1rem; color: var(--text-secondary); font-family: var(--font-article-body); font-style: italic; font-size: 0.95rem; text-align: center;"></div>
       </div>
     </div>
 
