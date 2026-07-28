@@ -12,6 +12,7 @@
   
   <!-- CSS Styles -->
   <link rel="stylesheet" href="css/styles.css?v=13">
+  <link rel="stylesheet" href="css/style.css?v=1">
 </head>
 <body>
   <div id="app-container">
@@ -61,6 +62,9 @@
         </button>
         <button id="world-doctor-btn" class="btn btn-secondary" style="background:rgba(30,27,75,0.7); color:var(--accent-primary); border:var(--border-filigree); cursor:pointer;" onclick="window.openDoctorModal()">
           <span data-badge="healer" data-badge-size="18">🩺</span> World Doctor
+        </button>
+        <button class="btn btn-secondary" onclick="window.app.openMediaVault()">
+          <span data-badge="scroll" data-badge-size="18">🖼️</span> Media Vault
         </button>
         <button class="btn btn-secondary" onclick="window.app.openImportModal()">
           <span data-badge="import" data-badge-size="18">📥</span> Import World
@@ -161,65 +165,284 @@
 
       <!-- TAB 2: LLM CONTEXT BUILDER -->
       <section id="view-context" class="view-panel hidden">
-        <div class="context-builder-layout">
-          <!-- Selection Column -->
-          <div class="context-select-column">
-            <h2>Assemble LLM Context Pack</h2>
-            <p class="subtitle">Select lore entries to bundle into a formatted context block for writing assistance in ChatGPT, Claude, Gemini, or local models.</p>
-
-            <div class="preset-group">
-              <label for="preset-selector">Writing Intent Preset</label>
-              <select id="preset-selector">
-                <option value="custom">Custom Instructions</option>
-                <option value="scene">Write Scene in Location with Characters</option>
-                <option value="consistency">Check Scene Draft for Lore Consistency</option>
-                <option value="brainstorm">Brainstorm Plot Hooks & World Twists</option>
-              </select>
+        <div class="cb-wrapper">
+          <!-- Header Bar -->
+          <header class="cb-header">
+            <div class="cb-header-left">
+              <h2><span class="icon">🔮</span> LLM Context Builder</h2>
+              <span class="preset-badge" id="cb-current-preset-badge">🧙‍♂️ Session Prep Mode</span>
             </div>
 
-            <div class="options-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="summaries-only-check">
-                <span>Summaries Only (Saves token count for broad lore overview)</span>
+            <div class="cb-header-controls">
+              <!-- Workflow Preset Selector -->
+              <div class="cb-control-group">
+                <label for="cb-workflow-preset">⚡ Workflow Preset:</label>
+                <select id="cb-workflow-preset" onchange="ContextBuilder.applyPreset(this.value)">
+                  <option value="session_prep">🧙‍♂️ Session Prep (Morgan)</option>
+                  <option value="cowriter">✍️ Co-Writer Slate (Elena)</option>
+                  <option value="developer">🛠️ Developer API Mode (Alex)</option>
+                  <option value="custom">⚙️ Custom Setup</option>
+                </select>
+              </div>
+
+              <!-- Saved Snapshots Dropdown -->
+              <div class="cb-control-group">
+                <label for="cb-load-snapshot">📂 Load Slate:</label>
+                <select id="cb-load-snapshot" onchange="ContextBuilder.loadSnapshot(this.value)">
+                  <option value="">📂 Load Slate Snapshot...</option>
+                </select>
+              </div>
+
+              <!-- Save Slate Button -->
+              <button class="btn btn-secondary cb-btn-sm" onclick="ContextBuilder.openSaveSnapshotModal()">
+                💾 Save Slate
+              </button>
+
+              <!-- Exclude DM Secrets Toggle Switch -->
+              <label class="cb-toggle-switch" title="Automatically strip [SECRET] tags and DM notes from compiled context">
+                <input type="checkbox" id="cb-exclude-secrets-toggle" checked onchange="ContextBuilder.toggleExcludeSecrets(this.checked)">
+                <span class="cb-slider"></span>
+                <span class="cb-toggle-label">🛡️ Exclude DM Secrets</span>
               </label>
             </div>
+          </header>
 
-            <div class="custom-instructions-group">
-              <label for="custom-llm-instructions">Task / Custom Prompt Instructions</label>
-              <textarea id="custom-llm-instructions" rows="3" placeholder="e.g. Write a dialogue between Corvus and Aurelia during a night raid."></textarea>
-            </div>
+          <!-- Main Grid -->
+          <div class="cb-main-grid">
+            <!-- LEFT COLUMN: Active Context Tray -->
+            <aside class="context-tray">
+              <div class="tray-header">
+                <div class="tray-title-row">
+                  <h3>📜 Lore Vault Tray</h3>
+                  <span id="selected-count" class="badge-count">0 Selected</span>
+                </div>
 
-            <div class="article-selector-header">
-              <div style="display:flex; align-items:center; gap:0.5rem;">
-                <h3>Select Lore Articles</h3>
-                <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:#8b5cf6; color:#fff; border:none;" onclick="window.app.openQuickPersonaModal()">➕ Quick Persona</button>
+                <!-- Search Filter -->
+                <div class="tray-search-box">
+                  <input type="text" id="cb-tray-search" placeholder="🔍 Search lore & tags..." oninput="ContextBuilder.handleSearch(this.value)">
+                </div>
+
+                <!-- Category Badges Filter -->
+                <div class="tray-category-filters" id="cb-category-filters">
+                  <!-- Dynamically populated category pill buttons -->
+                </div>
+
+                <!-- Quick Select Actions -->
+                <div class="tray-quick-actions">
+                  <button class="btn-text-sm" onclick="ContextBuilder.selectAll()">Select All</button>
+                  <button class="btn-text-sm" onclick="ContextBuilder.clearAll()">Clear All</button>
+                  <button class="btn-text-sm persona-btn" onclick="window.app && window.app.openQuickPersonaModal()">➕ Quick Persona</button>
+                </div>
               </div>
-              <div class="selector-actions">
-                <span id="selected-count">0 Selected</span>
-                <button class="btn-text" onclick="ContextBuilder.selectAll()">Select All</button>
-                <button class="btn-text" onclick="ContextBuilder.clearAll()">Clear</button>
+
+              <!-- Article List Cards -->
+              <div id="context-article-list" class="tray-article-list">
+                <!-- Dynamically populated article cards -->
               </div>
-            </div>
+            </aside>
 
-            <div id="context-article-list" class="context-article-list">
-              <!-- Dynamically populated checkboxes -->
-            </div>
+            <!-- RIGHT COLUMN: 4-Bucket Tabbed Interface -->
+            <main class="cb-bucket-container">
+              <!-- Bucket Navigation Tabs -->
+              <nav class="cb-bucket-nav">
+                <button class="bucket-tab active" id="tab-bucket-system" onclick="ContextBuilder.switchBucketTab('system')">
+                  <span class="tab-icon">🎭</span>
+                  <span class="tab-text">System Tone</span>
+                  <span class="bucket-badge" id="badge-bucket-system">Active</span>
+                </button>
+                <button class="bucket-tab" id="tab-bucket-world" onclick="ContextBuilder.switchBucketTab('world')">
+                  <span class="tab-icon">🌍</span>
+                  <span class="tab-text">World Scope Filters</span>
+                  <span class="bucket-badge" id="badge-bucket-world">All Lore</span>
+                </button>
+                <button class="bucket-tab" id="tab-bucket-slate" onclick="ContextBuilder.switchBucketTab('slate')">
+                  <span class="tab-icon">👥</span>
+                  <span class="tab-text">Active Slate & Personas</span>
+                  <span class="bucket-badge" id="badge-bucket-slate">0 Items</span>
+                </button>
+                <button class="bucket-tab" id="tab-bucket-workingState" onclick="ContextBuilder.switchBucketTab('workingState')">
+                  <span class="tab-icon">📜</span>
+                  <span class="tab-text">Scene Beats & Task</span>
+                  <span class="bucket-badge" id="badge-bucket-workingState">Ready</span>
+                </button>
+              </nav>
 
-            <button class="btn btn-primary btn-block" onclick="ContextBuilder.compileContext()">
-              ⚡ Compile LLM Context Prompt
-            </button>
+              <!-- Bucket Content Panels -->
+              <div class="cb-bucket-content">
+                <!-- BUCKET 1: System Tone -->
+                <div class="bucket-panel active" id="panel-bucket-system">
+                  <div class="panel-card">
+                    <h4>System Instructions & Tone Style</h4>
+                    <p class="panel-desc">Configure the AI narrator's voice, writing style guidelines, and core behavioral constraints.</p>
+                    
+                    <div class="form-group">
+                      <label>Narrative Tone Presets</label>
+                      <div class="tone-chips-container" id="cb-tone-chips">
+                        <button class="tone-chip" data-tone="Gritty" onclick="ContextBuilder.selectTone('Gritty')">🗡️ Gritty & Dark</button>
+                        <button class="tone-chip" data-tone="Whimsical" onclick="ContextBuilder.selectTone('Whimsical')">✨ Whimsical & High Fantasy</button>
+                        <button class="tone-chip active" data-tone="Action" onclick="ContextBuilder.selectTone('Action')">⚡ Fast-Paced Action</button>
+                        <button class="tone-chip" data-tone="Mystery" onclick="ContextBuilder.selectTone('Mystery')">🕵️ Noir & Mystery</button>
+                        <button class="tone-chip" data-tone="Academic" onclick="ContextBuilder.selectTone('Academic')">📜 Academic Codex</button>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="cb-system-custom-instructions">Custom System Directives / Persona Override</label>
+                      <textarea id="cb-system-custom-instructions" rows="4" placeholder="e.g. Write in third-person limited perspective. Maintain a suspenseful tone. Focus on sensory descriptions of magic and ancient ruins." oninput="ContextBuilder.updateSystemInstructions(this.value)"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BUCKET 2: World Scope Filters -->
+                <div class="bucket-panel" id="panel-bucket-world">
+                  <div class="panel-card">
+                    <h4>World Scope & Lore Granularity</h4>
+                    <p class="panel-desc">Filter world lore by categories, tags, and summary depth to optimize context inclusion.</p>
+                    
+                    <div class="form-group">
+                      <label class="cb-checkbox-card">
+                        <input type="checkbox" id="summaries-only-check" onchange="ContextBuilder.toggleSummariesOnly(this.checked)">
+                        <div class="cb-checkbox-info">
+                          <strong>Summaries Only Mode</strong>
+                          <span>Include brief article overviews instead of full lore text to maximize token efficiency.</span>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Category Filter Selection</label>
+                      <div class="world-category-grid" id="cb-world-category-grid">
+                        <!-- Category checkboxes/toggles -->
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Tag Scope Filter</label>
+                      <div class="world-tag-grid" id="cb-world-tag-grid">
+                        <!-- Tag pills -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BUCKET 3: Active Slate & Personas -->
+                <div class="bucket-panel" id="panel-bucket-slate">
+                  <div class="panel-card">
+                    <h4>Active Slate & Character Relationships</h4>
+                    <p class="panel-desc">Define interpersonal dynamics and relationship statuses for character personas in the current slate.</p>
+                    
+                    <div id="cb-slate-articles-container" class="slate-articles-container">
+                      <!-- Selected articles with relationship dropdowns (Ally, Rival, Nemesis, Confidential, Neutral) -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BUCKET 4: Scene Beats & Task -->
+                <div class="bucket-panel" id="panel-bucket-workingState">
+                  <div class="panel-card">
+                    <h4>Task Directive & Scene Beats</h4>
+                    <p class="panel-desc">Formulate the core objective, prompt task preset, and structural beats for the LLM output.</p>
+                    
+                    <div class="form-group">
+                      <label for="preset-selector">Prompt Intent Preset</label>
+                      <select id="preset-selector" onchange="ContextBuilder.handleTaskPresetChange(this.value)">
+                        <option value="scene">🎬 Write Scene in Location with Characters</option>
+                        <option value="consistency">🔍 Check Draft Scene for Lore Consistency</option>
+                        <option value="brainstorm">💡 Brainstorm Plot Hooks & World Twists</option>
+                        <option value="dialogue">💬 Character Dialogue Generator</option>
+                        <option value="custom">✏️ Custom Task / Instructions</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="custom-llm-instructions">Task Instructions & Guidance</label>
+                      <textarea id="custom-llm-instructions" rows="3" placeholder="e.g. Write a dramatic dialogue scene between Corvus and Elena..." oninput="ContextBuilder.updateTaskInstructions(this.value)"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="cb-scene-beats">Scene Beats / Structural Outline (Optional)</label>
+                      <textarea id="cb-scene-beats" rows="3" placeholder="Beat 1: Corvus arrives at the tavern under heavy rain...&#10;Beat 2: Elena reveals the secret crypt map...&#10;Beat 3: Ambush by shadow cultists." oninput="ContextBuilder.updateSceneBeats(this.value)"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
           </div>
 
-          <!-- Output Prompt Column -->
-          <div class="context-output-column">
-            <div class="output-header">
-              <h3>Compiled Prompt Output</h3>
-              <button id="copy-context-btn" class="btn btn-secondary" onclick="ContextBuilder.copyToClipboard()">
-                📋 Copy to Clipboard
-              </button>
+          <!-- BOTTOM PANEL: Developer Inspector & Action Bar -->
+          <footer class="cb-bottom-panel">
+            <!-- Token Capacity Gauge Bar -->
+            <div class="token-capacity-bar">
+              <div class="token-info">
+                <span class="token-title">📊 Live Token Capacity:</span>
+                <span class="token-count-display" id="cb-token-count-text">0 / 4,096 Tokens</span>
+              </div>
+              <div class="token-gauge-bar">
+                <div class="token-gauge-fill" id="cb-token-gauge-fill" style="width: 0%;"></div>
+              </div>
             </div>
-            <textarea id="compiled-llm-output" class="code-output" readonly placeholder="Your compiled prompt context pack will appear here..."></textarea>
-          </div>
+
+            <!-- Action Buttons & Inspector Toggle -->
+            <div class="cb-action-bar">
+              <div class="cb-action-left">
+                <button class="btn btn-secondary inspector-toggle-btn" id="cb-inspector-toggle-btn" onclick="ContextBuilder.toggleInspector()">
+                  🛠️ Developer Inspection & Output <span id="cb-inspector-chevron">▲</span>
+                </button>
+              </div>
+
+              <div class="cb-action-right">
+                <button class="btn btn-secondary" id="copy-context-btn" onclick="ContextBuilder.copyToClipboard()">
+                  📋 Copy Prompt
+                </button>
+                <button class="btn btn-primary" onclick="ContextBuilder.compileContext()">
+                  ⚡ Compile Context Pack
+                </button>
+              </div>
+            </div>
+
+            <!-- Developer Inspector Collapsible Panel -->
+            <div class="inspector-panel hidden" id="cb-inspector-panel">
+              <div class="inspector-header">
+                <div class="serializer-selector">
+                  <span class="serializer-label">Serializer Format:</span>
+                  <div class="serializer-btn-group">
+                    <button class="serializer-btn active" data-fmt="Markdown" onclick="ContextBuilder.setSerializer('Markdown')">Markdown</button>
+                    <button class="serializer-btn" data-fmt="XML" onclick="ContextBuilder.setSerializer('XML')">XML Tags</button>
+                    <button class="serializer-btn" data-fmt="JSON" onclick="ContextBuilder.setSerializer('JSON')">JSON</button>
+                    <button class="serializer-btn" data-fmt="YAML" onclick="ContextBuilder.setSerializer('YAML')">YAML</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="inspector-body">
+                <div class="inspector-preview-col">
+                  <label>Raw Prompt Preview</label>
+                  <textarea id="compiled-llm-output" class="code-output" readonly placeholder="Your compiled prompt context pack will appear here..."></textarea>
+                </div>
+
+                <div class="inspector-table-col">
+                  <label>Token Breakdown Table</label>
+                  <table class="token-table">
+                    <thead>
+                      <tr>
+                        <th>Bucket Component</th>
+                        <th>Chars</th>
+                        <th>Est. Tokens</th>
+                        <th>Share</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cb-token-table-body">
+                      <tr><td>🎭 System Tone</td><td>0</td><td>0</td><td>0%</td></tr>
+                      <tr><td>🌍 World Scope</td><td>0</td><td>0</td><td>0%</td></tr>
+                      <tr><td>👥 Active Slate</td><td>0</td><td>0</td><td>0%</td></tr>
+                      <tr><td>📜 Scene Beats & Task</td><td>0</td><td>0</td><td>0%</td></tr>
+                      <tr class="total-row"><td><strong>Total Prompt</strong></td><td><strong>0</strong></td><td><strong>0</strong></td><td><strong>100%</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
       </section>
 
@@ -345,6 +568,8 @@
               <button type="button" class="tool-btn" style="background:#0284c7; color:#fff;" onclick="document.getElementById('body-image-file-input').click()">🖼️ Insert Image</button>
               <input type="file" id="body-image-file-input" accept="image/*" style="display:none;" onchange="window.app.uploadBodyImage(this.files[0])">
               <button type="button" class="tool-btn btn-ai" onclick="window.app.generateAIImagePrompt()">🪄 AI Image Prompt</button>
+              <button type="button" class="tool-btn" style="background:#475569; color:#fff;" onclick="window.app.openMediaVault()">🖼️ Media Vault</button>
+              <button type="button" class="tool-btn" style="background:#334155; color:#fff;" onclick="window.app.stripMissingImageTags()">🧹 Strip Missing Images</button>
             </div>
 
             <div class="editor-split">
@@ -360,6 +585,30 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="window.app.closeEditor()">Cancel</button>
           <button class="btn btn-primary" onclick="window.app.saveArticle()">Save Article</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISUAL MEDIA VAULT MANAGER MODAL -->
+    <div id="media-vault-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeMediaVault()"></div>
+      <div class="modal-card" style="max-width: 900px;">
+        <div class="modal-header">
+          <h2 style="display:flex; align-items:center; gap:0.5rem;"><span data-badge="scroll" data-badge-size="24">🖼️</span> Visual Media Vault</h2>
+          <button class="close-btn" onclick="window.app.closeMediaVault()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <input type="text" id="media-vault-search" placeholder="Search images by name..." style="flex:1; background:var(--surface-card); border:1px solid var(--border-color); color:var(--text-primary); padding:0.5rem; border-radius:6px;" oninput="window.app.filterMediaVault(this.value)">
+            <button class="btn btn-primary" onclick="document.getElementById('media-vault-upload-input').click()">📷 Upload Image</button>
+            <input type="file" id="media-vault-upload-input" accept="image/*" style="display:none;" onchange="window.app.uploadMediaVaultAsset(this.files[0])">
+          </div>
+          <div id="media-vault-grid" class="media-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:1rem; max-height:450px; overflow-y:auto; padding:0.5rem; background:var(--bg-dark); border:1px solid var(--border-color); border-radius:8px;">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeMediaVault()">Close</button>
         </div>
       </div>
     </div>

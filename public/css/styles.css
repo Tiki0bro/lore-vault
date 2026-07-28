@@ -1403,3 +1403,73 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   backdrop-filter: blur(8px);
 }
 
+/* MAP PINS STYLING */
+.wa-map-container {
+  position: relative;
+  overflow: visible;
+}
+
+.wa-map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(12, 10, 8, 0.85);
+  border: 1px solid var(--border-filigree);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  transition: transform 0.2s ease;
+}
+
+.wa-map-pin:hover {
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 20;
+}
+
+.wa-map-pin .pin-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.wa-map-pin .pin-pulse {
+  position: absolute;
+  top: -4px; left: -4px; right: -4px; bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--border-filigree);
+  animation: mapPinPulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes mapPinPulse {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.wa-pin-tooltip {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-filigree);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  z-index: 30;
+}
+
+.wa-map-pin:hover .wa-pin-tooltip {
+  opacity: 1;
+}
+
+

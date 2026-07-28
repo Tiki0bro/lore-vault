@@ -1485,6 +1485,13 @@ Overview paragraph describing the location, faction, or character.
       return;
     }
 
+    let instructions = '';
+    if (action === 'expand_lore') {
+      const userPrompt = prompt('Enter custom direction / focus for AI lore expansion (optional):\ne.g. "Focus on architectural history", "Detail secret basement", "Add military lore"', '');
+      if (userPrompt === null) return; // User canceled
+      instructions = userPrompt.trim();
+    }
+
     const originalText = contentArea.value;
     contentArea.value = '🤖 AI Assistant is processing and formatting your lore...';
 
@@ -1501,6 +1508,7 @@ Overview paragraph describing the location, faction, or character.
           title,
           content,
           category,
+          instructions,
           provider,
           apiKey,
           model
@@ -1518,6 +1526,20 @@ Overview paragraph describing the location, faction, or character.
       contentArea.value = originalText;
       this.updateEditorPreview();
     }
+  }
+
+  stripMissingImageTags() {
+    const textarea = document.getElementById('edit-content');
+    if (!textarea) return;
+    const original = textarea.value;
+
+    let cleaned = original.replace(/\[img:\d+\]/gi, '');
+    cleaned = cleaned.replace(/\[img\]\d+\[\/img\]/gi, '');
+    cleaned = cleaned.replace(/!\[([^\]]*)\]\((?:undefined|null|)\)/gi, '');
+
+    textarea.value = cleaned.trim();
+    this.updateEditorPreview();
+    alert('Removed unlinked broken image tags from article content!');
   }
 
   // --- WORLD DOCTOR & AUDITOR METHODS ---
@@ -2594,6 +2616,79 @@ if (window.app) {
     const choice = confirm(`Generated AI Image Prompt:\n\n"${promptText}"\n\nClick OK to insert this concept prompt into your article content.`);
     if (choice) {
       this.insertMarkup(`[img align="center" caption="${title} concept art"]${promptText}[/img]\n`);
+    }
+  };
+
+  window.app.openMediaVault = function() {
+    const modal = document.getElementById('media-vault-modal');
+    if (modal) modal.classList.remove('hidden');
+    this.fetchMediaAssets();
+  };
+
+  window.app.closeMediaVault = function() {
+    const modal = document.getElementById('media-vault-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  window.app.fetchMediaAssets = async function(query = '') {
+    const grid = document.getElementById('media-vault-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:1rem; text-align:center;">Loading assets...</div>';
+
+    try {
+      const worldId = this.currentWorldId || 'default';
+      const url = `/api/media?world_id=${encodeURIComponent(worldId)}${query ? '&q=' + encodeURIComponent(query) : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:2rem; text-align:center; grid-column:1/-1;">No media assets found in vault. Click "📷 Upload Image" to add image files.</div>';
+        return;
+      }
+
+      grid.innerHTML = data.map(item => `
+        <div class="media-card" style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem; display:flex; flex-direction:column; gap:0.4rem;">
+          <div style="height:120px; overflow:hidden; border-radius:4px; background:#000; display:flex; justify-content:center; align-items:center;">
+            <img src="${item.url}" alt="${item.original_name || item.filename}" style="max-width:100%; max-height:100%; object-fit:cover; cursor:pointer;" onclick="window.openImageLightbox('${item.url}', '${(item.original_name || item.filename).replace(/'/g, "\\'")}')" />
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-primary); font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${item.original_name || item.filename}">
+            ${item.original_name || item.filename}
+          </div>
+          <div style="display:flex; gap:0.25rem; margin-top:auto;">
+            <button class="btn btn-secondary" style="flex:1; font-size:0.7rem; padding:0.2rem;" onclick="window.app.insertMediaBBCode('${item.url}')">➕ Insert</button>
+            <button class="btn btn-secondary" style="font-size:0.7rem; padding:0.2rem; background:#dc2626; color:#fff;" onclick="window.app.deleteMediaAsset('${item.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      grid.innerHTML = `<div style="color:var(--accent-rose); font-size:0.85rem; padding:1rem;">Failed to load media assets: ${err.message}</div>`;
+    }
+  };
+
+  window.app.filterMediaVault = function(query) {
+    this.fetchMediaAssets(query);
+  };
+
+  window.app.uploadMediaVaultAsset = async function(file) {
+    if (!file) return;
+    await this.uploadHeaderImage(file);
+    this.fetchMediaAssets();
+  };
+
+  window.app.insertMediaBBCode = function(url) {
+    this.insertMarkup(`[img]${url}[/img]\n`);
+    this.closeMediaVault();
+  };
+
+  window.app.deleteMediaAsset = async function(id) {
+    if (!confirm('Are you sure you want to delete this media asset from the vault?')) return;
+    try {
+      const res = await fetch(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      this.fetchMediaAssets();
+    } catch (err) {
+      alert('Failed to delete asset: ' + err.message);
     }
   };
 }

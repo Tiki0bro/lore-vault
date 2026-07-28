@@ -75,6 +75,9 @@ const WAParser = {
     });
 
     // 8. Images: WorldAnvil [img] & Markdown ![caption](src)
+    // Strip numeric ID-only image tags from WA exports that have no backing file payload
+    html = html.replace(/\[img:\d+\]/gi, '');
+    // 8. Images: WorldAnvil [img] & Markdown ![caption](src)
     html = html.replace(/\[img\b([^\]]*)\]([\s\S]*?)\[\/img\]/gi, (match, attrsStr, src) => {
       const cleanSrc = (src || '').trim();
       if (!cleanSrc) return '';
@@ -82,6 +85,7 @@ const WAParser = {
       let align = 'center';
       let caption = '';
       let width = '';
+      let pinsStr = '';
 
       const alignMatch = attrsStr.match(/align=["']?([a-z]+)["']?/i);
       if (alignMatch) align = alignMatch[1].toLowerCase();
@@ -92,12 +96,48 @@ const WAParser = {
       const widthMatch = attrsStr.match(/width=["']?([^"']+)["']?/i);
       if (widthMatch) width = widthMatch[1];
 
+      const pinsMatch = attrsStr.match(/pins=["']([^"']+)["']/i);
+      if (pinsMatch) pinsStr = pinsMatch[1];
+
       const escapedCaption = caption.replace(/'/g, "\\'");
       const styleAttr = width ? `style="max-width:${width};"` : '';
 
-      return `<figure class="wa-image-card align-${align}" ${styleAttr}>
+      let pinsHtml = '';
+      if (pinsStr) {
+        try {
+          const pins = JSON.parse(pinsStr);
+          if (Array.isArray(pins)) {
+            pinsHtml = pins.map(p => {
+              const x = p.x || 50;
+              const y = p.y || 50;
+              const targetId = p.articleId || p.target || '';
+              const label = p.label || 'Pinned Location';
+              const type = p.type || 'city';
+              const iconMap = { city: '🏰', battle: '⚔️', relic: '🔮', nature: '🌲' };
+              const icon = iconMap[type] || '📍';
+              const escapedLabel = label.replace(/'/g, "\\'");
+
+              return `
+                <div class="wa-map-pin" style="top:${y}%; left:${x}%;" title="${escapedLabel}" onclick="event.stopPropagation(); window.app.loadArticle('${targetId}');">
+                  <span class="pin-icon">${icon}</span>
+                  <span class="pin-pulse"></span>
+                  <div class="wa-pin-tooltip">
+                    <strong>${label}</strong>
+                    ${targetId ? '<div style="font-size:0.65rem; color:#38bdf8;">Click to open lore</div>' : ''}
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        } catch (e) {
+          console.warn('Failed to parse map pins JSON:', e);
+        }
+      }
+
+      return `<figure class="wa-image-card wa-map-container align-${align}" ${styleAttr}>
         <div class="wa-image-frame" onclick="window.openImageLightbox('${cleanSrc}', '${escapedCaption}')">
           <img src="${cleanSrc}" class="wa-image" alt="${caption || 'Article Media'}" onerror="this.style.display='none'" />
+          ${pinsHtml}
         </div>
         ${caption ? `<figcaption class="wa-image-caption">${caption}</figcaption>` : ''}
       </figure>`;
