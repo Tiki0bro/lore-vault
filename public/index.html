@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LoreVault — Local World Lore & Writing Context Engine</title>
   
-  <!-- Modern Google Fonts -->
+  <!-- Fantasy & Modern Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Lora:ital,wght@0,400;0,600;1,400&family=MedievalSharp&family=Orbitron:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS Styles -->
   <link rel="stylesheet" href="css/styles.css?v=13">
@@ -18,7 +18,7 @@
     <!-- Top Navigation Header -->
     <header class="navbar">
       <div class="brand">
-        <div class="brand-icon">📜</div>
+        <div class="brand-icon" data-badge="scroll" data-badge-size="28">📜</div>
         <div class="brand-text">
           <h1>LoreVault</h1>
           <span class="subtext">Offline World Anvil & LLM Context Engine</span>
@@ -26,46 +26,46 @@
       </div>
 
       <div class="search-bar-container">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon" data-badge="search" data-badge-size="16">🔍</span>
         <input type="text" id="global-search" placeholder="Search world lore, characters, locations, factions..." oninput="window.app.handleSearch(this.value)">
       </div>
 
       <nav class="nav-tabs">
         <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
-          <span>📚</span> Lore Library
+          <span data-badge="scroll" data-badge-size="18">📚</span> Lore Library
         </button>
         <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
-          <span>🎬</span> Scene Studio
+          <span data-badge="shield" data-badge-size="18">🎬</span> Scene Studio
         </button>
         <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
-          <span>⚡</span> LLM Context Builder
+          <span data-badge="crystal" data-badge-size="18">⚡</span> LLM Context Builder
         </button>
       </nav>
 
       <div class="header-actions" style="display:flex; gap:0.5rem; align-items:center;">
         <!-- World Selector Dropdown -->
-        <div style="display:flex; align-items:center; gap:0.4rem; background:#0f172a; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(56, 189, 248, 0.4);">
-          <span style="font-size:0.85rem;">🌍</span>
-          <select id="world-select-dropdown" style="background:transparent; color:#38bdf8; border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
+        <div style="display:flex; align-items:center; gap:0.4rem; background:var(--surface-sidebar, #0f172a); padding:0.25rem 0.6rem; border-radius:6px; border:1px solid var(--border-color);">
+          <span data-badge="compass" data-badge-size="18" style="display:inline-flex; align-items:center; color:var(--accent-primary);">🌍</span>
+          <select id="world-select-dropdown" style="background:transparent; color:var(--accent-primary, #38bdf8); border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
             <option value="default">Primary World</option>
           </select>
-          <button class="btn-text" style="font-size:0.75rem; color:#38bdf8; padding:0.1rem 0.3rem; cursor:pointer;" onclick="window.openCreateWorldModal()" title="Create New World">➕ World</button>
+          <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openCreateWorldModal()" title="Create New World"><span data-badge="plus" data-badge-size="14">➕</span> World</button>
         </div>
 
-        <button class="btn btn-secondary" style="background:#0284c7; color:#fff; font-weight:600;" onclick="window.toggleAIChatDrawer()">
-          <span>💬</span> Ask AI
+        <button class="btn btn-secondary" style="background:var(--surface-card-hover, #0284c7); color:#fff; font-weight:600;" onclick="window.toggleAIChatDrawer()">
+          <span data-badge="crystal" data-badge-size="18">💬</span> Ask AI
         </button>
-        <button class="btn btn-secondary" style="background:#334155; color:#f8fafc;" onclick="window.app.openAISettings()">
-          <span>⚙️</span> AI Settings
+        <button class="btn btn-secondary" style="background:var(--surface-sidebar, #334155); color:var(--text-primary);" onclick="window.app.openAISettings()">
+          <span data-badge="gear" data-badge-size="18">⚙️</span> AI Settings
         </button>
-        <button id="world-doctor-btn" class="btn btn-secondary" style="background:#1e1b4b; color:#a5b4fc; border:1px solid rgba(165,180,252,0.4); cursor:pointer;" onclick="window.openDoctorModal()">
-          <span>🩺</span> World Doctor
+        <button id="world-doctor-btn" class="btn btn-secondary" style="background:rgba(30,27,75,0.7); color:var(--accent-primary); border:var(--border-filigree); cursor:pointer;" onclick="window.openDoctorModal()">
+          <span data-badge="healer" data-badge-size="18">🩺</span> World Doctor
         </button>
         <button class="btn btn-secondary" onclick="window.app.openImportModal()">
-          <span>📥</span> Import World
+          <span data-badge="import" data-badge-size="18">📥</span> Import World
         </button>
         <button class="btn btn-primary" onclick="window.app.openEditor()">
-          <span>+</span> New Article
+          <span data-badge="quill" data-badge-size="18">+</span> New Article
         </button>
       </div>
     </header>
@@ -444,97 +444,226 @@
     <!-- WORLD DOCTOR & AI AUDITOR MODAL -->
     <div id="doctor-modal" class="modal hidden">
       <div class="modal-backdrop" onclick="window.app.closeDoctorModal()"></div>
-      <div class="modal-card" style="max-width: 780px;">
-        <div class="modal-header">
-          <h2>🩺 World Doctor & Vault Auditor</h2>
-          <button class="close-btn" onclick="window.app.closeDoctorModal()">✕</button>
-        </div>
-        
-        <div class="modal-body">
-          <p style="color:var(--text-secondary); font-size:0.85rem;">
-            Run a full vault diagnostic scan. The World Doctor detects misclassified categories (e.g. locations listed under characters) and identifies empty / stub articles.
-          </p>
-          <!-- WORLD HEALTH SCORE CARD -->
-          <div style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem;">
-            <div>
-              <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">World Vault Health</div>
-              <div id="doctor-health-summary" style="font-size:0.85rem; color:#e2e8f0; margin-top:0.2rem;">Click 'Run Vault Scan' or 'Run Deep AI Audit' to evaluate.</div>
-            </div>
-            <div id="doctor-health-score-badge" style="font-size:1.4rem; font-weight:800; padding:0.35rem 0.75rem; background:rgba(74,222,128,0.15); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:8px;">
+      <div class="modal-card doctor-modal-card" style="max-width: 1024px; width: 95%;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <h2 style="margin:0;">🩺 World Doctor & Vault Auditor</h2>
+            <select id="doctor-world-scope" class="doctor-scope-select" onchange="window.app.setDoctorWorldScope(this.value)">
+              <option value="all">🌐 All Worlds (Global Scope)</option>
+              <option value="default">📜 Default Vault Scope</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div id="doctor-health-score-badge" class="health-score-badge">
               -- / 100
             </div>
+            <button class="close-btn" onclick="window.app.closeDoctorModal()">✕</button>
           </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:0.75rem 1rem; background:#090d16; border-radius:8px; border:1px solid var(--border-color);">
-            <div>
-              <span id="doctor-status" style="font-weight:600; color:var(--text-primary);">Ready to scan world vault.</span>
-              <div id="doctor-summary-counts" style="font-size:0.75rem; color:var(--text-muted);">--</div>
-            </div>
-            <div style="display:flex; gap:0.5rem;">
-              <button class="btn btn-secondary" style="font-size:0.8rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">🤖 Deep AI Audit</button>
-              <button class="btn btn-primary" style="font-size:0.8rem;" onclick="window.app.runWorldAudit()">🔍 Run Vault Scan</button>
-            </div>
-          </div>
-
-          <!-- Deep AI Narrative Audit Section -->
-          <div style="margin-top:1.25rem;">
-            <h3 style="font-size:0.9rem; color:#38bdf8; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
-              <span>🤖 Deep AI Narrative & Timeline Audit</span>
-            </h3>
-            <div id="doctor-deep-ai-list" style="max-height:160px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
-              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Deep AI Audit' to scan for narrative & timeline conflicts using Gemini.</div>
-            </div>
-          </div>
-
-          <!-- Misclassified Articles Section -->
-          <div style="margin-top:1.25rem;">
-            <h3 style="font-size:0.9rem; color:var(--accent-amber); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
-              <span>⚠️ Misclassified Categories</span>
-              <button id="fix-misclassified-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.applyCategoryFixes()">Fix All Misclassifications</button>
-            </h3>
-            <div id="doctor-misclassified-list" style="max-height:160px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
-              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Click 'Run Vault Scan' to analyze category assignments.</div>
-            </div>
-          </div>
-
-          <!-- Duplicate Articles (Double-Ups) Section -->
-          <div style="margin-top:1.25rem;">
-            <h3 style="font-size:0.9rem; color:var(--accent-purple); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
-              <span>👯 Duplicate Articles (Double-Ups)</span>
-              <button id="fix-duplicates-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.deleteDuplicates()">Delete Duplicate Copies</button>
-            </h3>
-            <div id="doctor-duplicates-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
-              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check for identical title double-ups.</div>
-            </div>
-          </div>
-
-          <!-- Empty Stubs Section -->
-          <div style="margin-top:1.25rem;">
-            <h3 style="font-size:0.9rem; color:var(--accent-rose); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
-              <span>🧹 Empty / Stub Articles</span>
-              <div style="display:flex; gap:0.4rem;">
-                <button id="bulk-autocure-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem; background:#059669; color:#fff;" onclick="window.app.bulkAutoCureStubs()">🪄 Bulk Auto-Cure All</button>
-                <button id="fix-stubs-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.cleanStubs()">Delete All Stubs</button>
+        </div>
+        
+        <div class="modal-body" style="padding: 1.25rem;">
+          <!-- MAIN DASHBOARD CONTENT -->
+          <div id="doctor-dashboard-main">
+            <!-- CTA / QUICK SCAN BANNER -->
+            <div class="doctor-cta-banner">
+              <div>
+                <h3 style="font-size:1rem; color:var(--text-primary); margin-bottom:0.2rem;">⚡ Guided Vault Maintenance</h3>
+                <p style="font-size:0.8rem; color:var(--text-secondary); margin:0;">
+                  Run automated diagnostics or launch an interactive guided repair session to fix lore discrepancies 1-by-1.
+                </p>
               </div>
-            </h3>
-            <div id="doctor-stubs-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
-              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to detect stub articles.</div>
+              <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <button id="start-guided-repair-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); border:none;" onclick="window.app.startGuidedSession()">⚡ Start Guided Repair Session</button>
+                <button class="btn btn-secondary" style="font-size:0.8rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">🤖 Deep AI Audit</button>
+                <button class="btn btn-primary" style="font-size:0.8rem;" onclick="window.app.runWorldAudit()">🔍 Run Vault Scan</button>
+              </div>
+            </div>
+
+            <!-- METRIC CARDS OVERVIEW ROW -->
+            <div class="doctor-metric-grid">
+              <div class="doctor-metric-card" onclick="window.app.switchDoctorTab('dup')">
+                <div class="metric-icon" style="color:var(--accent-purple);">👯</div>
+                <div class="metric-info">
+                  <div class="metric-value" id="doctor-metric-duplicates">0</div>
+                  <div class="metric-label">Duplicates</div>
+                </div>
+              </div>
+              <div class="doctor-metric-card" onclick="window.app.switchDoctorTab('misc')">
+                <div class="metric-icon" style="color:var(--accent-amber);">⚠️</div>
+                <div class="metric-info">
+                  <div class="metric-value" id="doctor-metric-misc">0</div>
+                  <div class="metric-label">Misclassified</div>
+                </div>
+              </div>
+              <div class="doctor-metric-card" onclick="window.app.switchDoctorTab('stubs')">
+                <div class="metric-icon" style="color:var(--accent-rose);">🧹</div>
+                <div class="metric-info">
+                  <div class="metric-value" id="doctor-metric-stubs">0</div>
+                  <div class="metric-label">Stubs / Empty</div>
+                </div>
+              </div>
+              <div class="doctor-metric-card" onclick="window.app.switchDoctorTab('ai')">
+                <div class="metric-icon" style="color:var(--accent-cyan);">🤖</div>
+                <div class="metric-info">
+                  <div class="metric-value" id="doctor-metric-ai">0</div>
+                  <div class="metric-label">AI Conflicts</div>
+                </div>
+              </div>
+              <div class="doctor-metric-card" onclick="window.app.switchDoctorTab('orphans')">
+                <div class="metric-icon" style="color:var(--accent-blue);">🏝️</div>
+                <div class="metric-info">
+                  <div class="metric-value" id="doctor-metric-orphans">0</div>
+                  <div class="metric-label">Orphaned Lore</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB NAVIGATION BAR -->
+            <div id="doctor-tab-nav" class="doctor-tab-nav" style="margin-top:1.25rem;">
+              <button class="doctor-tab-btn active" data-tab="overview" onclick="window.app.switchDoctorTab('overview')">📊 Overview</button>
+              <button class="doctor-tab-btn" data-tab="misc" onclick="window.app.switchDoctorTab('misc')">⚠️ Misclassified</button>
+              <button class="doctor-tab-btn" data-tab="dup" onclick="window.app.switchDoctorTab('dup')">👯 Duplicates</button>
+              <button class="doctor-tab-btn" data-tab="stubs" onclick="window.app.switchDoctorTab('stubs')">🧹 Stubs</button>
+              <button class="doctor-tab-btn" data-tab="ai" onclick="window.app.switchDoctorTab('ai')">🤖 AI Conflicts</button>
+              <button class="doctor-tab-btn" data-tab="orphans" onclick="window.app.switchDoctorTab('orphans')">🏝️ Orphans</button>
+            </div>
+
+            <!-- TAB PANELS -->
+            <div class="doctor-tab-panels" style="margin-top:0.75rem;">
+              <!-- Panel 1: Overview -->
+              <div id="doctor-panel-overview" class="doctor-tab-panel">
+                <div style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">World Vault Health Status</div>
+                    <div id="doctor-health-summary" style="font-size:0.85rem; color:#e2e8f0; margin-top:0.2rem;">Click 'Run Vault Scan' or 'Run Deep AI Audit' to evaluate health score.</div>
+                    <div id="doctor-summary-counts" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">--</div>
+                  </div>
+                  <div>
+                    <span id="doctor-status" style="font-weight:600; font-size:0.85rem; color:var(--text-primary);">Ready to scan world vault.</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 2: Misclassifications -->
+              <div id="doctor-panel-misc" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:var(--accent-amber); margin:0;">⚠️ Misclassified Categories</h3>
+                  <button id="fix-misclassified-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.applyCategoryFixes()">Fix All Misclassifications</button>
+                </div>
+                <div id="doctor-misclassified-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Click 'Run Vault Scan' to analyze category assignments.</div>
+                </div>
+              </div>
+
+              <!-- Panel 3: Duplicates -->
+              <div id="doctor-panel-dup" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:var(--accent-purple); margin:0;">👯 Duplicate Articles (Double-Ups)</h3>
+                  <button id="fix-duplicates-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.deleteDuplicates()">Delete Duplicate Copies</button>
+                </div>
+                <div id="doctor-duplicates-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check for identical title double-ups.</div>
+                </div>
+              </div>
+
+              <!-- Panel 4: Stubs -->
+              <div id="doctor-panel-stubs" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:var(--accent-rose); margin:0;">🧹 Empty / Stub Articles</h3>
+                  <div style="display:flex; gap:0.4rem;">
+                    <button id="bulk-autocure-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem; background:#059669; color:#fff;" onclick="window.app.bulkAutoCureStubs()">🪄 Bulk Auto-Cure All</button>
+                    <button id="fix-stubs-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.cleanStubs()">Delete All Stubs</button>
+                  </div>
+                </div>
+                <div id="doctor-stubs-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to detect stub articles.</div>
+                </div>
+              </div>
+
+              <!-- Panel 5: AI Narrative Conflicts -->
+              <div id="doctor-panel-ai" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:#38bdf8; margin:0;">🤖 Deep AI Narrative & Timeline Audit</h3>
+                  <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.25rem 0.6rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">Run Deep AI Audit</button>
+                </div>
+                <div id="doctor-deep-ai-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Deep AI Audit' to scan for narrative & timeline conflicts using Gemini.</div>
+                </div>
+              </div>
+
+              <!-- Panel 6: Orphaned Unlinked Lore -->
+              <div id="doctor-panel-orphans" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:var(--accent-blue); margin:0;">🏝️ Orphaned Unlinked Lore</h3>
+                </div>
+                <div id="doctor-orphan-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check cross-link health.</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Orphaned Unlinked Articles Section -->
-          <div style="margin-top:1.25rem;">
-            <h3 style="font-size:0.9rem; color:var(--accent-blue); margin-bottom:0.5rem;">
-              <span>🏝️ Orphaned Unlinked Lore</span>
-            </h3>
-            <div id="doctor-orphan-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
-              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check cross-link health.</div>
+          <!-- GUIDED REPAIR SESSION CONTAINER (Hidden until session starts) -->
+          <div id="doctor-guided-session-view" class="hidden guided-session-container">
+            <div class="guided-header">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <h3 id="doctor-guided-step-title" style="font-size:1rem; color:var(--accent-cyan); display:flex; align-items:center; gap:0.5rem;">
+                  <span>⚡ Guided Repair Session</span>
+                </h3>
+                <span id="guided-progress-label" class="guided-progress-label" style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">Step 0 of 0</span>
+              </div>
+              <div class="guided-progress-bar-bg">
+                <div id="guided-progress-fill" class="guided-progress-bar-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- STEP / COMPARISON CONTAINER -->
+            <div id="guided-step-container">
+              <!-- 2-COLUMN SIDE-BY-SIDE COMPARISON PANE -->
+              <div id="doctor-guided-comparison" class="repair-comparison-grid" style="margin-top:1rem;">
+                <div id="doctor-guided-left-pane" class="repair-pane">
+                  <div class="pane-header">Current Vault Item</div>
+                  <div class="pane-content">Select 'Start Guided Repair Session' to begin.</div>
+                </div>
+                <div id="doctor-guided-right-pane" class="repair-pane">
+                  <div class="pane-header">Proposed Recommendation</div>
+                  <div class="pane-content">No active recommendation.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACTION BAR -->
+            <div id="doctor-guided-action-bar" class="guided-action-bar" style="margin-top:1rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+              <button class="btn btn-secondary" onclick="window.app.closeGuidedSession()">Exit Guided Mode</button>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="window.app.closeDoctorModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- POST-IMPORT TRIAGE MODAL -->
+    <div id="import-triage-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeImportTriageModal()"></div>
+      <div class="modal-card" style="max-width: 650px;">
+        <div class="modal-header">
+          <h2>📥 Post-Import Vault Triage</h2>
+          <button class="close-btn" onclick="window.app.closeImportTriageModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
+            Your world package has been imported! The World Doctor has performed an immediate diagnostic sweep of the imported articles.
+          </p>
+          <div id="import-triage-stats" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+            <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Analyzing imported items...</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeImportTriageModal()">Skip to Vault</button>
+          <button id="triage-launch-guided-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); border:none;" onclick="window.app.startGuidedSessionFromTriage()">⚡ Launch Guided Triage</button>
         </div>
       </div>
     </div>
@@ -744,6 +873,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/badges.js?v=13"></script>
   <script src="js/wa-parser.js?v=13"></script>
   <script src="js/context-builder.js?v=13"></script>
   <script src="js/app.js?v=13"></script>
