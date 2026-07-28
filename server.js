@@ -185,6 +185,31 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS context_snapshots (
+      id TEXT PRIMARY KEY,
+      world_id TEXT,
+      name TEXT NOT NULL,
+      preset_type TEXT NOT NULL,
+      config_json TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS media (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      original_name TEXT,
+      url TEXT NOT NULL,
+      mime_type TEXT,
+      size INTEGER,
+      world_id TEXT DEFAULT 'default',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Check if DB is empty and seed default WorldAnvil articles
   db.get('SELECT COUNT(*) as count FROM articles', (err, row) => {
     if (!err && row.count === 0) {
@@ -234,7 +259,7 @@ function syncFileToStorage(id, content) {
 
 // --- API ENDPOINTS ---
 
-// POST /api/upload/image - Upload single image
+// POST /api/upload/image - Upload single image & insert into media vault database
 app.post('/api/upload/image', (req, res) => {
   imageUpload.single('image')(req, res, (err) => {
     if (err) {
@@ -245,7 +270,74 @@ app.post('/api/upload/image', (req, res) => {
     }
     const filename = req.file.filename;
     const url = `/uploads/images/${filename}`;
-    res.json({ url, filename });
+    const id = `media-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const original_name = req.file.originalname || filename;
+    const mime_type = req.file.mimetype || 'image/jpeg';
+    const size = req.file.size || 0;
+    const world_id = (req.body && req.body.world_id) || (req.query && req.query.world_id) || 'default';
+
+    db.run(
+      'INSERT INTO media (id, filename, original_name, url, mime_type, size, world_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, filename, original_name, url, mime_type, size, world_id],
+      function (dbErr) {
+        if (dbErr) {
+          console.error('Error inserting media record:', dbErr.message);
+          return res.status(500).json({ error: dbErr.message });
+        }
+        res.json({ id, filename, original_name, url, mime_type, size, world_id });
+      }
+    );
+  });
+});
+
+// GET /api/media - List media vault assets (optional filtering by world_id and q)
+app.get('/api/media', (req, res) => {
+  const { world_id, q } = req.query;
+  let query = 'SELECT * FROM media WHERE 1=1';
+  const params = [];
+
+  if (world_id && world_id !== 'all') {
+    query += ' AND (world_id = ? OR world_id IS NULL)';
+    params.push(world_id);
+  }
+
+  if (q && q.trim()) {
+    query += ' AND (filename LIKE ? OR original_name LIKE ?)';
+    const searchTerm = `%${q.trim()}%`;
+    params.push(searchTerm, searchTerm);
+  }
+
+  query += ' ORDER BY created_at DESC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+// DELETE /api/media/:id - Delete media asset from SQLite database & unlink local file
+app.delete('/api/media/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT * FROM media WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Media record not found' });
+
+    db.run('DELETE FROM media WHERE id = ?', [id], function (deleteErr) {
+      if (deleteErr) return res.status(500).json({ error: deleteErr.message });
+
+      // Unlink local file safely
+      try {
+        const filePath = path.join(imagesDir, row.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (fileErr) {
+        console.warn(`Could not remove image file ${row.filename}:`, fileErr.message);
+      }
+
+      res.json({ message: 'Media asset deleted successfully', id });
+    });
   });
 });
 
@@ -512,42 +604,476 @@ app.get('/api/graph', (req, res) => {
   });
 });
 
-// POST /api/context/compile - Generate structured LLM prompt context
-app.post('/api/context/compile', (req, res) => {
-  const { articleIds, includeSummariesOnly, customInstructions } = req.body;
-  if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
-    return res.status(400).json({ error: 'Select at least one article to compile context.' });
+// --- LLM Context Builder Pipeline & Helper Utilities ---
+
+function stripSecretBlocks(text) {
+  if (!text) return '';
+  return text
+    .replace(/\[box=secret\][\s\S]*?\[\/box\]/gi, '')
+    .replace(/\[secret\][\s\S]*?\[\/secret\]/gi, '')
+    .trim();
+}
+
+function escapeXml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeYaml(str) {
+  if (!str) return '';
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}
+
+function estimateTokens(text) {
+  if (!text) return 0;
+  return Math.ceil(text.trim().length / 4);
+}
+
+function serializeContextEngine({ system, slateArticles, hopArticles, personas, workingState }, serializer = 'markdown') {
+  const normSerializer = (serializer || 'markdown').toLowerCase();
+
+  let systemStr = '';
+  let worldStr = '';
+  let slateStr = '';
+  let workingStateStr = '';
+  let compiledPrompt = '';
+
+  if (normSerializer === 'xml') {
+    if (system.instructions || system.toneChips?.length || system.formatGuidance) {
+      systemStr = `<system>\n` +
+        (system.instructions ? `  <instructions>${escapeXml(system.instructions)}</instructions>\n` : '') +
+        (system.toneChips?.length ? `  <tone_chips>${escapeXml(system.toneChips.join(', '))}</tone_chips>\n` : '') +
+        (system.formatGuidance ? `  <format_guidance>${escapeXml(system.formatGuidance)}</format_guidance>\n` : '') +
+        `</system>`;
+    }
+
+    if (slateArticles.length > 0) {
+      slateStr = slateArticles.map(a =>
+        `<article id="${escapeXml(a.id)}" title="${escapeXml(a.title)}" category="${escapeXml(a.category)}">\n` +
+        (a.summary ? `  <summary>${escapeXml(a.summary)}</summary>\n` : '') +
+        (a.content ? `  <content>${escapeXml(a.content)}</content>\n` : '') +
+        `</article>`
+      ).join('\n');
+      if (personas.length > 0) {
+        slateStr += '\n' + personas.map(p =>
+          `<persona article_id="${escapeXml(p.article_id)}">\n` +
+          (p.thoughts ? `  <thoughts>${escapeXml(p.thoughts)}</thoughts>\n` : '') +
+          (p.wants ? `  <wants>${escapeXml(p.wants)}</wants>\n` : '') +
+          (p.needs ? `  <needs>${escapeXml(p.needs)}</needs>\n` : '') +
+          `</persona>`
+        ).join('\n');
+      }
+    }
+
+    let hopStr = hopArticles.map(a =>
+      `<connected_summary id="${escapeXml(a.id)}" title="${escapeXml(a.title)}" category="${escapeXml(a.category)}">\n` +
+      (a.summary ? `  <summary>${escapeXml(a.summary)}</summary>\n` : '') +
+      `</connected_summary>`
+    ).join('\n');
+
+    worldStr = `<world_lore>\n` + (slateStr ? slateStr + '\n' : '') + (hopStr ? hopStr + '\n' : '') + `</world_lore>`;
+
+    if (workingState.chapterBeats || workingState.userPrompt) {
+      workingStateStr = `<working_state>\n` +
+        (workingState.chapterBeats ? `  <chapter_beats>${escapeXml(workingState.chapterBeats)}</chapter_beats>\n` : '') +
+        (workingState.userPrompt ? `  <user_prompt>${escapeXml(workingState.userPrompt)}</user_prompt>\n` : '') +
+        `</working_state>`;
+    }
+
+    compiledPrompt = `<context_pack>\n` +
+      [systemStr, worldStr, workingStateStr].filter(Boolean).join('\n') +
+      `\n</context_pack>`;
+
+  } else if (normSerializer === 'json') {
+    const jsonObj = {
+      system: {
+        instructions: system.instructions || '',
+        toneChips: system.toneChips || [],
+        formatGuidance: system.formatGuidance || ''
+      },
+      worldLore: {
+        slateArticles: slateArticles.map(a => ({ id: a.id, title: a.title, category: a.category, summary: a.summary || '', content: a.content || '' })),
+        connectedSummaries: hopArticles.map(a => ({ id: a.id, title: a.title, category: a.category, summary: a.summary || '' }))
+      },
+      characterPersonas: personas.map(p => ({ articleId: p.article_id, thoughts: p.thoughts || '', wants: p.wants || '', needs: p.needs || '' })),
+      workingState: {
+        chapterBeats: workingState.chapterBeats || '',
+        userPrompt: workingState.userPrompt || ''
+      }
+    };
+    systemStr = JSON.stringify(jsonObj.system, null, 2);
+    worldStr = JSON.stringify(jsonObj.worldLore, null, 2);
+    slateStr = JSON.stringify({ slateArticles: jsonObj.worldLore.slateArticles, personas: jsonObj.characterPersonas }, null, 2);
+    workingStateStr = JSON.stringify(jsonObj.workingState, null, 2);
+    compiledPrompt = JSON.stringify(jsonObj, null, 2);
+
+  } else if (normSerializer === 'yaml') {
+    let sysYaml = [];
+    if (system.instructions || system.toneChips?.length || system.formatGuidance) {
+      sysYaml.push('system:');
+      if (system.instructions) sysYaml.push(`  instructions: "${escapeYaml(system.instructions)}"`);
+      if (system.toneChips?.length) sysYaml.push(`  toneChips: [${system.toneChips.map(t => `"${escapeYaml(t)}"`).join(', ')}]`);
+      if (system.formatGuidance) sysYaml.push(`  formatGuidance: "${escapeYaml(system.formatGuidance)}"`);
+    }
+    systemStr = sysYaml.join('\n');
+
+    let slateYaml = [];
+    if (slateArticles.length > 0) {
+      slateYaml.push('slateArticles:');
+      slateArticles.forEach(a => {
+        slateYaml.push(`  - id: "${escapeYaml(a.id)}"`);
+        slateYaml.push(`    title: "${escapeYaml(a.title)}"`);
+        slateYaml.push(`    category: "${escapeYaml(a.category)}"`);
+        if (a.summary) slateYaml.push(`    summary: "${escapeYaml(a.summary)}"`);
+        if (a.content) slateYaml.push(`    content: "${escapeYaml(a.content)}"`);
+      });
+    }
+
+    let hopYaml = [];
+    if (hopArticles.length > 0) {
+      hopYaml.push('connectedLore:');
+      hopArticles.forEach(a => {
+        hopYaml.push(`  - id: "${escapeYaml(a.id)}"`);
+        hopYaml.push(`    title: "${escapeYaml(a.title)}"`);
+        hopYaml.push(`    category: "${escapeYaml(a.category)}"`);
+        if (a.summary) hopYaml.push(`    summary: "${escapeYaml(a.summary)}"`);
+      });
+    }
+
+    let personaYaml = [];
+    if (personas.length > 0) {
+      personaYaml.push('characterPersonas:');
+      personas.forEach(p => {
+        personaYaml.push(`  - articleId: "${escapeYaml(p.article_id)}"`);
+        if (p.thoughts) personaYaml.push(`    thoughts: "${escapeYaml(p.thoughts)}"`);
+        if (p.wants) personaYaml.push(`    wants: "${escapeYaml(p.wants)}"`);
+        if (p.needs) personaYaml.push(`    needs: "${escapeYaml(p.needs)}"`);
+      });
+    }
+    slateStr = [slateYaml.join('\n'), personaYaml.join('\n')].filter(Boolean).join('\n');
+    worldStr = [slateYaml.join('\n'), hopYaml.join('\n')].filter(Boolean).join('\n');
+
+    let wsYaml = [];
+    if (workingState.chapterBeats || workingState.userPrompt) {
+      wsYaml.push('workingState:');
+      if (workingState.chapterBeats) wsYaml.push(`  chapterBeats: "${escapeYaml(workingState.chapterBeats)}"`);
+      if (workingState.userPrompt) wsYaml.push(`  userPrompt: "${escapeYaml(workingState.userPrompt)}"`);
+    }
+    workingStateStr = wsYaml.join('\n');
+
+    compiledPrompt = [systemStr, slateYaml.join('\n'), hopYaml.join('\n'), personaYaml.join('\n'), workingStateStr].filter(Boolean).join('\n');
+
+  } else {
+    // Markdown default
+    let sysParts = [];
+    if (system.instructions || system.toneChips?.length || system.formatGuidance) {
+      sysParts.push('# SYSTEM INSTRUCTIONS & TONE');
+      if (system.instructions) sysParts.push(`Instructions: ${system.instructions}`);
+      if (system.toneChips && system.toneChips.length > 0) sysParts.push(`Tone: ${system.toneChips.join(', ')}`);
+      if (system.formatGuidance) sysParts.push(`Format Guidance: ${system.formatGuidance}`);
+    }
+    systemStr = sysParts.join('\n');
+
+    let slateParts = [];
+    if (slateArticles.length > 0) {
+      slateParts.push('# ACTIVE SLATE LORE');
+      slateArticles.forEach((art) => {
+        slateParts.push(`## ${art.title.toUpperCase()} (${art.category})`);
+        if (art.summary) slateParts.push(`OVERVIEW: ${art.summary}`);
+        if (art.content) slateParts.push(`CONTENT:\n${art.content}`);
+      });
+    }
+
+    let personaParts = [];
+    if (personas.length > 0) {
+      personaParts.push('# CHARACTER PERSONAS');
+      personas.forEach(p => {
+        personaParts.push(`## Persona (Article: ${p.article_id})`);
+        if (p.thoughts) personaParts.push(`- Thoughts: ${p.thoughts}`);
+        if (p.wants) personaParts.push(`- Wants: ${p.wants}`);
+        if (p.needs) personaParts.push(`- Needs: ${p.needs}`);
+      });
+    }
+    slateStr = [slateParts.join('\n'), personaParts.join('\n')].filter(Boolean).join('\n');
+
+    let hopParts = [];
+    if (hopArticles.length > 0) {
+      hopParts.push('# CONNECTED LORE (HOP-1)');
+      hopArticles.forEach(art => {
+        hopParts.push(`### ${art.title.toUpperCase()} (${art.category})`);
+        if (art.summary) hopParts.push(`OVERVIEW: ${art.summary}`);
+      });
+    }
+    worldStr = [slateParts.join('\n'), hopParts.join('\n')].filter(Boolean).join('\n');
+
+    let wsParts = [];
+    if (workingState.chapterBeats || workingState.userPrompt) {
+      wsParts.push('# WORKING STATE');
+      if (workingState.chapterBeats) wsParts.push(`## Chapter Beats\n${workingState.chapterBeats}`);
+      if (workingState.userPrompt) wsParts.push(`## User Prompt / Task\n${workingState.userPrompt}`);
+    }
+    workingStateStr = wsParts.join('\n');
+
+    compiledPrompt = [systemStr, slateParts.join('\n'), hopParts.join('\n'), personaParts.join('\n'), workingStateStr].filter(Boolean).join('\n\n');
+  }
+
+  const tokenStats = {
+    totalTokens: estimateTokens(compiledPrompt),
+    systemTokens: estimateTokens(systemStr),
+    worldTokens: estimateTokens(worldStr),
+    slateTokens: estimateTokens(slateStr),
+    workingStateTokens: estimateTokens(workingStateStr)
+  };
+
+  return { compiledPrompt, tokenStats };
+}
+
+function compileContextEngine(db, config, callback) {
+  const normSerializer = (config.serializer || 'markdown').toLowerCase();
+  const includeSecrets = config.includeSecrets !== false;
+  const includePersonas = config.includePersonas !== false && config.buckets?.slate?.includePersonas !== false;
+
+  const categoryFilters = config.buckets?.world?.categoryFilters || [];
+  const tagFilters = config.buckets?.world?.tagFilters || [];
+  const maxGraphHops = config.buckets?.world?.maxGraphHops ?? config.buckets?.world?.graphHops ?? config.graphHops ?? 0;
+
+  const rawArticleIds = config.buckets?.slate?.articleIds || config.articleIds || [];
+  const articleIds = Array.isArray(rawArticleIds) ? rawArticleIds : [];
+
+  const system = {
+    instructions: config.buckets?.system?.instructions || config.customInstructions || '',
+    toneChips: config.buckets?.system?.toneChips || [],
+    formatGuidance: config.buckets?.system?.formatGuidance || ''
+  };
+
+  const workingState = {
+    chapterBeats: config.buckets?.workingState?.chapterBeats || '',
+    userPrompt: config.buckets?.workingState?.userPrompt || ''
+  };
+
+  if (articleIds.length === 0) {
+    const { compiledPrompt, tokenStats } = serializeContextEngine({
+      system,
+      slateArticles: [],
+      hopArticles: [],
+      personas: [],
+      workingState
+    }, normSerializer);
+
+    return callback(null, {
+      compiledPrompt,
+      tokenStats,
+      sources: []
+    });
   }
 
   const placeholders = articleIds.map(() => '?').join(',');
-  const query = `SELECT id, title, category, summary, content FROM articles WHERE id IN (${placeholders})`;
+  const query = `SELECT id, title, category, summary, content, tags FROM articles WHERE id IN (${placeholders})`;
 
   db.all(query, articleIds, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) return callback(err);
 
-    let systemContext = `=== WORLD LORE CONTEXT PACK FOR LLM WRITING ASSISTANT ===\n`;
-    systemContext += `Use the following canonical world-building lore as strict facts when answering questions, writing scenes, or brainstorming ideas.\n\n`;
+    let slateArticles = rows || [];
 
-    rows.forEach((art, index) => {
-      systemContext += `--- ARTICLE ${index + 1}: ${art.title.toUpperCase()} (${art.category}) ---\n`;
-      if (art.summary) {
-        systemContext += `OVERVIEW: ${art.summary}\n`;
-      }
-      if (includeSummariesOnly && art.summary) {
-        systemContext += `\n`;
-      } else {
-        systemContext += `CONTENT:\n${art.content}\n\n`;
-      }
-    });
-
-    if (customInstructions) {
-      systemContext += `--- WRITER TASK / INSTRUCTIONS ---\n${customInstructions}\n`;
+    if (categoryFilters.length > 0) {
+      slateArticles = slateArticles.filter(a => categoryFilters.includes(a.category));
+    }
+    if (tagFilters.length > 0) {
+      slateArticles = slateArticles.filter(a =>
+        tagFilters.some(t => (a.tags || '').toLowerCase().includes(t.toLowerCase()))
+      );
     }
 
-    res.json({
-      articleCount: rows.length,
-      compiledPrompt: systemContext
+    if (!includeSecrets) {
+      slateArticles = slateArticles.filter(a => {
+        const cat = (a.category || '').toLowerCase();
+        const tags = (a.tags || '').toLowerCase();
+        return cat !== 'secrets' && !tags.includes('dm-secret');
+      });
+
+      slateArticles = slateArticles.map(a => ({
+        ...a,
+        summary: stripSecretBlocks(a.summary),
+        content: stripSecretBlocks(a.content)
+      }));
+    }
+
+    const referencedIds = new Set();
+    if (maxGraphHops >= 1) {
+      const waRegex = /@\[([^\]]+)\]\((?:[^:]+:)?([^)]+)\)/g;
+      slateArticles.forEach(art => {
+        let match;
+        const text = (art.content || '') + ' ' + (art.summary || '');
+        while ((match = waRegex.exec(text)) !== null) {
+          const targetId = match[2].trim();
+          if (targetId && !articleIds.includes(targetId)) {
+            referencedIds.add(targetId);
+          }
+        }
+      });
+    }
+
+    const hopArticleIds = Array.from(referencedIds);
+
+    const finishCompilation = (hopArticles, personas) => {
+      const { compiledPrompt, tokenStats } = serializeContextEngine({
+        system,
+        slateArticles,
+        hopArticles,
+        personas,
+        workingState
+      }, normSerializer);
+
+      const sources = [
+        ...slateArticles.map(a => ({ id: a.id, title: a.title, hop: 0 })),
+        ...hopArticles.map(a => ({ id: a.id, title: a.title, hop: 1 }))
+      ];
+
+      callback(null, {
+        compiledPrompt,
+        tokenStats,
+        sources
+      });
+    };
+
+    const fetchHopArticles = (next) => {
+      if (hopArticleIds.length === 0) return next([]);
+      const hPlaceholders = hopArticleIds.map(() => '?').join(',');
+      const hQuery = `SELECT id, title, category, summary, tags FROM articles WHERE id IN (${hPlaceholders})`;
+      db.all(hQuery, hopArticleIds, (hErr, hRows) => {
+        if (hErr) return callback(hErr);
+        let hArticles = hRows || [];
+        if (!includeSecrets) {
+          hArticles = hArticles.filter(a => {
+            const cat = (a.category || '').toLowerCase();
+            const tags = (a.tags || '').toLowerCase();
+            return cat !== 'secrets' && !tags.includes('dm-secret');
+          });
+          hArticles = hArticles.map(a => ({
+            ...a,
+            summary: stripSecretBlocks(a.summary)
+          }));
+        }
+        next(hArticles);
+      });
+    };
+
+    const fetchPersonas = (slateIds, next) => {
+      if (!includePersonas || slateIds.length === 0) return next([]);
+      const pPlaceholders = slateIds.map(() => '?').join(',');
+      const pQuery = `SELECT article_id, thoughts, wants, needs FROM personas WHERE article_id IN (${pPlaceholders})`;
+      db.all(pQuery, slateIds, (pErr, pRows) => {
+        if (pErr) return callback(pErr);
+        next(pRows || []);
+      });
+    };
+
+    const slateIds = slateArticles.map(a => a.id);
+    fetchHopArticles((hArticles) => {
+      fetchPersonas(slateIds, (pRows) => {
+        finishCompilation(hArticles, pRows);
+      });
     });
+  });
+}
+
+// POST /api/context/compile - Generate structured LLM prompt context
+app.post('/api/context/compile', (req, res) => {
+  compileContextEngine(db, req.body, (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+// POST /api/context/preview - Preview prompt compilation & token breakdown
+app.post('/api/context/preview', (req, res) => {
+  compileContextEngine(db, req.body, (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+// GET /api/context/snapshots - Retrieve saved context snapshots
+app.get('/api/context/snapshots', (req, res) => {
+  const { world_id } = req.query;
+  let query = 'SELECT * FROM context_snapshots';
+  let params = [];
+
+  if (world_id) {
+    query += ' WHERE world_id = ?';
+    params.push(world_id);
+  }
+
+  query += ' ORDER BY updated_at DESC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const snapshots = (rows || []).map(r => {
+      let config = null;
+      try {
+        config = JSON.parse(r.config_json);
+      } catch (e) {
+        config = r.config_json;
+      }
+      return {
+        id: r.id,
+        world_id: r.world_id,
+        name: r.name,
+        preset_type: r.preset_type,
+        config_json: r.config_json,
+        config: config,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      };
+    });
+    res.json(snapshots);
+  });
+});
+
+// POST /api/context/snapshots - Save or update a context snapshot
+app.post('/api/context/snapshots', (req, res) => {
+  const { id, world_id, name, preset_type, config_json, config } = req.body;
+  if (!name || !preset_type) {
+    return res.status(400).json({ error: 'Snapshot name and preset_type are required.' });
+  }
+
+  const snapshotId = id || `snapshot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const worldId = world_id || 'default';
+  const jsonStr = config_json || (config ? JSON.stringify(config) : '{}');
+
+  const query = `
+    INSERT INTO context_snapshots (id, world_id, name, preset_type, config_json, updated_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      world_id = excluded.world_id,
+      name = excluded.name,
+      preset_type = excluded.preset_type,
+      config_json = excluded.config_json,
+      updated_at = CURRENT_TIMESTAMP
+  `;
+
+  db.run(query, [snapshotId, worldId, name, preset_type, jsonStr], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({
+      success: true,
+      snapshot: {
+        id: snapshotId,
+        world_id: worldId,
+        name,
+        preset_type,
+        config_json: jsonStr,
+        config: config || (function() { try { return JSON.parse(jsonStr); } catch(e) { return null; } })()
+      }
+    });
+  });
+});
+
+// DELETE /api/context/snapshots/:id - Delete a context snapshot
+app.delete('/api/context/snapshots/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM context_snapshots WHERE id = ?', [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Snapshot deleted successfully.' });
   });
 });
 
@@ -606,10 +1132,8 @@ Rules:
 UNSTRUCTURED TEXT:
 ${content}`;
   } else if (action === 'expand_lore') {
-    prompt = `Expand the worldbuilding lore article titled "${title}". Add richer details regarding culture, history, and secrets while preserving existing facts. Return updated WorldAnvil formatted text.
-
-EXISTING LORE:
-${content}`;
+    const focusDirection = instructions ? `\nUSER SPECIFIC DIRECTION / FOCUS:\n${instructions}\n` : '';
+    prompt = `Expand the worldbuilding lore article titled "${title}". Add richer details while preserving existing facts.${focusDirection}\nReturn updated formatted text.\n\nEXISTING LORE:\n${content}`;
   } else {
     prompt = `${instructions || 'Refine and clean up this world lore article.'}\n\nARTICLE TITLE: ${title}\nCONTENT:\n${content}`;
   }
