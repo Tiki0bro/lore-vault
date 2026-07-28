@@ -1,17 +1,17 @@
-# Lore-Vault User Personas for LLM Context Builder & Features
+# LoreWeaver User Personas for The Weave Matrix & Feature Suite
 
-This document contains the primary user personas established for Lore-Vault. These personas serve as reference archetypes when designing, refining, testing, and evaluating app features—specifically the **LLM Context Builder**, **World Doctor**, **Scene Studio**, **Lore Library**, and **Automated QA Pipelines**.
+This document contains the primary user personas established for **LoreWeaver**. These personas serve as reference archetypes when designing, refining, testing, and evaluating platform features—specifically **The Weave Matrix** (Context Compiler), **Canon Guard** (Graph Diagnostics & Secret Filters), **Narrative Slate** (Scene & Session Workspace), **Lore Codex** (World Knowledge Graph), and **Automated QA Pipelines**.
 
 ---
 
 ## 👔 1. Ethen — Product Owner & Project Lead
 
-> *"I need to balance feature scope, user satisfaction across our target segments (VTT devs, worldbuilders, authors, QA), release velocity, and technical scalability while ensuring the LLM Context Builder stays intuitive, extensible, and high-value."*
+> *"I need to balance feature scope, user satisfaction across our target segments (VTT devs, worldbuilders, authors, QA, marketing), release velocity, and technical scalability while ensuring The Weave Matrix stays intuitive, extensible, and high-value."*
 
 ### Background & Profile
-* **Role**: Product Owner & Strategic Project Lead for Lore-Vault.
+* **Role**: Product Owner & Strategic Project Lead for LoreWeaver.
 * **Responsibilities**: Product vision, feature scoping, user feedback synthesis, milestone planning, UX prioritization, and aligning technical delivery with user value.
-* **Core Goal**: Deliver a cohesive, high-impact LLM Context Builder that delights all core user segments without over-complicating the user experience or suffering scope creep.
+* **Core Goal**: Deliver a cohesive, high-impact **Weave Matrix** that delights all core user segments without over-complicating the user experience or suffering scope creep.
 
 ### Key Pain Points
 * **Feature Scope Creep**: Trying to solve every niche power-user request at once, creating a bloated, confusing UI.
@@ -28,7 +28,7 @@ This document contains the primary user personas established for Lore-Vault. The
 
 ## 🧪 2. Riley "Solder" Chen — QA Lead & Edge-Case Specialist
 
-> *"I need exhaustive boundary testing, zero silent error masks, deterministic error reporting, and robust automated regression suites so no malformed lore or edge-case prompt can crash Lore-Vault."*
+> *"I need exhaustive boundary testing, zero silent error masks, deterministic error reporting, and robust automated regression suites so no malformed lore or edge-case prompt can crash LoreWeaver."*
 
 ### Background & Profile
 * **Role**: Senior QA Automation Lead & System Reliability Specialist.
@@ -73,7 +73,7 @@ This document contains the primary user personas established for Lore-Vault. The
 
 ## 🎭 4. Morgan "Gifford" Reed — World Anvil Migrator & Power Worldbuilder
 
-> *"I have 500+ articles covering nations, pantheons, timelines, and secret lore. I want Lore-Vault's AI to know my world inside out without me having to copy-paste 10 articles into ChatGPT every time I ask a question."*
+> *"I have 500+ articles covering nations, pantheons, timelines, and secret lore. I want LoreWeaver's AI to know my world inside out without me having to copy-paste 10 articles into ChatGPT every time I ask a question."*
 
 ### Background & Profile
 * **Role**: Veteran Game Master running a multi-year TTRPG campaign in a rich custom world.
@@ -115,10 +115,42 @@ This document contains the primary user personas established for Lore-Vault. The
 
 ---
 
+## 🎭 6. Marcus "HypeSmith" Sterling — TTRPG, VTT & Fiction Marketing Strategist
+
+> *"Marketing indie TTRPGs, VTT modules, and serial fiction isn't just about selling a product—it's about building a lore ecosystem. I need tools that instantly convert raw worldbuilding into high-converting Kickstarter teasers, VTT showcase copy, and reader newsletter hooks in our exact setting tone."*
+
+### Background & Profile
+* **Role**: Independent TTRPG Publisher, VTT Store Manager & Self-Published Fiction Marketer.
+* **Environment**: Crowdfunding platforms (Kickstarter, BackerKit), VTT Marketplaces (Foundry VTT Hub, Roll20 Marketplace, DTRPG, itch.io), Fiction Platforms (Royal Road, Substack, Amazon KDP, BookTok), Discord, and Mailchimp/ConvertKit.
+* **Core Goal**: Maximize audience growth, conversion, and community engagement across game systems, VTT platforms, and novel releases by leveraging rich setting lore for promotional content without spending hours manually drafting marketing assets.
+
+### Domain-Specific Marketing Knowledge & Strategy
+1. **TTRPG & Crowdfunding Growth**:
+   * Quickstart PDF lead magnets, pledge tier strategy, stretch goal unlocks, playtest packet releases, and actual-play sponsorship media kits.
+   * Native engagement on Reddit (`r/rpg`, `r/worldbuilding`), Discord server funnels, and DriveThruRPG/itch.io launch algorithms.
+2. **VTT Marketplace & Product Positioning**:
+   * Packaging campaign settings into ready-to-play VTT bundles with compelling store descriptions, feature callouts (dynamic lighting, macro automation, actor tokens), and video teaser copy.
+3. **Serialized & Indie Novel Marketing**:
+   * Royal Road/Scribble Hub serialization algorithms (shoutout swaps, tag optimization), ARC (Advance Reader Copy) team management, Substack reader magnets, and BookTok/BookTube hook generation.
+
+### Key Pain Points
+* **Marketing Friction & Burnout**: Spending more time writing promotional posts, press releases, and Kickstarter updates than working on the game/book itself.
+* **Tonal Mismatch in Marketing Copy**: Generic AI tool outputs sound like sanitized corporate ad copy rather than rich, evocative dark fantasy/sci-fi narrative prose.
+* **Spoiler & Canon Risk**: Accidentally revealing campaign twists or unreleased book endings in public promotional lore snippets.
+* **Format Fatigue**: Reformatting the same lore entry into 5 different layouts (Kickstarter update, Royal Road author note, VTT store copy, Discord lore drop, Twitter/Bluesky teaser).
+
+### Context Builder Wishlist & Requirements
+1. **"Marketing & Promotional Slate" Presets**: Pre-configured context slates for generating Kickstarter updates, Royal Road author notes, newsletter reader magnets, and press releases.
+2. **Tone & Hook Injector**: Style chips designed specifically for marketing copy (*Evocative Teaser*, *High-Stakes Blurb*, *Feature Showcase*, *Backer Call-to-Action*).
+3. **Spoiler-Filtered Public Excerpts**: Ability to generate player-facing / public-safe promotional lore summaries with DM secrets automatically stripped.
+4. **VTT & Web Store Asset Generator**: One-click formatting of lore articles into VTT store listings, itch.io devlogs, and DTRPG sales page descriptions.
+
+---
+
 ## 🛠️ Summary Matrix for Feature & QA Evaluation
 
-| Feature / Consideration | Ethen (PO) | Riley (QA / Debugging) | Alex (Developer / VTT) | Morgan (World Anvil) | Elena (Author) |
-|---|---|---|---|---|---|
-| **Primary Goal** | Balanced Scope & UX | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone |
-| **Primary Interface** | Presets & Progressive UI | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Cross-link Search | Scene Slate & Style Chips |
-| **Key Metric** | User Adoption & Roadmap | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow |
+| Feature / Consideration | Ethen (PO) | Riley (QA / Debugging) | Alex (Developer / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing / Growth) |
+|---|---|---|---|---|---|---|
+| **Primary Goal** | Balanced Scope & UX | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality, Audience Conversion & Lore Distribution |
+| **Primary Interface** | Presets & Progressive UI | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Cross-link Search | Scene Slate & Style Chips | Promo Slates, Hook Chips & Excerpt Exports |
+| **Key Metric** | User Adoption & Roadmap | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates, Kickstarter Conversions & List Growth |
