@@ -57,31 +57,18 @@
         <!-- Consolidated Tools Dropdown -->
         <div class="tools-dropdown-container">
           <button id="tools-dropdown-btn" class="btn btn-secondary tools-dropdown-btn" onclick="window.toggleToolsMenu(event)">
-            <span data-badge="gear" data-badge-size="18">⚙️</span> Tools ▾
+            ⚙️ Tools ▾
           </button>
           <div id="tools-dropdown-menu" class="tools-dropdown-menu hidden">
-            <button class="dropdown-item" onclick="window.openDoctorModal(); window.closeToolsMenu();">
-              <span data-badge="healer" data-badge-size="18">🩺</span> World Doctor
-            </button>
-            <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">
-              <span data-badge="scroll" data-badge-size="18">🖼️</span> Media Vault
-            </button>
-            <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">
-              <span data-badge="crystal" data-badge-size="18">💬</span> Ask AI Assistant
-            </button>
-            <button class="dropdown-item" onclick="window.app.openAISettings(); window.closeToolsMenu();">
-              <span data-badge="gear" data-badge-size="18">⚙️</span> AI Settings
-            </button>
-            <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">
-              <span data-badge="import" data-badge-size="18">📥</span> Import World
-            </button>
+            <button class="dropdown-item" onclick="window.openDoctorModal(); window.closeToolsMenu();">🩺 World Doctor</button>
+            <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">🖼️ Media Vault</button>
+            <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">💬 Ask AI Assistant</button>
+            <button class="dropdown-item" onclick="window.app.openAISettings(); window.closeToolsMenu();">⚙️ AI Settings</button>
+            <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">📥 Import World</button>
           </div>
         </div>
 
-        <button id="weave-matrix-btn" class="btn btn-secondary">🕸️ Weave Matrix</button>
-        <button class="btn btn-primary" onclick="window.app.openEditor()">
-          <span data-badge="quill" data-badge-size="18">+</span> New Article
-        </button>
+        <button class="btn btn-primary" onclick="window.app.openEditor()">✍️ New Article</button>
       </div>
     </header>
 
