@@ -1996,5 +1996,14 @@ html, body {
   }
 }
 
-
-
+/* Joint Alex & Maya Authoritative Header Architecture CSS */
+.navbar { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 0.75rem !important; padding: 0.5rem 1.25rem !important; background: var(--surface-sidebar, #0f172a) !important; border-bottom: var(--border-filigree) !important; overflow: hidden !important; max-width: 100vw !important; z-index: 100 !important; }
+.navbar-zone-left { display: flex !important; align-items: center !important; gap: 0.75rem !important; flex: 0 1 auto !important; min-width: 0 !important; }
+.navbar-zone-center { display: flex !important; align-items: center !important; justify-content: center !important; flex: 0 0 auto !important; margin: 0 auto !important; }
+.navbar-zone-right { display: flex !important; align-items: center !important; gap: 0.5rem !important; flex: 0 0 auto !important; }
+.search-bar-container { width: 260px !important; min-width: 200px !important; max-width: 280px !important; flex: 0 1 auto !important; position: relative !important; display: flex !important; align-items: center !important; background: var(--surface-card, #1e293b) !important; border: 1px solid var(--border-color, rgba(212,175,55,0.3)) !important; border-radius: 6px !important; padding: 0.35rem 0.65rem !important; }
+.search-bar-container input[type="text"], #global-search { width: 100% !important; padding-right: 70px !important; background: transparent !important; border: none !important; color: var(--text-primary, #f8fafc) !important; font-size: 0.82rem !important; outline: none !important; }
+.search-kbd-badge { position: absolute !important; right: 0.5rem !important; pointer-events: none !important; }
+.nav-tabs { display: flex !important; gap: 0.35rem !important; background: var(--surface-sidebar, #0f172a) !important; padding: 0.25rem !important; border-radius: var(--radius-md) !important; border: 1px solid var(--border-color) !important; flex-shrink: 0 !important; }
+.tab-btn { white-space: nowrap !important; display: flex !important; align-items: center !important; gap: 0.4rem !important; padding: 0.45rem 0.85rem !important; font-size: 0.82rem !important; font-weight: 600 !important; }
+@media (max-width: 1400px) { .brand-text .subtext { display: none !important; } }
