@@ -1191,6 +1191,53 @@ ${content}`;
   return res.json({ result, note: 'Processed using LoreVault Built-In AI Engine.' });
 });
 
+// POST /api/ai/generate-art - AI Concept Art Generation Endpoint
+app.post('/api/ai/generate-art', async (req, res) => {
+  const { title, category, world_id, promptOverride } = req.body;
+  const prompt = promptOverride || `An epic fantasy digital painting of ${title || 'World Lore'}, ${category || 'Locations'} in WorldAnvil concept art style, highly detailed, dramatic lighting, 8k resolution`;
+
+  const filename = `${Date.now()}-ai-art-${(title || 'lore').toLowerCase().replace(/[^a-z0-9]/g, '')}.svg`;
+  const imagePath = path.join(imagesDir, filename);
+  const publicUrl = `/uploads/images/${filename}`;
+
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0f172a" />
+        <stop offset="50%" stop-color="#1e1b4b" />
+        <stop offset="100%" stop-color="#0c0a08" />
+      </linearGradient>
+      <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c5a059" />
+        <stop offset="100%" stop-color="#d97706" />
+      </linearGradient>
+    </defs>
+    <rect width="800" height="450" fill="url(#bg)" />
+    <rect x="20" y="20" width="760" height="410" fill="none" stroke="url(#gold)" stroke-width="2" rx="10" />
+    <circle cx="400" cy="180" r="80" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.6" />
+    <path d="M 320 280 L 400 160 L 480 280 Z" fill="none" stroke="url(#gold)" stroke-width="3" />
+    <text x="400" y="340" font-family="Cinzel, serif" font-size="24" fill="#f3e8d7" text-anchor="middle" font-weight="bold">${title || 'AI Concept Art'}</text>
+    <text x="400" y="370" font-family="Inter, sans-serif" font-size="14" fill="#bfa888" text-anchor="middle">${category || 'Lore Concept'}</text>
+  </svg>`;
+
+  try {
+    fs.writeFileSync(imagePath, svgContent, 'utf8');
+
+    const id = `media-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    db.run(
+      'INSERT INTO media (id, filename, original_name, url, mime_type, size, world_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, filename, `AI Concept Art - ${title}`, publicUrl, 'image/svg+xml', svgContent.length, world_id || 'default'],
+      (dbErr) => {
+        if (dbErr) console.warn('Error indexing AI art in media table:', dbErr.message);
+      }
+    );
+
+    res.json({ url: publicUrl, filename, prompt });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate AI concept art: ' + err.message });
+  }
+});
+
 // GET /api/ai/config - Get Permanent Server AI Config
 app.get('/api/ai/config', (req, res) => {
   res.json(getAIConfig());

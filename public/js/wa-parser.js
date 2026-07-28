@@ -166,6 +166,29 @@ const WAParser = {
       </figure>`;
     });
 
+    // Multi-Image Gallery Grids: [gallery]url1 | Caption1\nurl2 | Caption2[/gallery]
+    html = html.replace(/\[gallery\]([\s\S]*?)\[\/gallery\]/gi, (match, bodyStr) => {
+      const lines = (bodyStr || '').trim().split('\n').filter(Boolean);
+      if (lines.length === 0) return '';
+
+      const itemsHtml = lines.map(line => {
+        const parts = line.split('|');
+        const src = (parts[0] || '').trim();
+        const caption = (parts[1] || '').trim();
+        if (!src) return '';
+        const escapedCaption = caption.replace(/'/g, "\\'");
+
+        return `
+          <div class="wa-gallery-item" onclick="window.openImageLightbox('${src}', '${escapedCaption}')">
+            <img src="${src}" alt="${caption || 'Gallery Image'}" onerror="this.style.display='none'" />
+            ${caption ? `<div class="wa-gallery-caption">${caption}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      return `<div class="wa-gallery-grid">${itemsHtml}</div>`;
+    });
+
     // Standard Markdown Headings & Quotes
     html = html.replace(/^### (.*$)/gim, '<h3 class="wa-h3">$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2 class="wa-h2">$1</h2>');

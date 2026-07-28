@@ -1472,4 +1472,44 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   opacity: 1;
 }
 
+/* MULTI-IMAGE GALLERY GRID STYLING */
+.wa-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.wa-gallery-item {
+  background: var(--surface-card);
+  border: 1px solid var(--border-filigree);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wa-gallery-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+}
+
+.wa-gallery-item img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
+
+.wa-gallery-caption {
+  padding: 0.4rem;
+  font-family: var(--font-article-body);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+  border-top: 1px solid var(--border-color);
+}
+
 
