@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoreVault — Local World Lore & Writing Context Engine</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="css/styles.css?v=13">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-icon">📜</div>
+        <div class="brand-text">
+          <h1>LoreVault</h1>
+          <span class="subtext">Offline World Anvil & LLM Context Engine</span>
+        </div>
+      </div>
+
+      <div class="search-bar-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search" placeholder="Search world lore, characters, locations, factions..." oninput="window.app.handleSearch(this.value)">
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')">
+          <span>📚</span> Lore Library
+        </button>
+        <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')">
+          <span>🎬</span> Scene Studio
+        </button>
+        <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')">
+          <span>⚡</span> LLM Context Builder
+        </button>
+      </nav>
+
+      <div class="header-actions" style="display:flex; gap:0.5rem; align-items:center;">
+        <!-- World Selector Dropdown -->
+        <div style="display:flex; align-items:center; gap:0.4rem; background:#0f172a; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(56, 189, 248, 0.4);">
+          <span style="font-size:0.85rem;">🌍</span>
+          <select id="world-select-dropdown" style="background:transparent; color:#38bdf8; border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
+            <option value="default">Primary World</option>
+          </select>
+          <button class="btn-text" style="font-size:0.75rem; color:#38bdf8; padding:0.1rem 0.3rem; cursor:pointer;" onclick="window.openCreateWorldModal()" title="Create New World">➕ World</button>
+        </div>
+
+        <button class="btn btn-secondary" style="background:#0284c7; color:#fff; font-weight:600;" onclick="window.toggleAIChatDrawer()">
+          <span>💬</span> Ask AI
+        </button>
+        <button class="btn btn-secondary" style="background:#334155; color:#f8fafc;" onclick="window.app.openAISettings()">
+          <span>⚙️</span> AI Settings
+        </button>
+        <button id="world-doctor-btn" class="btn btn-secondary" style="background:#1e1b4b; color:#a5b4fc; border:1px solid rgba(165,180,252,0.4); cursor:pointer;" onclick="window.openDoctorModal()">
+          <span>🩺</span> World Doctor
+        </button>
+        <button class="btn btn-secondary" onclick="window.app.openImportModal()">
+          <span>📥</span> Import World
+        </button>
+        <button class="btn btn-primary" onclick="window.app.openEditor()">
+          <span>+</span> New Article
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <main class="main-content">
+      
+      <!-- TAB 1: LORE LIBRARY -->
+      <section id="view-library" class="view-panel active">
+        <!-- Category Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-section">
+            <h3>Categories</h3>
+            <ul id="category-list" class="category-menu">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>Tags</h3>
+            <div id="tag-cloud" class="tag-cloud">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- Articles Master-Detail View -->
+        <div class="articles-layout">
+          <!-- Article List Cards Column -->
+          <div class="article-list-column">
+            <div class="list-header">
+              <span id="article-count">0 Articles</span>
+              <select id="sort-select" onchange="window.app.handleSort(this.value)">
+                <option value="updated">Recently Updated</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="category">Category</option>
+              </select>
+            </div>
+            <div id="articles-cards" class="cards-wrapper">
+              <!-- Dynamically populated cards -->
+            </div>
+          </div>
+
+          <!-- Article Detail Viewer Column (WorldAnvil Rendered) -->
+          <div class="article-detail-column">
+            <div id="article-viewer-empty" class="empty-detail-state">
+              <div class="empty-icon">📖</div>
+              <h2>Select an Article to View</h2>
+              <p>Explore your canonical world lore, cross-link references, and WorldAnvil formatted articles.</p>
+            </div>
+
+            <article id="article-viewer" class="article-viewer hidden">
+              <div class="article-actions">
+                <div class="article-meta-tags">
+                  <span id="view-category-badge" class="badge">Category</span>
+                  <span id="view-updated-date" class="meta-date">Updated: --</span>
+                </div>
+                <div class="action-buttons" style="display:flex; gap:0.4rem; align-items:center;">
+                  <select id="move-world-select" style="background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem; font-size:0.75rem; font-weight:600; cursor:pointer;" onchange="window.app.moveCurrentArticleToWorld(this.value)">
+                    <option value="" disabled selected>🌍 Move to World...</option>
+                  </select>
+                  <button class="btn btn-secondary" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
+                  <button class="btn btn-danger" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
+                </div>
+              </div>
+
+              <!-- WorldAnvil Article Render Target -->
+              <div id="wa-article-render" class="wa-article-body">
+                <!-- Parsed WorldAnvil HTML goes here -->
+              </div>
+
+              <!-- Persona Hub Target -->
+              <div id="persona-hub-container" style="display:none; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+                <!-- Dynamic Persona UI gets injected here -->
+              </div>
+
+              <!-- Inbound & Outbound Cross-Links Drawer -->
+              <div class="cross-links-footer">
+                <div class="link-column">
+                  <h4>🔗 Outbound References</h4>
+                  <ul id="outbound-links-list"></ul>
+                </div>
+                <div class="link-column">
+                  <h4>⬅️ Referenced By</h4>
+                  <ul id="inbound-links-list"></ul>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: LLM CONTEXT BUILDER -->
+      <section id="view-context" class="view-panel hidden">
+        <div class="context-builder-layout">
+          <!-- Selection Column -->
+          <div class="context-select-column">
+            <h2>Assemble LLM Context Pack</h2>
+            <p class="subtitle">Select lore entries to bundle into a formatted context block for writing assistance in ChatGPT, Claude, Gemini, or local models.</p>
+
+            <div class="preset-group">
+              <label for="preset-selector">Writing Intent Preset</label>
+              <select id="preset-selector">
+                <option value="custom">Custom Instructions</option>
+                <option value="scene">Write Scene in Location with Characters</option>
+                <option value="consistency">Check Scene Draft for Lore Consistency</option>
+                <option value="brainstorm">Brainstorm Plot Hooks & World Twists</option>
+              </select>
+            </div>
+
+            <div class="options-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="summaries-only-check">
+                <span>Summaries Only (Saves token count for broad lore overview)</span>
+              </label>
+            </div>
+
+            <div class="custom-instructions-group">
+              <label for="custom-llm-instructions">Task / Custom Prompt Instructions</label>
+              <textarea id="custom-llm-instructions" rows="3" placeholder="e.g. Write a dialogue between Corvus and Aurelia during a night raid."></textarea>
+            </div>
+
+            <div class="article-selector-header">
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <h3>Select Lore Articles</h3>
+                <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:#8b5cf6; color:#fff; border:none;" onclick="window.app.openQuickPersonaModal()">➕ Quick Persona</button>
+              </div>
+              <div class="selector-actions">
+                <span id="selected-count">0 Selected</span>
+                <button class="btn-text" onclick="ContextBuilder.selectAll()">Select All</button>
+                <button class="btn-text" onclick="ContextBuilder.clearAll()">Clear</button>
+              </div>
+            </div>
+
+            <div id="context-article-list" class="context-article-list">
+              <!-- Dynamically populated checkboxes -->
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="ContextBuilder.compileContext()">
+              ⚡ Compile LLM Context Prompt
+            </button>
+          </div>
+
+          <!-- Output Prompt Column -->
+          <div class="context-output-column">
+            <div class="output-header">
+              <h3>Compiled Prompt Output</h3>
+              <button id="copy-context-btn" class="btn btn-secondary" onclick="ContextBuilder.copyToClipboard()">
+                📋 Copy to Clipboard
+              </button>
+            </div>
+            <textarea id="compiled-llm-output" class="code-output" readonly placeholder="Your compiled prompt context pack will appear here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: SCENE STUDIO & CHAPTER CO-WRITER -->
+      <section id="view-studio" class="view-panel">
+        <div style="display:grid; grid-template-columns: 290px 1fr; gap:1.25rem; height:calc(100vh - 140px);">
+          <!-- LEFT SIDEBAR: OUTLINE & PERSONA SYNC -->
+          <aside style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <h3 style="font-size:0.85rem; color:#38bdf8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🎬 Scenes & Chapters</h3>
+                <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem;" onclick="window.app.createNewScene()">+ New Scene</button>
+              </div>
+              <div id="scene-studio-list" style="display:flex; flex-direction:column; gap:0.4rem; max-height:220px; overflow-y:auto;">
+                <div style="font-size:0.75rem; color:var(--text-muted); padding:0.4rem;">No saved scenes yet. Click '+ New Scene' to start drafting.</div>
+              </div>
+            </div>
+
+            <hr style="border-color:var(--border-color); margin:0;">
+
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <h3 style="font-size:0.85rem; color:#f59e0b; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🎭 Persona Sync & Chat</h3>
+                <div style="display:flex; gap:0.3rem;">
+                  <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:#8b5cf6; color:#fff;" onclick="window.app.openQuickPersonaModal()">➕ Quick Persona</button>
+                  <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:#059669; color:#fff;" onclick="window.app.openPersonaInterviewer()">💬 Prompt Persona</button>
+                </div>
+              </div>
+              <div id="scene-studio-persona-sync" style="background:#0f172a; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
+                Hover or click any <code style="color:#38bdf8;">[[WikiLink]]</code> in the editor to inspect character thoughts, wants, and needs.
+              </div>
+            </div>
+          </aside>
+
+          <!-- RIGHT MAIN STUDIO EDITOR -->
+          <main style="display:flex; flex-direction:column; background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem;">
+              <input id="scene-title-input" type="text" placeholder="Scene Title (e.g. Ambushed in Merton)" style="background:transparent; border:none; border-bottom:1px solid var(--border-color); color:#fff; font-size:1.25rem; font-weight:700; width:55%; outline:none;" value="Ambushed in Merton">
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <span id="scene-word-count" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">0 words</span>
+                <button class="btn btn-secondary" style="font-size:0.75rem; background:#0284c7; color:#fff;" onclick="window.app.suggestSceneBeats()">🤖 Suggest Beats</button>
+                <button class="btn btn-secondary" style="font-size:0.75rem; background:#8b5cf6; color:#fff;" onclick="window.app.openPOVRewriteModal()">👁️ POV Rewrite</button>
+                <button class="btn btn-primary" style="font-size:0.75rem;" onclick="window.app.saveCurrentScene()">Save Scene</button>
+              </div>
+            </div>
+
+            <!-- RICH MANUSCRIPT TEXTAREA -->
+            <textarea id="scene-manuscript-editor" style="flex:1; background:#020617; color:#e2e8f0; border:1px solid var(--border-color); border-radius:6px; padding:1rem; font-family:'Inter', sans-serif; font-size:0.95rem; line-height:1.6; resize:none; outline:none;" placeholder="Start writing your scene manuscript here... Type [[ to insert characters, locations, or factions." onkeyup="window.app.handleManuscriptKeyup(event)"></textarea>
+          </main>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- EDITOR MODAL -->
+    <div id="editor-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeEditor()"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="modal-title">New Lore Article</h2>
+          <button class="close-btn" onclick="window.app.closeEditor()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Article Title *</label>
+              <input type="text" id="edit-title" placeholder="e.g. The Obsidian Citadel" required>
+            </div>
+            <div class="form-group">
+              <label>Category *</label>
+              <select id="edit-category" required>
+                <option value="Characters">Characters</option>
+                <option value="Locations">Locations</option>
+                <option value="Factions">Factions</option>
+                <option value="Species">Species</option>
+                <option value="Magic & Tech">Magic & Tech</option>
+                <option value="History">History</option>
+                <option value="Items">Items</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Overview / Summary</label>
+            <input type="text" id="edit-summary" placeholder="Brief 1-2 sentence overview of this entity.">
+          </div>
+
+          <div class="form-group">
+            <label>Tags (comma separated)</label>
+            <input type="text" id="edit-tags" placeholder="e.g. Empire, Sun-Magic, Capital">
+          </div>
+
+          <!-- WorldAnvil Tag Helper & Live AI Assistant Toolbar -->
+          <div class="form-group">
+            <div class="toolbar-label" style="display:flex; justify-content:space-between; align-items:center;">
+              <label>WorldAnvil Markup Content *</label>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <span class="sub-label" style="color:var(--accent-purple); font-weight:600;">🤖 Live AI Assistant:</span>
+                <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('format_worldanvil')">✨ Auto-Format Notes</button>
+                <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('expand_lore')">🪄 Expand Lore</button>
+                <button type="button" class="tool-btn" style="background:#334155; color:#fff;" onclick="window.app.openAISettings()">⚙️ AI Settings</button>
+              </div>
+            </div>
+            <div class="wa-toolbar" style="margin-top:0.35rem;">
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[quote]“Quote” | — Source[/quote]\n')">Quote</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[row]\n[col]\n[h1]Title[/h1]\nOverview\n[/col]\n[col]\n[h3]Sidebar[/h3]\n[table]\n[tr][th]Header[/th][/tr]\n[/table]\n[/col]\n[/row]\n')">Dual Column</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[h2]I. Section Title[/h2]\n')">Section H2</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[table]\n[tr][th]Key[/th][th]Value[/th][/tr]\n[tr][td]Trait[/td][td]Detail[/td][/tr]\n[/table]\n')">Table</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[b]Label:[/b] Details here\n')">Label [b]</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[hr]\n')">Divider [hr]</button>
+              <button type="button" class="tool-btn" onclick="window.app.insertMarkup('@[Article Title](id)')">@[Cross-Link]</button>
+            </div>
+
+            <div class="editor-split">
+              <textarea id="edit-content" rows="12" placeholder="Write or paste raw unstructured notes here, then click '✨ Auto-Format Notes'..." oninput="window.app.updateEditorPreview()"></textarea>
+              <div class="editor-preview-container">
+                <div class="preview-title">Live WorldAnvil Preview</div>
+                <div id="editor-preview-render" class="wa-article-body"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeEditor()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.saveArticle()">Save Article</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORLD ANVIL IMPORT MODAL -->
+    <div id="import-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeImportModal()"></div>
+      <div class="modal-card" style="max-width: 600px;">
+        <div class="modal-header">
+          <h2>📥 Import World Anvil Export</h2>
+          <button class="close-btn" onclick="window.app.closeImportModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); font-size:0.85rem;">
+            Upload your World Anvil <code>.zip</code> archive or <code>.json</code> export file below. LoreVault's <strong>Smart AI Categorization Engine</strong> will extract all articles, analyze their contents, and sort them into optimal vault categories.
+          </p>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label>Option A: Choose WorldAnvil .zip or .json Archive *</label>
+            <input type="file" id="import-file-input" accept=".zip,.json" onchange="window.app.handleImportFile(event)">
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label class="checkbox-label" style="display:flex; align-items:center; gap:0.5rem; color:var(--accent-blue); font-weight:600;">
+              <input type="checkbox" id="smart-ai-check" checked disabled>
+              <span>🤖 Smart AI Auto-Categorization & Entity Analysis Enabled</span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>Option B: Paste Raw Export JSON</label>
+            <textarea id="import-json-paste" rows="6" placeholder='Paste World Anvil JSON export array here...'></textarea>
+          </div>
+
+          <div id="import-status-msg" style="display:none; padding:0.75rem; border-radius:6px; font-weight:600; margin-top:0.5rem;"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeImportModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.processImport()">Start Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeAISettings()"></div>
+      <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-header">
+          <h2>⚙️ Live LLM Assistant Settings</h2>
+          <button class="close-btn" onclick="window.app.closeAISettings()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); font-size:0.85rem;">
+            Choose your preferred LLM provider for live lore formatting, unstructured notes cleanup, and lore expansion.
+          </p>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label>LLM Provider</label>
+            <select id="ai-provider-select" onchange="window.app.toggleAIFields(this.value)">
+              <option value="offline">LoreVault Local Engine (100% Offline & Free)</option>
+              <option value="ollama">Ollama (Local LLM - localhost:11434)</option>
+              <option value="gemini">Google Gemini API</option>
+              <option value="openai">OpenAI API (GPT-4o)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="ai-key-group" style="display:none; margin-top:0.75rem;">
+            <label>API Key</label>
+            <input type="password" id="ai-api-key" placeholder="Enter API Key...">
+          </div>
+
+          <div class="form-group" id="ai-model-group" style="display:none; margin-top:0.75rem;">
+            <label>AI Model</label>
+            <select id="ai-model-select" onchange="window.app.handleModelSelectChange(this.value)">
+              <option value="gemini-2.5-flash">🚀 Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro</option>
+              <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
+              <option value="gemini-flash-latest" selected>⚡ Gemini Flash Latest (Fast & High Quality - Recommended)</option>
+              <option value="gemini-pro-latest">🧠 Gemini Pro Latest (Deep Reasoning & Complex Lore)</option>
+              <option value="custom">Custom Model Name...</option>
+            </select>
+            <input type="text" id="ai-custom-model" placeholder="Enter custom model identifier..." style="display:none; margin-top:0.4rem;">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeAISettings()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.saveAISettings()">Save AI Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORLD DOCTOR & AI AUDITOR MODAL -->
+    <div id="doctor-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeDoctorModal()"></div>
+      <div class="modal-card" style="max-width: 780px;">
+        <div class="modal-header">
+          <h2>🩺 World Doctor & Vault Auditor</h2>
+          <button class="close-btn" onclick="window.app.closeDoctorModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); font-size:0.85rem;">
+            Run a full vault diagnostic scan. The World Doctor detects misclassified categories (e.g. locations listed under characters) and identifies empty / stub articles.
+          </p>
+          <!-- WORLD HEALTH SCORE CARD -->
+          <div style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem;">
+            <div>
+              <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">World Vault Health</div>
+              <div id="doctor-health-summary" style="font-size:0.85rem; color:#e2e8f0; margin-top:0.2rem;">Click 'Run Vault Scan' or 'Run Deep AI Audit' to evaluate.</div>
+            </div>
+            <div id="doctor-health-score-badge" style="font-size:1.4rem; font-weight:800; padding:0.35rem 0.75rem; background:rgba(74,222,128,0.15); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:8px;">
+              -- / 100
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:0.75rem 1rem; background:#090d16; border-radius:8px; border:1px solid var(--border-color);">
+            <div>
+              <span id="doctor-status" style="font-weight:600; color:var(--text-primary);">Ready to scan world vault.</span>
+              <div id="doctor-summary-counts" style="font-size:0.75rem; color:var(--text-muted);">--</div>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+              <button class="btn btn-secondary" style="font-size:0.8rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">🤖 Deep AI Audit</button>
+              <button class="btn btn-primary" style="font-size:0.8rem;" onclick="window.app.runWorldAudit()">🔍 Run Vault Scan</button>
+            </div>
+          </div>
+
+          <!-- Deep AI Narrative Audit Section -->
+          <div style="margin-top:1.25rem;">
+            <h3 style="font-size:0.9rem; color:#38bdf8; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>🤖 Deep AI Narrative & Timeline Audit</span>
+            </h3>
+            <div id="doctor-deep-ai-list" style="max-height:160px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Deep AI Audit' to scan for narrative & timeline conflicts using Gemini.</div>
+            </div>
+          </div>
+
+          <!-- Misclassified Articles Section -->
+          <div style="margin-top:1.25rem;">
+            <h3 style="font-size:0.9rem; color:var(--accent-amber); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>⚠️ Misclassified Categories</span>
+              <button id="fix-misclassified-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.applyCategoryFixes()">Fix All Misclassifications</button>
+            </h3>
+            <div id="doctor-misclassified-list" style="max-height:160px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Click 'Run Vault Scan' to analyze category assignments.</div>
+            </div>
+          </div>
+
+          <!-- Duplicate Articles (Double-Ups) Section -->
+          <div style="margin-top:1.25rem;">
+            <h3 style="font-size:0.9rem; color:var(--accent-purple); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>👯 Duplicate Articles (Double-Ups)</span>
+              <button id="fix-duplicates-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.deleteDuplicates()">Delete Duplicate Copies</button>
+            </h3>
+            <div id="doctor-duplicates-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check for identical title double-ups.</div>
+            </div>
+          </div>
+
+          <!-- Empty Stubs Section -->
+          <div style="margin-top:1.25rem;">
+            <h3 style="font-size:0.9rem; color:var(--accent-rose); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>🧹 Empty / Stub Articles</span>
+              <div style="display:flex; gap:0.4rem;">
+                <button id="bulk-autocure-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem; background:#059669; color:#fff;" onclick="window.app.bulkAutoCureStubs()">🪄 Bulk Auto-Cure All</button>
+                <button id="fix-stubs-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.cleanStubs()">Delete All Stubs</button>
+              </div>
+            </h3>
+            <div id="doctor-stubs-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to detect stub articles.</div>
+            </div>
+          </div>
+
+          <!-- Orphaned Unlinked Articles Section -->
+          <div style="margin-top:1.25rem;">
+            <h3 style="font-size:0.9rem; color:var(--accent-blue); margin-bottom:0.5rem;">
+              <span>🏝️ Orphaned Unlinked Lore</span>
+            </h3>
+            <div id="doctor-orphan-list" style="max-height:140px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+              <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check cross-link health.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeDoctorModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUB AI FLESH-OUT PREVIEW MODAL -->
+    <div id="stub-preview-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeStubPreviewModal()"></div>
+      <div class="modal-card" style="max-width: 720px;">
+        <div class="modal-header">
+          <h2 id="stub-preview-title">🪄 AI Generated Lore Preview</h2>
+          <button class="close-btn" onclick="window.app.closeStubPreviewModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <label style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">Genre & Writing Style:</label>
+            <select id="stub-genre-select" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); border-radius:4px; padding:0.25rem 0.5rem; font-size:0.8rem; outline:none; cursor:pointer;" onchange="window.app.regenerateStubPreview()">
+              <option value="High Fantasy">High Fantasy</option>
+              <option value="Dark & Gritty">Dark & Gritty</option>
+              <option value="Sci-Fi / Cyberpunk">Sci-Fi / Cyberpunk</option>
+              <option value="Gothic Horror">Gothic Horror</option>
+            </select>
+          </div>
+          <div id="stub-rendered-preview" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:1rem; max-height:320px; overflow-y:auto;">
+            Rendering lore preview...
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeStubPreviewModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.saveGeneratedStubLore()">Accept & Save Lore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFLICT HARMONIZE DIFF MODAL -->
+    <div id="harmonize-diff-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeHarmonizeModal()"></div>
+      <div class="modal-card" style="max-width: 820px;">
+        <div class="modal-header">
+          <h2>🪄 One-Click AI Harmonize Resolution</h2>
+          <button class="close-btn" onclick="window.app.closeHarmonizeModal()">✕</button>
+        </div>
+        <div class="modal-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div>
+            <h4 id="harmonize-title-1" style="font-size:0.85rem; color:#f43f5e; margin-bottom:0.4rem; font-weight:700;">Article 1</h4>
+            <div id="harmonize-content-1" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
+          </div>
+          <div>
+            <h4 id="harmonize-title-2" style="font-size:0.85rem; color:#4ade80; margin-bottom:0.4rem; font-weight:700;">Article 2</h4>
+            <div id="harmonize-content-2" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeHarmonizeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.applyHarmonizedResolution()">Apply Harmonized Lore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE WORLD MODAL -->
+    <div id="create-world-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeCreateWorldModal()"></div>
+      <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+          <h2>🌍 Create New World Lore Vault</h2>
+          <button class="close-btn" onclick="window.app.closeCreateWorldModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); font-size:0.85rem;">
+            Create a separate world setting for a different novel, campaign, or universe.
+          </p>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label>World Name *</label>
+            <input type="text" id="new-world-name" placeholder="e.g. Cyberpunk 2099, Eldoria, Sci-Fi Universe...">
+          </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>Description / Premise</label>
+            <textarea id="new-world-desc" rows="3" placeholder="Brief premise of this world or novel setting..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeCreateWorldModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.saveNewWorld()">Create World</button>
+        </div>
+      </div>
+    </div>
+
+  <!-- ASK MY WORLD AI CHAT DRAWER -->
+  <aside id="ai-chat-drawer" class="chat-drawer hidden">
+    <div class="drawer-header">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-size:1.1rem;">💬</span>
+        <h3 style="font-size:0.95rem; font-weight:700; color:#fff; margin:0;">Ask My World AI</h3>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <select id="chat-category-filter" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); border-radius:4px; font-size:0.75rem; padding:0.2rem 0.4rem; outline:none; cursor:pointer;">
+          <option value="all">All Categories</option>
+          <option value="Characters">Characters</option>
+          <option value="Locations">Locations</option>
+          <option value="Factions">Factions</option>
+          <option value="Species">Species</option>
+          <option value="Magic & Tech">Magic & Tech</option>
+          <option value="History">History</option>
+          <option value="Items">Items</option>
+        </select>
+        <button class="close-btn" onclick="window.toggleAIChatDrawer()">✕</button>
+      </div>
+    </div>
+
+    <div id="chat-messages-container" class="drawer-messages">
+      <div class="chat-message ai-message">
+        👋 Hello! Ask me any question about your active world lore, characters, or locations.
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <textarea id="chat-input-field" rows="2" placeholder="Ask a question about your world lore..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.app.sendChatMessage();}"></textarea>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
+        <button class="btn-text" style="font-size:0.75rem; color:var(--text-muted);" onclick="window.app.clearChatMessages()">🗑️ Clear</button>
+        <button class="btn btn-primary" style="font-size:0.8rem; padding:0.35rem 0.85rem;" onclick="window.app.sendChatMessage()">Send ➔</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- PERSONA INTERVIEWER & CHAT MODAL -->
+  <div id="persona-interviewer-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="window.app.closePersonaInterviewer()"></div>
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h2>💬 Interview Character Persona</h2>
+        <button class="close-btn" onclick="window.app.closePersonaInterviewer()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:0.75rem;">
+          <label style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">Select Character Persona:</label>
+          <select id="persona-character-select" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); padding:0.35rem; border-radius:4px; font-size:0.85rem; width:100%; margin-top:0.25rem; outline:none;" onchange="window.app.handleInterviewerPersonaSelect(this.value)"></select>
+          <div id="persona-interviewer-status" style="margin-top:0.4rem;"></div>
+        </div>
+
+        <div id="persona-chat-messages" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; height:240px; overflow-y:auto; font-size:0.85rem; margin-bottom:0.75rem; display:flex; flex-direction:column; gap:0.6rem;">
+          <div style="color:var(--text-muted);">Select a character and pose a question to prompt their persona in-character...</div>
+        </div>
+
+        <div style="display:flex; gap:0.5rem;">
+          <input id="persona-question-input" type="text" placeholder="Ask a question (e.g. Roland, how do you feel about Merton?)..." style="flex:1; background:#090d16; border:1px solid var(--border-color); color:#fff; border-radius:4px; padding:0.4rem 0.6rem; font-size:0.85rem; outline:none;" onkeypress="if(event.key==='Enter') window.app.sendPersonaQuestion()">
+          <button class="btn btn-primary" onclick="window.app.sendPersonaQuestion()">Ask Persona</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI NARRATIVE BEAT PROMPTER MODAL -->
+  <div id="beat-prompter-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="window.app.closeBeatPrompter()"></div>
+    <div class="modal-card" style="max-width: 760px;">
+      <div class="modal-header">
+        <h2>🤖 AI Suggested Narrative Beats</h2>
+        <button class="close-btn" onclick="window.app.closeBeatPrompter()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="beat-prompter-list" style="display:flex; flex-direction:column; gap:0.85rem;">
+          <div style="color:#38bdf8;">Analyzing manuscript and generating 3 lore-grounded beats...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.app.closeBeatPrompter()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING WIKILINK AUTO-COMPLETE POPOVER -->
+  <div id="wikilink-autocomplete-popover" class="hidden" style="position:fixed; z-index:99999; background:#0f172a; border:1px solid #38bdf8; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.6); width:240px; max-height:180px; overflow-y:auto; padding:0.3rem;">
+    <div id="wikilink-popover-list" style="display:flex; flex-direction:column; gap:0.2rem;"></div>
+  </div>
+
+  <!-- QUICK PERSONA MODAL -->
+  <div id="quick-persona-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="window.app.closeQuickPersonaModal()"></div>
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2>➕ Quick Persona Create</h2>
+        <button class="close-btn" onclick="window.app.closeQuickPersonaModal()">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
+          Quickly create a new Character and jump directly into defining their Persona (Thoughts, Wants, Needs).
+        </p>
+        <div class="form-group">
+          <label>Character Name *</label>
+          <input type="text" id="quick-persona-name" placeholder="e.g. Roland Braxton" required>
+        </div>
+        <div class="form-group" style="margin-top:0.75rem;">
+          <label>Brief Background / Concept</label>
+          <textarea id="quick-persona-bg" rows="3" placeholder="A brief description to seed the lore article..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.app.closeQuickPersonaModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="window.app.submitQuickPersona()">Create & Edit Persona</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/wa-parser.js?v=13"></script>
+  <script src="js/context-builder.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
+</body>
+</html>

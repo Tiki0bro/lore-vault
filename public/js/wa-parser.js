@@ -1,0 +1,119 @@
+/**
+ * WorldAnvil Simplified Standard BBCode & Markdown Parser
+ * Strictly adheres to user formatting directives:
+ * 1. [quote]Quote text | — Source[/quote]
+ * 2. [row] and [col] layout grid
+ * 3. [h1], [h2], [h3] headers
+ * 4. [table], [tr], [th], [td] plain-text tables
+ * 5. [b]Label:[/b] detail emphasis
+ * 6. [hr] dividers
+ * 7. @[Title](template:id) cross-links
+ */
+
+const WAParser = {
+  parse(input) {
+    if (!input) return '';
+
+    let html = input;
+
+    // Sanitize basic script injection
+    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+    // 1. [quote]“Quote” | — Source[/quote]
+    html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, (match, content) => {
+      const parts = content.split('|');
+      const text = parts[0] ? parts[0].trim() : '';
+      const source = parts[1] ? parts[1].trim() : '';
+      return `<blockquote class="wa-quote"><p>${text}</p>${source ? `<cite>${source}</cite>` : ''}</blockquote>`;
+    });
+
+    // 2. Grid [row] and [col]
+    html = html.replace(/\[row\]/gi, '<div class="wa-row">');
+    html = html.replace(/\[\/row\]/gi, '</div>');
+    html = html.replace(/\[col\]/gi, '<div class="wa-col">');
+    html = html.replace(/\[\/col\]/gi, '</div>');
+
+    // 3. Headings [h1], [h2], [h3]
+    html = html.replace(/\[h1\]([\s\S]*?)\[\/h1\]/gi, '<h1 class="wa-h1">$1</h1>');
+    html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, '<h2 class="wa-h2">$1</h2>');
+    html = html.replace(/\[h3\]([\s\S]*?)\[\/h3\]/gi, '<h3 class="wa-h3">$1</h3>');
+
+    // 4. Tables: [table], [tr], [th], [td]
+    html = html.replace(/\[table\]/gi, '<div class="wa-table-container"><table class="wa-table">');
+    html = html.replace(/\[\/table\]/gi, '</table></div>');
+    html = html.replace(/\[tr\]/gi, '<tr>');
+    html = html.replace(/\[\/tr\]/gi, '</tr>');
+    html = html.replace(/\[th\]/gi, '<th>');
+    html = html.replace(/\[\/th\]/gi, '</th>');
+    html = html.replace(/\[td\]/gi, '<td>');
+    html = html.replace(/\[\/td\]/gi, '</td>');
+
+    // 5. Bold detail labels: [b]Label:[/b]
+    html = html.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>');
+
+    // 6. Horizontal Rules: [hr]
+    html = html.replace(/\[hr\]/gi, '<hr class="wa-hr" />');
+
+    // 7. Cross Links: @[Title](category:id) or @[Title](id) or WikiLinks [[Article Title]]
+    html = html.replace(/@\[([^\]]+)\]\((?:[^:]+:)?([^)]+)\)/gi, (match, title, id) => {
+      const cleanId = id.trim();
+      return `<a href="#" class="wa-cross-link" data-id="${cleanId}" onclick="event.preventDefault(); window.app.loadArticle('${cleanId}');">${title}</a>`;
+    });
+
+    html = html.replace(/\[\[([^\]]+)\]\]/g, (match, title) => {
+      const cleanTitle = title.trim();
+      const cleanId = cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return `<a href="#" class="wa-cross-link" data-title="${cleanTitle}" onclick="event.preventDefault(); window.app.loadArticleByTitle('${cleanTitle}');">${cleanTitle}</a>`;
+    });
+
+    // 8. Images: [img]src[/img] & Markdown ![alt](src)
+    html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (match, src) => {
+      const cleanSrc = src.trim();
+      return `<div class="wa-image-wrapper"><img src="${cleanSrc}" class="wa-image" alt="Article Media" onerror="this.style.display='none'" /></div>`;
+    });
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      return `<div class="wa-image-wrapper"><img src="${src.trim()}" class="wa-image" alt="${alt}" onerror="this.style.display='none'" /></div>`;
+    });
+
+    // Standard Markdown Headings & Quotes
+    html = html.replace(/^### (.*$)/gim, '<h3 class="wa-h3">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="wa-h2">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="wa-h1">$1</h1>');
+    html = html.replace(/^>\s*(.*$)/gim, '<blockquote class="wa-quote"><p>$1</p></blockquote>');
+
+    // Fallback markdown parsing for bold, italics, paragraphs & line breaks
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Process paragraphs for non-tag blocks
+    const lines = html.split('\n');
+    let inBlock = false;
+    let formatted = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('<div') || trimmed.startsWith('</div') || 
+          trimmed.startsWith('<table') || trimmed.startsWith('</table') || 
+          trimmed.startsWith('<tr') || trimmed.startsWith('</tr') || 
+          trimmed.startsWith('<h') || trimmed.startsWith('<blockquote') || 
+          trimmed.startsWith('<hr')) {
+        return line;
+      }
+      return `<p>${line}</p>`;
+    }).join('\n');
+
+    return formatted;
+  },
+
+  parseWikiLinks(input) {
+    if (!input) return '';
+    return input.replace(/\[\[([^\]]+)\]\]/g, (match, title) => {
+      const cleanTitle = title.trim();
+      const escapedTitle = cleanTitle.replace(/'/g, "\\'");
+      return `<a href="#" class="wa-cross-link" style="color:#38bdf8; font-weight:700; text-decoration:underline; cursor:pointer;" onclick="event.preventDefault(); window.app.loadArticleByTitle('${escapedTitle}');">[[${cleanTitle}]]</a>`;
+    });
+  }
+};
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = WAParser;
+}

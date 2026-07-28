@@ -1,0 +1,1 @@
+Lord Corvus Ravenwing was born in the western forests. He leads House Ravenwing and wields shadow magic.

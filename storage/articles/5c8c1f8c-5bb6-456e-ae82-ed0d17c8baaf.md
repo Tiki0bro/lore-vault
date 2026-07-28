@@ -1,0 +1,1 @@
+Loyal soldiers to the @[Raven Queen](person:f19a6e2f-ef62-4a26-a177-9ae77e1d48a1), the souls of these Raven Warriors manifest into the mortal realm through the use of @Shadow Magic(Article), when they are defeated their souls return to the warm embrace of their mistress the Raven Queen.

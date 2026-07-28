@@ -1,0 +1,1 @@
+<h1>Solaria Capital</h1><p>The radiant sun capital city of the empire surrounded by giant stone walls.</p>
