@@ -27,24 +27,32 @@ const WAParser = {
       return `<blockquote class="wa-quote"><p>${text}</p>${source ? `<cite>${source}</cite>` : ''}</blockquote>`;
     });
 
-    // 2. Grid [row] and [col]
+    // 2. Grid [row], [col], and [section]
     html = html.replace(/\[row\]/gi, '<div class="wa-row">');
     html = html.replace(/\[\/row\]/gi, '</div>');
     html = html.replace(/\[col\]/gi, '<div class="wa-col">');
     html = html.replace(/\[\/col\]/gi, '</div>');
+    html = html.replace(/\[section\]/gi, '<div class="wa-sidebar">');
+    html = html.replace(/\[\/section\]/gi, '</div>');
 
     // 3. Headings [h1], [h2], [h3]
-    html = html.replace(/\[h1\]([\s\S]*?)\[\/h1\]/gi, '<h1 class="wa-h1">$1</h1>');
-    html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, '<h2 class="wa-h2">$1</h2>');
+    html = html.replace(/\[h1\]([\s\S]*?)\[\/h1\]/gi, '<h1 class="wa-article-title">$1</h1>');
+    html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, '<h2 class="wa-section-h2">$1</h2>');
     html = html.replace(/\[h3\]([\s\S]*?)\[\/h3\]/gi, '<h3 class="wa-h3">$1</h3>');
 
-    // 4. Tables: [table], [tr], [th], [td]
+    // 4. Tables: [table], [tr], [th], [td] (th renders plain text only - NO FontAwesome or icons)
     html = html.replace(/\[table\]/gi, '<div class="wa-table-container"><table class="wa-table">');
     html = html.replace(/\[\/table\]/gi, '</table></div>');
     html = html.replace(/\[tr\]/gi, '<tr>');
     html = html.replace(/\[\/tr\]/gi, '</tr>');
-    html = html.replace(/\[th\]/gi, '<th>');
-    html = html.replace(/\[\/th\]/gi, '</th>');
+    html = html.replace(/\[th\]([\s\S]*?)\[\/th\]/gi, (match, inner) => {
+      const plainText = inner
+        .replace(/\[fa-[^\]]+\]/gi, '')
+        .replace(/\[i\b[^\]]*\][\s\S]*?\[\/i\]/gi, '')
+        .replace(/<i\b[^>]*>.*?<\/i>/gi, '')
+        .trim();
+      return `<th>${plainText}</th>`;
+    });
     html = html.replace(/\[td\]/gi, '<td>');
     html = html.replace(/\[\/td\]/gi, '</td>');
 

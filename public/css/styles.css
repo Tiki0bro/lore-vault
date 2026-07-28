@@ -593,20 +593,39 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
    WORLDANVIL SIMPLIFIED STANDARD PARSED STYLES
    ========================================================================== */
 .wa-article-body {
-  color: #e2e8f0;
-  line-height: 1.7;
+  color: var(--text-primary);
+  font-family: var(--font-article-body);
+  line-height: 1.75;
+}
+
+.wa-article-title,
+.wa-h1 {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: var(--border-filigree);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
 }
 
 .wa-quote {
-  border-left: 4px solid var(--accent-amber);
-  background: rgba(251, 191, 36, 0.05);
-  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--accent-secondary, #991b1b);
+  background: var(--surface-card);
+  padding: 1.25rem 1.5rem;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   margin-bottom: 1.75rem;
+  font-family: var(--font-article-body);
   font-style: italic;
+  box-shadow: var(--shadow-card);
+  border-top: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
-.wa-quote p { font-size: 1.05rem; color: #fff; margin-bottom: 0.3rem; }
-.wa-quote cite { display: block; font-size: 0.85rem; color: var(--accent-amber); text-align: right; font-style: normal; }
+.wa-quote p { font-size: 1.05rem; color: var(--text-primary); margin-bottom: 0.4rem; line-height: 1.6; }
+.wa-quote cite { display: block; font-size: 0.85rem; color: var(--accent-amber); text-align: right; font-style: normal; font-weight: 600; }
 
 .wa-row {
   display: flex;
@@ -620,44 +639,46 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
   min-width: 300px;
 }
 
-.wa-h1 {
-  font-family: var(--font-heading);
-  font-size: 2.1rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 1rem;
-  line-height: 1.2;
+.wa-sidebar {
+  background: var(--surface-card);
+  border: var(--border-filigree);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 1.5rem;
 }
 
+.wa-section-h2,
 .wa-h2 {
   font-family: var(--font-heading);
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: var(--accent-blue);
-  margin-top: 1.75rem;
+  color: var(--accent-primary);
+  margin-top: 2rem;
   margin-bottom: 0.75rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  padding-bottom: 0.4rem;
+  border-bottom: var(--border-filigree);
 }
 
 .wa-h3 {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
-  border-left: 3px solid var(--accent-blue);
+  border-left: 3px solid var(--accent-primary);
 }
 
 .wa-table-container {
   overflow-x: auto;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   background: var(--surface-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
+  border: var(--border-filigree);
+  box-shadow: var(--shadow-card);
 }
 
 .wa-table {
@@ -668,26 +689,33 @@ body[data-theme="scifi-fantasy"] .lore-badge-icon {
 }
 
 .wa-table th {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  font-weight: 600;
-  padding: 0.6rem 0.85rem;
-  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--accent-primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .wa-table td {
-  padding: 0.55rem 0.85rem;
+  padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
+.wa-table tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.15);
+}
+
 .wa-table tr:last-child td { border-bottom: none; }
-.wa-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+.wa-table tr:hover td { background: var(--surface-card-hover); }
 
 .wa-hr {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
   margin: 2rem 0;
 }
 

@@ -22,12 +22,28 @@ class LoreApp {
 
   async init() {
     await this.fetchWorlds();
+
+    let initialTheme = 'ancient-codex';
+    if (this.currentWorldId !== 'all') {
+      const world = this.worlds.find(w => w.id === this.currentWorldId);
+      if (world && world.theme) initialTheme = world.theme;
+    }
+    document.body.setAttribute('data-theme', initialTheme);
+
     await this.fetchCategories();
     await this.fetchArticles();
 
     // Auto-load first article if available
     if (this.articles.length > 0) {
       this.loadArticle(this.articles[0].id);
+    }
+
+    if (window.LoreBadges) {
+      if (typeof window.LoreBadges.injectAll === 'function') {
+        window.LoreBadges.injectAll();
+      } else if (typeof window.LoreBadges.renderAll === 'function') {
+        window.LoreBadges.renderAll();
+      }
     }
   }
 
@@ -69,6 +85,14 @@ class LoreApp {
     this.searchQuery = '';
     this.currentArticle = null;
 
+    // Apply per-world theme
+    let theme = 'ancient-codex';
+    if (worldId !== 'all') {
+      const world = this.worlds.find(w => w.id === worldId);
+      if (world && world.theme) theme = world.theme;
+    }
+    document.body.setAttribute('data-theme', theme);
+
     // Reset Article Viewer state for the new world
     const viewerEl = document.getElementById('article-viewer');
     const emptyEl = document.getElementById('article-viewer-empty');
@@ -81,6 +105,14 @@ class LoreApp {
     // Auto-load first article if available in the selected world
     if (this.articles.length > 0) {
       this.loadArticle(this.articles[0].id);
+    }
+
+    if (window.LoreBadges) {
+      if (typeof window.LoreBadges.injectAll === 'function') {
+        window.LoreBadges.injectAll();
+      } else if (typeof window.LoreBadges.renderAll === 'function') {
+        window.LoreBadges.renderAll();
+      }
     }
   }
 
@@ -97,8 +129,11 @@ class LoreApp {
   async saveNewWorld() {
     const nameEl = document.getElementById('new-world-name');
     const descEl = document.getElementById('new-world-desc');
+    const themeEl = document.getElementById('new-world-theme');
+
     const name = nameEl.value.trim();
     const description = descEl.value.trim();
+    const theme = themeEl ? themeEl.value : 'ancient-codex';
 
     if (!name) {
       alert('Please enter a world name.');
@@ -109,7 +144,7 @@ class LoreApp {
       const res = await fetch('/api/worlds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description })
+        body: JSON.stringify({ name, description, theme })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -117,6 +152,7 @@ class LoreApp {
       alert(`World "${data.name}" created!`);
       nameEl.value = '';
       descEl.value = '';
+      if (themeEl) themeEl.value = 'ancient-codex';
       this.closeCreateWorldModal();
 
       await this.fetchWorlds();
@@ -124,6 +160,74 @@ class LoreApp {
 
     } catch (err) {
       alert('Error creating world: ' + err.message);
+    }
+  }
+
+  openEditWorldModal() {
+    if (!this.currentWorldId || this.currentWorldId === 'all') {
+      alert('Please select a specific world to edit theme and settings.');
+      return;
+    }
+    const world = this.worlds.find(w => w.id === this.currentWorldId);
+    if (!world) return;
+
+    const modal = document.getElementById('edit-world-modal');
+    const idEl = document.getElementById('edit-world-id');
+    const nameEl = document.getElementById('edit-world-name');
+    const descEl = document.getElementById('edit-world-desc');
+    const themeEl = document.getElementById('edit-world-theme');
+
+    if (idEl) idEl.value = world.id;
+    if (nameEl) nameEl.value = world.name;
+    if (descEl) descEl.value = world.description || '';
+    if (themeEl) themeEl.value = world.theme || 'ancient-codex';
+
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  }
+
+  closeEditWorldModal() {
+    const modal = document.getElementById('edit-world-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+
+  async updateWorld() {
+    const idEl = document.getElementById('edit-world-id');
+    const nameEl = document.getElementById('edit-world-name');
+    const descEl = document.getElementById('edit-world-desc');
+    const themeEl = document.getElementById('edit-world-theme');
+
+    const id = idEl ? idEl.value : this.currentWorldId;
+    const name = nameEl ? nameEl.value.trim() : '';
+    const description = descEl ? descEl.value.trim() : '';
+    const theme = themeEl ? themeEl.value : 'ancient-codex';
+
+    if (!name) {
+      alert('Please enter a world name.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/worlds/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, theme })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      alert(`World "${data.name}" updated successfully!`);
+      this.closeEditWorldModal();
+
+      await this.fetchWorlds();
+      this.switchWorld(id);
+    } catch (err) {
+      alert('Error updating world: ' + err.message);
     }
   }
 
@@ -1163,7 +1267,18 @@ Overview paragraph describing the location, faction, or character.
           if (this.articles.length > 0) {
             this.loadArticle(this.articles[0].id);
           }
-        }, 1800);
+          if (data.importAudit) {
+            this.openImportTriageModal(data.importAudit);
+          } else {
+            this.openImportTriageModal({
+              importedCount: data.importedCount || 0,
+              world_id: this.currentWorldId || 'default',
+              misclassifiedCount: 0,
+              duplicateCount: 0,
+              stubCount: 0
+            });
+          }
+        }, 1000);
       } catch (err) {
         statusMsg.style.background = 'rgba(244, 63, 94, 0.2)';
         statusMsg.style.color = '#f43f5e';
@@ -1211,7 +1326,18 @@ Overview paragraph describing the location, faction, or character.
         if (this.articles.length > 0) {
           this.loadArticle(this.articles[0].id);
         }
-      }, 1500);
+        if (data.importAudit) {
+          this.openImportTriageModal(data.importAudit);
+        } else {
+          this.openImportTriageModal({
+            importedCount: data.importedCount || 0,
+            world_id: this.currentWorldId || 'default',
+            misclassifiedCount: 0,
+            duplicateCount: 0,
+            stubCount: 0
+          });
+        }
+      }, 1000);
 
     } catch (err) {
       statusMsg.style.background = 'rgba(244, 63, 94, 0.2)';
@@ -1812,6 +1938,45 @@ Overview paragraph describing the location, faction, or character.
     });
   }
 
+  openImportTriageModal(importAudit) {
+    const modal = document.getElementById('import-triage-modal');
+    const statsContainer = document.getElementById('import-triage-stats');
+    if (!modal) return;
+
+    const importedCount = importAudit?.importedCount || 0;
+    const worldId = importAudit?.world_id || this.currentWorldId || 'default';
+    const misclassifiedCount = importAudit?.misclassifiedCount || 0;
+    const duplicateCount = importAudit?.duplicateCount || 0;
+    const stubCount = importAudit?.stubCount || 0;
+
+    if (statsContainer) {
+      statsContainer.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:0.6rem; font-size:0.9rem;">
+          <div style="color:#4ade80; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+            <span>✓</span> <span>${importedCount} articles imported into &lt;${worldId}&gt;</span>
+          </div>
+          <div style="color:${misclassifiedCount > 0 ? '#fbbf24' : 'var(--text-secondary)'}; display:flex; align-items:center; gap:0.5rem;">
+            <span>⚠️</span> <span>${misclassifiedCount} potential category misclassifications</span>
+          </div>
+          <div style="color:${duplicateCount > 0 ? '#f43f5e' : 'var(--text-secondary)'}; display:flex; align-items:center; gap:0.5rem;">
+            <span>👯</span> <span>${duplicateCount} title overlaps with existing worlds</span>
+          </div>
+          <div style="color:${stubCount > 0 ? '#a855f7' : 'var(--text-secondary)'}; display:flex; align-items:center; gap:0.5rem;">
+            <span>🧹</span> <span>${stubCount} empty stubs detected</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const triageBtn = document.getElementById('triage-launch-guided-btn');
+    if (triageBtn) {
+      triageBtn.onclick = () => this.startGuidedSessionFromTriage();
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+
   startGuidedSessionFromTriage() {
     this.closeImportTriageModal();
     this.openDoctorModal();
@@ -1820,7 +1985,10 @@ Overview paragraph describing the location, faction, or character.
 
   closeImportTriageModal() {
     const modal = document.getElementById('import-triage-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   async runDeepAIAudit() {
@@ -2239,6 +2407,30 @@ window.closeCreateWorldModal = function() {
   if (modal) {
     modal.classList.add('hidden');
     modal.style.display = 'none';
+  }
+};
+
+window.openEditWorldModal = function() {
+  if (window.app && typeof window.app.openEditWorldModal === 'function') {
+    window.app.openEditWorldModal();
+  } else {
+    const modal = document.getElementById('edit-world-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  }
+};
+
+window.closeEditWorldModal = function() {
+  if (window.app && typeof window.app.closeEditWorldModal === 'function') {
+    window.app.closeEditWorldModal();
+  } else {
+    const modal = document.getElementById('edit-world-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 };
 

@@ -1196,6 +1196,49 @@ app.post('/api/audit/harmonize', (req, res) => {
   res.json({ message: 'Lore harmonized successfully across both articles!' });
 });
 
+// Helper for Post-Import Automated Audit Statistics
+function getImportAuditStats(world_id, callback) {
+  let sql = 'SELECT id, title, category, sub_category, world_id, summary, content, tags FROM articles WHERE 1=1';
+  const params = [];
+  if (world_id && world_id !== 'all') {
+    sql += ' AND (world_id = ? OR world_id IS NULL)';
+    params.push(world_id);
+  }
+
+  db.all(sql, params, (err, rows) => {
+    if (err || !rows) {
+      return callback({ misclassifiedCount: 0, duplicateCount: 0, stubCount: 0 });
+    }
+
+    let stubCount = 0;
+    let misclassifiedCount = 0;
+    let duplicateCount = 0;
+    const seenTitles = new Map();
+
+    rows.forEach(art => {
+      const cleanContent = (art.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
+      const isBoilerplate = /welcome to world anvil|describe a predator|read me first/i.test(cleanContent + ' ' + art.title);
+      if (cleanContent.length < 50 || isBoilerplate) {
+        stubCount++;
+      }
+
+      const smart = smartCategorizeArticle(art.title, art.content);
+      if (smart.category !== art.category) {
+        misclassifiedCount++;
+      }
+
+      const normTitle = art.title.toLowerCase().trim();
+      if (seenTitles.has(normTitle)) {
+        duplicateCount++;
+      } else {
+        seenTitles.set(normTitle, true);
+      }
+    });
+
+    callback({ misclassifiedCount, duplicateCount, stubCount });
+  });
+}
+
 // POST /api/import/worldanvil - Bulk import articles from World Anvil export JSON
 app.post('/api/import/worldanvil', (req, res) => {
   const payload = req.body;
@@ -1235,13 +1278,17 @@ app.post('/api/import/worldanvil', (req, res) => {
 
   let importedCount = 0;
   let updatedCount = 0;
+  const categoryCounts = {};
+  const targetWorldId = req.query.world_id || req.body.world_id || (payload && payload.world_id) || 'default';
 
   const stmt = db.prepare(`
-    INSERT INTO articles (id, title, category, summary, content, tags, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO articles (id, title, category, sub_category, world_id, summary, content, tags, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
       category = excluded.category,
+      sub_category = excluded.sub_category,
+      world_id = excluded.world_id,
       summary = excluded.summary,
       content = excluded.content,
       tags = excluded.tags,
@@ -1269,7 +1316,10 @@ app.post('/api/import/worldanvil', (req, res) => {
       category = 'History';
     }
 
-    const summary = item.summary || item.snippet || item.excerpt || '';
+    const smart = smartCategorizeArticle(rawTitle, item.content || item.body || item.content_parsed || item.bbcode || '');
+    const subCategory = item.sub_category || smart.subCategory || 'General';
+
+    const summary = item.summary || item.snippet || item.excerpt || smart.summary || '';
     const content = item.content || item.body || item.content_parsed || item.bbcode || '';
 
     // Normalize tags
@@ -1278,19 +1328,33 @@ app.post('/api/import/worldanvil', (req, res) => {
     else if (typeof item.user_tags === 'string') tags = item.user_tags.split(',').map(t => t.trim()).filter(Boolean);
     else if (typeof item.tags === 'string') tags = item.tags.split(',').map(t => t.trim()).filter(Boolean);
 
-    stmt.run(id, rawTitle, category, summary, content, JSON.stringify(tags), function(err) {
+    stmt.run(id, rawTitle, category, subCategory, targetWorldId, summary, content, JSON.stringify(tags), function(err) {
       if (!err) {
         extractCrossLinks(id, content);
         syncFileToStorage(id, content);
         importedCount++;
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
       }
     });
   });
 
   stmt.finalize(() => {
-    res.json({
-      message: `Successfully imported ${importedCount} articles into LoreVault!`,
-      importedCount
+    getImportAuditStats(targetWorldId, (auditStats) => {
+      const importAudit = {
+        importedCount,
+        imageCount: 0,
+        categoryCounts,
+        misclassifiedCount: auditStats.misclassifiedCount,
+        duplicateCount: auditStats.duplicateCount,
+        stubCount: auditStats.stubCount,
+        world_id: targetWorldId
+      };
+
+      res.json({
+        message: `Successfully imported ${importedCount} articles into LoreVault!`,
+        importedCount,
+        importAudit
+      });
     });
   });
 });
@@ -1367,20 +1431,113 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
   let summary = firstParagraph.substring(0, 160);
   if (summary.length >= 160) summary += '...';
 
-  const tags = new Set();
-  tags.add(topCategory);
-  tags.add(subCategory);
-  if (/sun|solar|light/i.test(textLower)) tags.add('Sun-Magic');
-  if (/shadow|night|dark/i.test(textLower)) tags.add('Shadow');
-  if (/ancient|old/i.test(textLower)) tags.add('Ancient');
-  if (/noble|royal/i.test(textLower)) tags.add('Nobility');
-  if (/military|war/i.test(textLower)) tags.add('Military');
+  let keywordMaxScore = 0;
+
+  const keywordsMap = {
+    'Characters': {
+      weight: 3,
+      keywords: ['character', 'person', 'hero', 'villain', 'king', 'queen', 'emperor', 'npc', 'biography', 'lord', 'lady', 'warrior', 'mage', 'rogue', 'paladin', 'cleric', 'born', 'died', 'father', 'mother', 'son', 'daughter', 'height', 'weight', 'eyes', 'hair'],
+      subCategories: {
+        'Historical Figures': ['king', 'queen', 'emperor', 'legendary', 'ancient'],
+        'Protagonists & NPCs': ['companion', 'ally', 'merchant', 'quest-giver'],
+        'Villains & Antagonists': ['villain', 'dark lord', 'tyrant', 'enemy', 'boss']
+      }
+    },
+    'Locations': {
+      weight: 2,
+      keywords: ['location', 'city', 'town', 'village', 'settlement', 'kingdom', 'realm', 'region', 'continent', 'mountain', 'river', 'forest', 'ocean', 'sea', 'lake', 'castle', 'fortress', 'dungeon', 'temple', 'shrine', 'capital', 'province'],
+      subCategories: {
+        'Cities & Settlements': ['city', 'town', 'village', 'capital', 'settlement', 'port'],
+        'Geographic Features': ['mountain', 'river', 'forest', 'valley', 'desert', 'ocean', 'sea', 'lake', 'island'],
+        'Dungeons & Landmarks': ['dungeon', 'ruin', 'temple', 'castle', 'fortress', 'shrine', 'tower']
+      }
+    },
+    'Factions': {
+      weight: 3,
+      keywords: ['faction', 'organization', 'guild', 'order', 'cult', 'clan', 'house', 'syndicate', 'alliance', 'covenant', 'brotherhood', 'fleet', 'company', 'court', 'council'],
+      subCategories: {
+        'Guilds & Orders': ['guild', 'order', 'brotherhood', 'knights', 'mercenary'],
+        'Noble Houses': ['house', 'dynasty', 'clan', 'noble', 'family'],
+        'Secret Societies & Cults': ['cult', 'cabal', 'syndicate', 'secret', 'shadow']
+      }
+    },
+    'Species': {
+      weight: 3,
+      keywords: ['species', 'race', 'creature', 'monster', 'beast', 'fauna', 'flora', 'plant', 'herb', 'beast', 'dragon', 'elf', 'dwarf', 'orc', 'goblin', 'undead', 'demon', 'elemental'],
+      subCategories: {
+        'Sentient Races': ['elf', 'dwarf', 'orc', 'human', 'gnome', 'halfling', 'race', 'people'],
+        'Monsters & Beasts': ['monster', 'beast', 'dragon', 'demon', 'undead', 'aberration'],
+        'Flora & Natural Life': ['plant', 'herb', 'tree', 'flower', 'fauna', 'flora', 'fungus']
+      }
+    },
+    'Items': {
+      weight: 3,
+      keywords: ['item', 'weapon', 'armor', 'artifact', 'relic', 'potion', 'scroll', 'tool', 'equipment', 'sword', 'shield', 'ring', 'amulet', 'staff', 'blade', 'bow', 'crown'],
+      subCategories: {
+        'Weapons & Armor': ['sword', 'blade', 'bow', 'shield', 'armor', 'helm', 'spear', 'staff', 'axe'],
+        'Artifacts & Relics': ['artifact', 'relic', 'crown', 'ring', 'amulet', 'orb', 'tome'],
+        'Consumables & Tools': ['potion', 'scroll', 'elixir', 'tool', 'key', 'kit']
+      }
+    },
+    'Magic & Tech': {
+      weight: 3,
+      keywords: ['magic', 'spell', 'technology', 'tech', 'alchemy', 'rune', 'enchantment', 'ritual', 'system', 'device', 'construct', 'golem', 'ship', 'airship', 'engine', 'power'],
+      subCategories: {
+        'Spells & Rituals': ['spell', 'incantation', 'ritual', 'enchantment', 'hex', 'curse'],
+        'Magical Systems': ['mana', 'ether', 'weave', 'school of magic', 'elemental'],
+        'Technology & Gizmos': ['device', 'engine', 'airship', 'construct', 'golem', 'machine', 'tech']
+      }
+    },
+    'History': {
+      weight: 3,
+      keywords: ['history', 'event', 'war', 'battle', 'era', 'age', 'siege', 'treaty', 'revolution', 'cataclysm', 'shattering', 'rebellion', 'fall', 'rise', 'chronicle', 'timeline'],
+      subCategories: {
+        'Wars & Conflicts': ['war', 'battle', 'siege', 'rebellion', 'crusade', 'conflict'],
+        'Historical Eras': ['era', 'age', 'period', 'century', 'epoch'],
+        'Cataclysms & Pivotal Events': ['cataclysm', 'shattering', 'fall', 'founding', 'treaty', 'disaster']
+      }
+    }
+  };
+
+  for (const [catName, catData] of Object.entries(keywordsMap)) {
+    let score = 0;
+    catData.keywords.forEach(kw => {
+      if (cleanTitle.includes(kw)) score += kw.length * 4;
+      if (textLower.includes(kw)) score += 1;
+    });
+
+    score *= catData.weight;
+
+    if (score > keywordMaxScore) {
+      keywordMaxScore = score;
+      topCategory = catName;
+
+      let subScore = 0;
+      for (const [subName, subKws] of Object.entries(catData.subCategories)) {
+        let currentSubScore = 0;
+        subKws.forEach(skw => {
+          if (cleanTitle.includes(skw)) currentSubScore += 3;
+          if (textLower.includes(skw)) currentSubScore += 1;
+        });
+        if (currentSubScore > subScore) {
+          subScore = currentSubScore;
+          subCategory = subName;
+        }
+      }
+    }
+  }
+
+  const sentences = cleanText.split(/(?<=[.!?])\s+/);
+  summary = sentences.slice(0, 2).join(' ').trim() || summary || `${title} lore article.`;
+
+  const autoTags = new Set([topCategory.toLowerCase()]);
+  if (subCategory !== 'General') autoTags.add(subCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
 
   return {
     category: topCategory,
     subCategory,
     summary: summary || `${title} lore article.`,
-    tags: Array.from(tags)
+    tags: Array.from(autoTags)
   };
 }
 
@@ -1463,7 +1620,7 @@ app.post('/api/import/zip', upload.single('zipfile'), (req, res) => {
 
             const smart = smartCategorizeArticle(title, rawContent, filename);
             const category = item.category?.name || item.template || smart.category;
-            const summary = item.summary || item.snippet || smart.summary;
+            const summary = item.summary || item.snippet || item.excerpt || smart.summary;
             const tags = item.tags || smart.tags;
 
             stmt.run(id, title, category, smart.subCategory, targetWorldId, summary, rawContent, JSON.stringify(tags), (err) => {
@@ -1505,11 +1662,24 @@ app.post('/api/import/zip', upload.single('zipfile'), (req, res) => {
     });
 
     stmt.finalize(() => {
-      res.json({
-        message: `Smart Imported ${importedCount} articles & ${imageCount} images from ZIP archive!`,
-        importedCount,
-        imageCount,
-        categoryCounts
+      getImportAuditStats(targetWorldId, (auditStats) => {
+        const importAudit = {
+          importedCount,
+          imageCount,
+          categoryCounts,
+          misclassifiedCount: auditStats.misclassifiedCount,
+          duplicateCount: auditStats.duplicateCount,
+          stubCount: auditStats.stubCount,
+          world_id: targetWorldId
+        };
+
+        res.json({
+          message: `Smart Imported ${importedCount} articles & ${imageCount} images from ZIP archive!`,
+          importedCount,
+          imageCount,
+          categoryCounts,
+          importAudit
+        });
       });
     });
 

@@ -170,6 +170,13 @@
         
         el.innerHTML = this.get(name, { size, class: cls, color });
       });
+    },
+
+    /**
+     * Alias for renderAll()
+     */
+    injectAll() {
+      return this.renderAll();
     }
   };
 

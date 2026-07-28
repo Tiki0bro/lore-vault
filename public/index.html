@@ -50,6 +50,7 @@
             <option value="default">Primary World</option>
           </select>
           <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openCreateWorldModal()" title="Create New World"><span data-badge="plus" data-badge-size="14">➕</span> World</button>
+          <button class="btn-text" style="font-size:0.75rem; color:var(--accent-primary); padding:0.1rem 0.3rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;" onclick="window.openEditWorldModal()" title="Edit Current World Theme &amp; Settings"><span data-badge="gear" data-badge-size="14">⚙️</span> Theme</button>
         </div>
 
         <button class="btn btn-secondary" style="background:var(--surface-card-hover, #0284c7); color:#fff; font-weight:600;" onclick="window.toggleAIChatDrawer()">
@@ -745,11 +746,56 @@
             <label>Description / Premise</label>
             <textarea id="new-world-desc" rows="3" placeholder="Brief premise of this world or novel setting..."></textarea>
           </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>World Theme Style</label>
+            <select id="new-world-theme" style="width:100%; background:var(--bg-main, #090d16); color:var(--text-primary, #fff); border:1px solid var(--border-color, #334155); border-radius:6px; padding:0.5rem; font-size:0.85rem;">
+              <option value="ancient-codex">📜 Ancient Parchment &amp; Codex</option>
+              <option value="scifi-fantasy">🌌 Sci-Fi Fantasy / Aetherpunk</option>
+            </select>
+          </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="window.app.closeCreateWorldModal()">Cancel</button>
           <button class="btn btn-primary" onclick="window.app.saveNewWorld()">Create World</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT WORLD MODAL -->
+    <div id="edit-world-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeEditWorldModal()"></div>
+      <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+          <h2>⚙️ Edit World Settings &amp; Theme</h2>
+          <button class="close-btn" onclick="window.app.closeEditWorldModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <input type="hidden" id="edit-world-id">
+          <div class="form-group" style="margin-top:1rem;">
+            <label>World Name *</label>
+            <input type="text" id="edit-world-name" placeholder="e.g. Cyberpunk 2099, Eldoria...">
+          </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>Description / Premise</label>
+            <textarea id="edit-world-desc" rows="3" placeholder="Brief premise of this world setting..."></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>World Theme Style</label>
+            <select id="edit-world-theme" style="width:100%; background:var(--bg-main, #090d16); color:var(--text-primary, #fff); border:1px solid var(--border-color, #334155); border-radius:6px; padding:0.5rem; font-size:0.85rem;">
+              <option value="ancient-codex">📜 Ancient Parchment &amp; Codex</option>
+              <option value="scifi-fantasy">🌌 Sci-Fi Fantasy / Aetherpunk</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeEditWorldModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.updateWorld()">Save Changes</button>
         </div>
       </div>
     </div>
