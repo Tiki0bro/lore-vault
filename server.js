@@ -76,6 +76,7 @@ db.serialize(() => {
       name TEXT NOT NULL,
       description TEXT,
       color TEXT DEFAULT '#38bdf8',
+      theme TEXT DEFAULT 'ancient-codex',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -83,6 +84,7 @@ db.serialize(() => {
   db.run("ALTER TABLE articles ADD COLUMN sub_category TEXT", (err) => {});
   db.run("ALTER TABLE articles ADD COLUMN world_id TEXT DEFAULT 'default'", (err) => {});
   db.run("UPDATE articles SET world_id = 'default' WHERE world_id IS NULL", (err) => {});
+  db.run("ALTER TABLE worlds ADD COLUMN theme TEXT DEFAULT 'ancient-codex'", (err) => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS personas (
@@ -100,7 +102,7 @@ db.serialize(() => {
 
   db.get('SELECT COUNT(*) as count FROM worlds', (err, row) => {
     if (!err && (!row || row.count === 0)) {
-      db.run("INSERT INTO worlds (id, name, description, color) VALUES ('default', 'Primary World', 'Main world lore vault', '#38bdf8')");
+      db.run("INSERT INTO worlds (id, name, description, color, theme) VALUES ('default', 'Primary World', 'Main world lore vault', '#38bdf8', 'ancient-codex')");
     }
   });
 
@@ -203,7 +205,7 @@ function syncFileToStorage(id, content) {
 // GET /api/worlds - List all worlds
 app.get('/api/worlds', (req, res) => {
   const query = `
-    SELECT w.id, w.name, w.description, w.color, COUNT(a.id) as article_count
+    SELECT w.id, w.name, w.description, w.color, w.theme, COUNT(a.id) as article_count
     FROM worlds w
     LEFT JOIN articles a ON w.id = a.world_id
     GROUP BY w.id
@@ -217,15 +219,48 @@ app.get('/api/worlds', (req, res) => {
 
 // POST /api/worlds - Create new world
 app.post('/api/worlds', (req, res) => {
-  const { name, description, color } = req.body;
+  const { name, description, color, theme } = req.body;
   if (!name) return res.status(400).json({ error: 'World name is required.' });
 
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'world-' + Date.now();
   const hexColor = color || '#' + Math.floor(Math.random()*16777215).toString(16);
+  const worldTheme = theme || 'ancient-codex';
 
-  db.run('INSERT INTO worlds (id, name, description, color) VALUES (?, ?, ?, ?)', [id, name, description || '', hexColor], (err) => {
+  db.run('INSERT INTO worlds (id, name, description, color, theme) VALUES (?, ?, ?, ?, ?)', [id, name, description || '', hexColor, worldTheme], (err) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ id, name, description, color: hexColor, message: 'World created successfully!' });
+    res.json({ id, name, description, color: hexColor, theme: worldTheme, message: 'World created successfully!' });
+  });
+});
+
+// PUT /api/worlds/:id - Update existing world
+app.put('/api/worlds/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, description, color, theme } = req.body;
+
+  db.get('SELECT * FROM worlds WHERE id = ?', [id], (err, world) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!world) return res.status(404).json({ error: 'World not found.' });
+
+    const updatedName = name !== undefined ? name : world.name;
+    const updatedDesc = description !== undefined ? description : world.description;
+    const updatedColor = color !== undefined ? color : world.color;
+    const updatedTheme = theme !== undefined ? theme : world.theme;
+
+    db.run(
+      'UPDATE worlds SET name = ?, description = ?, color = ?, theme = ? WHERE id = ?',
+      [updatedName, updatedDesc, updatedColor, updatedTheme, id],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+          id,
+          name: updatedName,
+          description: updatedDesc,
+          color: updatedColor,
+          theme: updatedTheme,
+          message: 'World updated successfully!'
+        });
+      }
+    );
   });
 });
 
