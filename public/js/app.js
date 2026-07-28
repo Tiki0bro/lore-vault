@@ -13,6 +13,9 @@ class LoreApp {
     this.selectedTag = null;
     this.searchQuery = '';
     this.editingId = null;
+    this.doctorWorldScope = 'all';
+    this.guidedQueue = [];
+    this.guidedQueueIndex = 0;
 
     this.init();
   }
@@ -1393,17 +1396,34 @@ Overview paragraph describing the location, faction, or character.
     if (modal) modal.classList.add('hidden');
   }
 
+  setDoctorWorldScope(worldId) {
+    this.doctorWorldScope = worldId;
+    this.runWorldAudit();
+  }
+
   async runWorldAudit() {
     const statusEl = document.getElementById('doctor-status');
     const summaryEl = document.getElementById('doctor-summary-counts');
     const miscList = document.getElementById('doctor-misclassified-list');
     const stubList = document.getElementById('doctor-stubs-list');
     const dupList = document.getElementById('doctor-duplicates-list');
-    const orphanList = document.getElementById('doctor-orphans-list');
+    const orphanList = document.getElementById('doctor-orphan-list') || document.getElementById('doctor-orphans-list');
 
     const fixMiscBtn = document.getElementById('fix-misclassified-btn');
     const fixStubsBtn = document.getElementById('fix-stubs-btn');
     const fixDupBtn = document.getElementById('fix-duplicates-btn');
+
+    // Populate scope dropdown with current worlds
+    const scopeSelect = document.getElementById('doctor-world-scope');
+    if (scopeSelect && this.worlds && Array.isArray(this.worlds)) {
+      const selected = this.doctorWorldScope || scopeSelect.value || 'all';
+      let html = `<option value="all">🌐 All Worlds (Global Scope)</option><option value="default">📜 Default Vault Scope</option>`;
+      this.worlds.forEach(w => {
+        html += `<option value="${w.id}">${w.name} (${w.article_count || 0})</option>`;
+      });
+      scopeSelect.innerHTML = html;
+      scopeSelect.value = selected;
+    }
 
     if (statusEl) statusEl.textContent = '🔍 Scanning lore database for duplicates, misclassifications, and stubs...';
     if (miscList) miscList.innerHTML = `<div style="padding:0.75rem; color:var(--text-muted);">Analyzing category assignments...</div>`;
@@ -1416,28 +1436,71 @@ Overview paragraph describing the location, faction, or character.
     const model = localStorage.getItem('lore_ai_model') || '';
 
     try {
+      const targetWorldId = this.doctorWorldScope || this.currentWorldId || 'all';
       const res = await fetch('/api/audit/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, apiKey, model })
+        body: JSON.stringify({ world_id: targetWorldId, provider, apiKey, model })
       });
       const data = await res.json();
-
       this.lastAudit = data;
 
-      statusEl.textContent = `Diagnostic Scan Complete — Audited ${data.totalAudited} articles.`;
-      summaryEl.textContent = `Found ${data.duplicateCount || 0} duplicates, ${data.misclassifiedCount} misclassifications, and ${data.stubCount} stubs.`;
+      const dupCount = data.counts?.duplicates ?? data.duplicateCount ?? (data.duplicateArticles?.length || 0);
+      const miscCount = data.counts?.misclassified ?? data.misclassifiedCount ?? (data.misclassifiedArticles?.length || 0);
+      const stubCount = data.counts?.stubs ?? data.stubCount ?? (data.stubArticles?.length || 0);
+      const orphanCount = data.counts?.orphans ?? data.orphanCount ?? (data.orphanArticles?.length || 0);
+      const aiCount = data.counts?.aiConflicts ?? data.aiConflictCount ?? (data.conflicts?.length || 0);
+
+      // Health score badge
+      const healthBadge = document.getElementById('doctor-health-score-badge');
+      if (healthBadge) {
+        const score = data.healthScore !== undefined ? data.healthScore : 100;
+        healthBadge.textContent = `${score} / 100`;
+        if (score >= 90) {
+          healthBadge.style.background = 'rgba(74, 222, 128, 0.15)';
+          healthBadge.style.color = '#4ade80';
+          healthBadge.style.borderColor = 'rgba(74, 222, 128, 0.3)';
+        } else if (score >= 70) {
+          healthBadge.style.background = 'rgba(251, 191, 36, 0.15)';
+          healthBadge.style.color = '#fbbf24';
+          healthBadge.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+        } else {
+          healthBadge.style.background = 'rgba(244, 63, 94, 0.15)';
+          healthBadge.style.color = '#f43f5e';
+          healthBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+        }
+      }
+
+      // Metric count cards
+      const mDup = document.getElementById('doctor-metric-duplicates');
+      const mMisc = document.getElementById('doctor-metric-misc');
+      const mStubs = document.getElementById('doctor-metric-stubs');
+      const mAi = document.getElementById('doctor-metric-ai');
+      const mOrphans = document.getElementById('doctor-metric-orphans');
+
+      if (mDup) mDup.textContent = dupCount;
+      if (mMisc) mMisc.textContent = miscCount;
+      if (mStubs) mStubs.textContent = stubCount;
+      if (mAi) mAi.textContent = aiCount;
+      if (mOrphans) mOrphans.textContent = orphanCount;
+
+      if (statusEl) statusEl.textContent = `Diagnostic Scan Complete — Audited ${data.totalAudited || 0} articles.`;
+      if (summaryEl) summaryEl.textContent = `Found ${dupCount} duplicates, ${miscCount} misclassifications, ${stubCount} stubs, and ${orphanCount} orphans.`;
 
       // 1. Render Misclassified List
-      if (data.misclassifiedCount > 0) {
+      const miscArticles = data.misclassifiedArticles || [];
+      if (miscArticles.length > 0) {
         if (fixMiscBtn) fixMiscBtn.style.display = 'inline-block';
-        miscList.innerHTML = data.misclassifiedArticles.map(art => `
+        miscList.innerHTML = miscArticles.map(art => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
             <div>
               <strong style="color:#fff;">${art.title}</strong>
               <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">Current: <del style="color:var(--accent-rose);">${art.currentCategory}</del> ➔ Suggested: <ins style="color:var(--accent-emerald); text-decoration:none; font-weight:600;">${art.suggestedCategory}</ins></span>
             </div>
-            <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">View</button>
+            <div style="display:flex; gap:0.4rem;">
+              <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem;" onclick="window.app.applyGuidedStepAction('recategorize', '${art.id}', { newCategory: '${art.suggestedCategory}', newSubCategory: '${art.suggestedSubCategory || 'General'}' })">Fix Category</button>
+              <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">View</button>
+            </div>
           </div>
         `).join('');
       } else {
@@ -1446,27 +1509,34 @@ Overview paragraph describing the location, faction, or character.
       }
 
       // 2. Render Duplicates List
-      if (data.duplicateCount > 0) {
+      const dupArticles = data.duplicateArticles || [];
+      if (dupArticles.length > 0) {
         if (fixDupBtn) fixDupBtn.style.display = 'inline-block';
-        dupList.innerHTML = data.duplicateArticles.map(art => `
+        dupList.innerHTML = dupArticles.map(art => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
             <div>
               <strong style="color:#fff;">${art.title}</strong>
               <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">(Duplicate copy under category: ${art.category})</span>
             </div>
-            <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">Inspect Copy</button>
+            <div style="display:flex; gap:0.4rem;">
+              ${art.originalId ? `<button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem;" onclick="window.app.applyGuidedStepAction('merge_duplicates', '${art.id}', { targetMasterId: '${art.originalId}' })">Merge</button>` : ''}
+              <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem; background:#dc2626; color:#fff;" onclick="window.app.applyGuidedStepAction('delete_article', '${art.id}')">Delete Copy</button>
+              <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">Inspect</button>
+            </div>
           </div>
         `).join('');
       } else {
         if (fixDupBtn) fixDupBtn.style.display = 'none';
         dupList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ No duplicate article double-ups found.</div>`;
       }
-      // 3. Render Stub List with Flesh Out Buttons
+
+      // 3. Render Stub List
+      const stubArticles = data.stubArticles || [];
       const bulkAutoCureBtn = document.getElementById('bulk-autocure-btn');
-      if (data.stubCount > 0) {
+      if (stubArticles.length > 0) {
         if (fixStubsBtn) fixStubsBtn.style.display = 'inline-block';
         if (bulkAutoCureBtn) bulkAutoCureBtn.style.display = 'inline-block';
-        stubList.innerHTML = data.stubArticles.map(art => `
+        stubList.innerHTML = stubArticles.map(art => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
             <div>
               <strong style="color:#fff;">${art.title}</strong>
@@ -1474,6 +1544,7 @@ Overview paragraph describing the location, faction, or character.
             </div>
             <div style="display:flex; gap:0.4rem;">
               <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem; background:#059669; color:#fff;" onclick="window.app.openStubPreviewModal('${art.id}', '${art.title.replace(/'/g, "\\'")}', '${art.category}')">🪄 Flesh Out</button>
+              <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem; background:#dc2626; color:#fff;" onclick="window.app.applyGuidedStepAction('delete_article', '${art.id}')">Delete</button>
               <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">Inspect</button>
             </div>
           </div>
@@ -1484,11 +1555,11 @@ Overview paragraph describing the location, faction, or character.
         stubList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ No empty stubs found.</div>`;
       }
 
-      // 4. Render Orphan List with Confidence Badges
-      const orphanList = document.getElementById('doctor-orphan-list');
+      // 4. Render Orphan List
+      const orphanArticles = data.orphanArticles || [];
       if (orphanList) {
-        if (data.orphanCount > 0) {
-          orphanList.innerHTML = data.orphanArticles.slice(0, 10).map(art => `
+        if (orphanArticles.length > 0) {
+          orphanList.innerHTML = orphanArticles.slice(0, 10).map(art => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
               <div>
                 <strong style="color:#fff;">${art.title}</strong>
@@ -1497,7 +1568,7 @@ Overview paragraph describing the location, faction, or character.
               </div>
               <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${art.id}'); window.app.closeDoctorModal();">Add Links</button>
             </div>
-          `).join('') + (data.orphanCount > 10 ? `<div style="font-size:0.7rem; color:var(--text-muted); text-align:center; padding:0.3rem;">...and ${data.orphanCount - 10} more unlinked articles.</div>` : '');
+          `).join('') + (orphanArticles.length > 10 ? `<div style="font-size:0.7rem; color:var(--text-muted); text-align:center; padding:0.3rem;">...and ${orphanArticles.length - 10} more unlinked articles.</div>` : '');
         } else {
           orphanList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ Every article has cross-reference links!</div>`;
         }
@@ -1506,6 +1577,250 @@ Overview paragraph describing the location, faction, or character.
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Audit Error: ' + err.message;
     }
+  }
+
+  // --- GUIDED REPAIR SESSION CONTROLLER METHODS ---
+
+  async startGuidedSession() {
+    const worldId = this.doctorWorldScope || this.currentWorldId || 'all';
+    try {
+      const res = await fetch(`/api/audit/guided-session?world_id=${encodeURIComponent(worldId)}`);
+      const data = await res.json();
+      
+      this.guidedQueue = data.queue || [];
+      this.guidedQueueIndex = 0;
+
+      const mainDashboard = document.getElementById('doctor-dashboard-main');
+      const guidedView = document.getElementById('doctor-guided-session-view');
+
+      if (mainDashboard) mainDashboard.classList.add('hidden');
+      if (guidedView) guidedView.classList.remove('hidden');
+
+      this.renderGuidedStep();
+    } catch (err) {
+      alert('Failed to start Guided Repair Session: ' + err.message);
+    }
+  }
+
+  renderGuidedStep() {
+    const total = (this.guidedQueue || []).length;
+    const progressFill = document.getElementById('guided-progress-fill') || document.getElementById('doctor-guided-progress-bar');
+    const progressLabel = document.getElementById('guided-progress-label') || document.getElementById('doctor-guided-progress-text');
+    const stepContainer = document.getElementById('guided-step-container') || document.getElementById('doctor-guided-comparison');
+
+    if (this.guidedQueueIndex >= total) {
+      // Completion Card
+      if (progressFill) progressFill.style.width = '100%';
+      if (progressLabel) progressLabel.textContent = 'Session Complete! 🎉';
+
+      if (stepContainer) {
+        stepContainer.innerHTML = `
+          <div style="background:#090d16; border:1px solid var(--border-color); border-radius:12px; padding:2.5rem 1.5rem; text-align:center; margin-top:1rem;">
+            <div style="font-size:3.5rem; margin-bottom:0.75rem; filter:drop-shadow(0 0 10px rgba(74,222,128,0.4));">🏆</div>
+            <h3 style="font-size:1.4rem; color:#4ade80; margin-bottom:0.5rem; font-weight:700;">Guided Repair Complete!</h3>
+            <p style="color:var(--text-secondary); font-size:0.9rem; max-width:500px; margin:0 auto 1.5rem auto; line-height:1.5;">
+              All items in the repair queue have been processed. Your world vault structure and lore integrity have significantly improved!
+            </p>
+            <button class="btn btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #0284c7 100%); border:none; padding:0.6rem 1.5rem; font-size:0.9rem;" onclick="window.app.closeGuidedSession()">
+              Return to Doctor Dashboard
+            </button>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const currentStep = this.guidedQueueIndex + 1;
+    const pct = Math.round((this.guidedQueueIndex / Math.max(1, total)) * 100);
+
+    if (progressFill) progressFill.style.width = `${pct}%`;
+    if (progressLabel) progressLabel.textContent = `Step ${currentStep} of ${total}`;
+
+    const item = this.guidedQueue[this.guidedQueueIndex];
+    if (!item) return;
+
+    if (!stepContainer) return;
+
+    if (item.type === 'misclassification') {
+      stepContainer.innerHTML = `
+        <div class="repair-comparison-grid" style="margin-top:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Current Vault Item</div>
+            <h4 style="font-size:1.1rem; color:#fff; margin:0 0 0.4rem 0;">${item.title}</h4>
+            <div style="font-size:0.8rem; color:var(--accent-rose); margin-bottom:0.75rem;">
+              Current Category: <strong>${item.currentCategory}</strong>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:6px;">
+              ${item.excerpt || 'No excerpt available.'}
+            </div>
+          </div>
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--accent-amber); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--accent-amber); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Proposed Doctor Fix</div>
+            <h4 style="font-size:1.1rem; color:#4ade80; margin:0 0 0.4rem 0;">Category: ${item.suggestedCategory}</h4>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+              Sub-Category: <strong>${item.suggestedSubCategory || 'General'}</strong>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4; margin-bottom:1.25rem;">
+              💡 <em>Reasoning:</em> ${item.reasoning || 'Automated smart categorization analysis.'}
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" style="background:#10b981; border:none; font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('recategorize', { newCategory: '${item.suggestedCategory}', newSubCategory: '${item.suggestedSubCategory || 'General'}' })">
+                ✓ Apply Recategorization
+              </button>
+              <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('skip')">
+                ⏭️ Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (item.type === 'duplicate') {
+      stepContainer.innerHTML = `
+        <div class="repair-comparison-grid" style="margin-top:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Duplicate Article (Copy)</div>
+            <h4 style="font-size:1.1rem; color:#fff; margin:0 0 0.4rem 0;">${item.title}</h4>
+            <div style="font-size:0.8rem; color:var(--accent-purple); margin-bottom:0.75rem;">
+              Category: <strong>${item.category}</strong>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:6px;">
+              ${(item.content || '').substring(0, 180) || 'Duplicate copy content.'}
+            </div>
+          </div>
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--accent-purple); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--accent-purple); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Master Article Comparison</div>
+            <h4 style="font-size:1.1rem; color:#4ade80; margin:0 0 0.4rem 0;">Master Copy (ID: ${item.originalId})</h4>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+              Original Category: <strong>${item.originalCategory}</strong>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4; margin-bottom:1.25rem;">
+              💡 <em>Recommended Action:</em> Merge duplicate content into master article or delete copy.
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" style="background:#8b5cf6; border:none; font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('merge_duplicates', { targetMasterId: '${item.originalId}' })">
+                🔀 Merge into Master
+              </button>
+              <button class="btn btn-secondary" style="background:#dc2626; color:#fff; font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('delete_article')">
+                🗑️ Delete Duplicate
+              </button>
+              <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('skip')">
+                ⏭️ Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (item.type === 'stub') {
+      stepContainer.innerHTML = `
+        <div class="repair-comparison-grid" style="margin-top:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Empty / Stub Article</div>
+            <h4 style="font-size:1.1rem; color:#fff; margin:0 0 0.4rem 0;">${item.title}</h4>
+            <div style="font-size:0.8rem; color:var(--accent-rose); margin-bottom:0.75rem;">
+              Category: <strong>${item.category}</strong>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:6px;">
+              ${item.excerpt || 'Article has minimal or default template content.'}
+            </div>
+          </div>
+          <div class="repair-pane" style="background:#090d16; border:1px solid var(--accent-rose); border-radius:8px; padding:1rem;">
+            <div class="pane-header" style="font-size:0.75rem; text-transform:uppercase; color:var(--accent-rose); letter-spacing:0.05em; font-weight:700; margin-bottom:0.5rem;">Doctor Action</div>
+            <h4 style="font-size:1.1rem; color:#38bdf8; margin:0 0 0.4rem 0;">Flesh Out or Remove</h4>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.25rem; line-height:1.4;">
+              This article is missing body content or contains standard World Anvil boilerplate.
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" style="background:#059669; border:none; font-size:0.8rem;" onclick="window.app.openStubPreviewModal('${item.articleId}', '${(item.title || '').replace(/'/g, "\\'")}', '${item.category}')">
+                🪄 Flesh Out with AI
+              </button>
+              <button class="btn btn-secondary" style="background:#dc2626; color:#fff; font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('delete_article')">
+                🗑️ Delete Stub
+              </button>
+              <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="window.app.applyGuidedStepAction('skip')">
+                ⏭️ Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  async applyGuidedStepAction(action, extraParamsOrArticleId, maybeExtraParams) {
+    let articleId = null;
+    let params = {};
+
+    const item = (this.guidedQueue || [])[this.guidedQueueIndex];
+
+    if (typeof action === 'string' && typeof extraParamsOrArticleId === 'string') {
+      articleId = extraParamsOrArticleId;
+      params = maybeExtraParams || {};
+    } else {
+      if (item) {
+        articleId = item.articleId || item.id;
+      }
+      params = extraParamsOrArticleId || {};
+    }
+
+    if (action !== 'skip' && articleId) {
+      try {
+        await fetch('/api/audit/apply-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, articleId, params })
+        });
+      } catch (err) {
+        console.error('Failed to apply guided repair action:', err);
+      }
+    }
+
+    this.guidedQueueIndex++;
+    this.renderGuidedStep();
+  }
+
+  closeGuidedSession() {
+    const mainDashboard = document.getElementById('doctor-dashboard-main');
+    const guidedView = document.getElementById('doctor-guided-session-view');
+
+    if (guidedView) guidedView.classList.add('hidden');
+    if (mainDashboard) mainDashboard.classList.remove('hidden');
+
+    this.runWorldAudit();
+  }
+
+  exitGuidedSession() {
+    this.closeGuidedSession();
+  }
+
+  switchDoctorTab(tabId) {
+    const tabBtns = document.querySelectorAll('#doctor-tab-nav .doctor-tab-btn');
+    tabBtns.forEach(btn => {
+      if (btn.getAttribute('data-tab') === tabId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    const panels = document.querySelectorAll('.doctor-tab-panel');
+    panels.forEach(panel => {
+      if (panel.id === `doctor-panel-${tabId}`) {
+        panel.classList.remove('hidden');
+      } else {
+        panel.classList.add('hidden');
+      }
+    });
+  }
+
+  startGuidedSessionFromTriage() {
+    this.closeImportTriageModal();
+    this.openDoctorModal();
+    this.startGuidedSession();
+  }
+
+  closeImportTriageModal() {
+    const modal = document.getElementById('import-triage-modal');
+    if (modal) modal.classList.add('hidden');
   }
 
   async runDeepAIAudit() {
@@ -1862,6 +2177,51 @@ window.closeDoctorModal = function() {
   if (modal) {
     modal.classList.add('hidden');
     modal.style.display = 'none';
+  }
+};
+
+window.setDoctorWorldScope = function(worldId) {
+  if (window.app && typeof window.app.setDoctorWorldScope === 'function') {
+    window.app.setDoctorWorldScope(worldId);
+  }
+};
+
+window.startGuidedSession = function() {
+  if (window.app && typeof window.app.startGuidedSession === 'function') {
+    window.app.startGuidedSession();
+  }
+};
+
+window.closeGuidedSession = function() {
+  if (window.app && typeof window.app.closeGuidedSession === 'function') {
+    window.app.closeGuidedSession();
+  }
+};
+
+window.exitGuidedSession = function() {
+  if (window.app && typeof window.app.exitGuidedSession === 'function') {
+    window.app.exitGuidedSession();
+  }
+};
+
+window.switchDoctorTab = function(tabId) {
+  if (window.app && typeof window.app.switchDoctorTab === 'function') {
+    window.app.switchDoctorTab(tabId);
+  }
+};
+
+window.startGuidedSessionFromTriage = function() {
+  if (window.app && typeof window.app.startGuidedSessionFromTriage === 'function') {
+    window.app.startGuidedSessionFromTriage();
+  }
+};
+
+window.closeImportTriageModal = function() {
+  if (window.app && typeof window.app.closeImportTriageModal === 'function') {
+    window.app.closeImportTriageModal();
+  } else {
+    const modal = document.getElementById('import-triage-modal');
+    if (modal) modal.classList.add('hidden');
   }
 };
 
