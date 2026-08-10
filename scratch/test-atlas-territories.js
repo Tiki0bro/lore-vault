@@ -123,6 +123,7 @@ async function runTests() {
   if (serverInstance) {
     serverInstance.close();
   }
+  process.exit(0);
 }
 
 runTests().catch((err) => {

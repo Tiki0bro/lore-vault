@@ -31,12 +31,13 @@ const mockLayers = [
   { id: 'layer-2', map_id: 'map-1', name: 'DM Hidden Ruins', color_badge: '#a855f7', is_visible: 1, is_secret: 1, sort_order: 1 }
 ];
 
-window.fetch = (url) => {
-  if (url.includes('/api/worlds/default/maps')) return Promise.resolve({ json: () => Promise.resolve({ maps: mockMaps }) });
-  if (url.includes('/api/articles')) return Promise.resolve({ json: () => Promise.resolve([]) });
-  if (url.includes('/layers')) return Promise.resolve({ json: () => Promise.resolve({ layers: mockLayers }) });
-  if (url.includes('/pins')) return Promise.resolve({ json: () => Promise.resolve({ pins: [] }) });
-  return Promise.resolve({ json: () => Promise.resolve({}) });
+window.fetch = async (url) => {
+  if (url.includes('/api/worlds/default/maps')) return { ok: true, json: async () => ({ maps: mockMaps }) };
+  if (url.includes('/api/articles')) return { ok: true, json: async () => [] };
+  if (url.includes('/layers')) return { ok: true, json: async () => ({ layers: mockLayers }) };
+  if (url.includes('/pins')) return { ok: true, json: async () => ({ pins: [] }) };
+  if (url.includes('/territories')) return { ok: true, json: async () => ({ territories: [] }) };
+  return { ok: true, json: async () => ({}) };
 };
 
 const atlasCode = fs.readFileSync(path.join(__dirname, '../public/js/atlas-view.js'), 'utf8');

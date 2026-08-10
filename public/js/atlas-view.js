@@ -1813,18 +1813,28 @@ class AtlasView {
 
   async exportStandaloneHtml() {
     try {
-      const res = await fetch(`/api/export/atlas/${this.worldId}`, {
+      const worldId = this.worldId || 'default';
+      const mapId = this.currentMap ? this.currentMap.id : null;
+      const res = await fetch(`/api/export/atlas/${worldId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: this.viewMode })
+        body: JSON.stringify({
+          mode: this.viewMode || 'dm',
+          mapId: mapId
+        })
       });
+      if (!res.ok) {
+        throw new Error(`Export request failed with status ${res.status}`);
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `lore-vault-atlas-${this.worldId}.html`;
+      a.download = `lore-vault-atlas-${worldId}.html`;
       a.click();
+      window.URL.revokeObjectURL(url);
     } catch (e) {
+      console.error('Export HTML error:', e);
       alert('Failed to generate standalone HTML export.');
     }
   }

@@ -4493,60 +4493,339 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
   db.get('SELECT * FROM worlds WHERE id = ? OR id = "default"', [worldId], (err, world) => {
     const targetWorld = world || { id: 'default', name: 'LoreVault Atlas', theme: 'ancient-codex' };
 
-    db.all('SELECT * FROM maps WHERE world_id = ?', [targetWorld.id], (err2, maps) => {
+    db.all('SELECT * FROM maps WHERE world_id = ? OR world_id = "default"', [targetWorld.id], (err2, maps) => {
       const mapList = maps || [];
       const mapIds = mapList.map(m => m.id);
-      
-      let pinQuery = 'SELECT * FROM map_pins';
-      let params = [];
-      if (mapIds.length > 0) {
-        pinQuery += ' WHERE map_id IN (' + mapIds.map(() => '?').join(',') + ')';
-        params = mapIds;
-        if (isPlayerMode) pinQuery += ' AND is_secret = 0';
-      } else if (isPlayerMode) {
-        pinQuery += ' WHERE is_secret = 0';
-      }
 
-      db.all(pinQuery, params, (err3, pins) => {
-        db.all('SELECT id, title, category, summary, content FROM articles WHERE world_id = ? OR world_id = "default"', [targetWorld.id], (err4, articles) => {
+      const dbQueryAll = (sql, params) => new Promise((resolve) => {
+        db.all(sql, params, (e, rows) => resolve(rows || []));
+      });
+
+      const runQueries = async () => {
+        let pins = [];
+        let layers = [];
+        let territories = [];
+
+        if (mapIds.length > 0) {
+          const placeholders = mapIds.map(() => '?').join(',');
           
-          const sanitizedArticles = (articles || []).map(art => ({
-            ...art,
-            content: isPlayerMode ? sanitizeSecretContent(art.content) : art.content
-          }));
+          let pinQuery = `SELECT * FROM map_pins WHERE map_id IN (${placeholders})`;
+          if (isPlayerMode) pinQuery += ' AND is_secret = 0';
+          pins = await dbQueryAll(pinQuery, mapIds);
 
-          const bundleHtml = `<!DOCTYPE html>
+          let layerQuery = `SELECT * FROM map_layers WHERE map_id IN (${placeholders})`;
+          if (isPlayerMode) layerQuery += ' AND is_secret = 0';
+          layerQuery += ' ORDER BY sort_order ASC, created_at ASC';
+          layers = await dbQueryAll(layerQuery, mapIds);
+
+          let terrQuery = `SELECT * FROM map_territories WHERE map_id IN (${placeholders})`;
+          if (isPlayerMode) terrQuery += ' AND is_secret = 0';
+          terrQuery += ' ORDER BY created_at ASC';
+          territories = await dbQueryAll(terrQuery, mapIds);
+        } else {
+          let pinQuery = 'SELECT * FROM map_pins';
+          if (isPlayerMode) pinQuery += ' WHERE is_secret = 0';
+          pins = await dbQueryAll(pinQuery, []);
+
+          let layerQuery = 'SELECT * FROM map_layers';
+          if (isPlayerMode) layerQuery += ' WHERE is_secret = 0';
+          layerQuery += ' ORDER BY sort_order ASC, created_at ASC';
+          layers = await dbQueryAll(layerQuery, []);
+
+          let terrQuery = 'SELECT * FROM map_territories';
+          if (isPlayerMode) terrQuery += ' WHERE is_secret = 0';
+          terrQuery += ' ORDER BY created_at ASC';
+          territories = await dbQueryAll(terrQuery, []);
+        }
+
+        const articles = await dbQueryAll('SELECT id, title, category, summary, content FROM articles WHERE world_id = ? OR world_id = "default"', [targetWorld.id]);
+
+        const sanitizedArticles = articles.map(art => ({
+          ...art,
+          content: isPlayerMode ? sanitizeSecretContent(art.content) : art.content
+        }));
+
+        const bundleHtml = `<!DOCTYPE html>
 <html lang="en" data-theme="${targetWorld.theme}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${targetWorld.name} — Standalone World Atlas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; height: 100vh; }
-    #map { flex: 1; height: 100%; background: #000; }
-    #drawer { width: 400px; padding: 24px; background: #161b22; border-left: 1px solid #30363d; overflow-y: auto; }
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-light); display: flex; height: 100vh; overflow: hidden; }
+    #atlas-viewport { position: relative; flex: 1; height: 100%; }
+    #map { width: 100%; height: 100%; background: #020617; }
+    #drawer { width: 420px; padding: 24px; background: var(--bg-card); border-left: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .drawer-header { border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .drawer-title { margin: 0; font-size: 1.5rem; color: var(--accent); }
+    .drawer-subtitle { margin: 4px 0 0 0; font-size: 0.875rem; color: var(--text-muted); }
+    .article-content { font-size: 0.95rem; line-height: 1.6; }
+    .article-content table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    .article-content th, .article-content td { border: 1px solid var(--border-color); padding: 6px 10px; font-size: 0.85rem; }
+    .article-content th { background: rgba(255, 255, 255, 0.05); }
+    .article-content blockquote { border-left: 3px solid var(--accent); margin: 12px 0; padding-left: 12px; color: var(--text-muted); font-style: italic; }
+    .atlas-layers-drawer { position: absolute; top: 16px; right: 16px; width: 260px; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; backdrop-filter: blur(12px); z-index: 1000; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+    .atlas-layers-header { font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; color: var(--accent); }
+    .layer-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; margin-bottom: 4px; background: rgba(255, 255, 255, 0.03); font-size: 0.85rem; cursor: pointer; }
+    .layer-badge { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); margin-bottom: 8px; }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div id="drawer">
-    <h2 id="title">${targetWorld.name} Atlas</h2>
-    <div id="body">Select a marker on the map to explore lore.</div>
+  <div id="atlas-viewport">
+    <div id="map"></div>
+    <div class="atlas-layers-drawer">
+      <div class="atlas-layers-header">
+        <span><i class="fa-solid fa-layer-group"></i> Map Layers</span>
+      </div>
+      <div id="layers-list"></div>
+    </div>
   </div>
+  <div id="drawer">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="drawer-title">${targetWorld.name} Atlas</h2>
+      <p class="drawer-subtitle" id="drawer-subtitle">Offline Interactive Map</p>
+    </div>
+    <div id="drawer-body" class="article-content">
+      <p>Select a marker or territory on the map to explore world lore.</p>
+    </div>
+  </div>
+
+  <svg style="display:none;">
+    <defs>
+      <pattern id="pattern-stripe" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" />
+        <line x1="6" y1="0" x2="6" y2="12" stroke="#f59e0b" stroke-width="4" opacity="0.6" />
+      </pattern>
+    </defs>
+  </svg>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script>
     const maps = ${JSON.stringify(mapList)};
     const pins = ${JSON.stringify(pins || [])};
+    const layers = ${JSON.stringify(layers || [])};
+    const territories = ${JSON.stringify(territories || [])};
     const articles = ${JSON.stringify(sanitizedArticles)};
+
+    (function() {
+      let mapInstance = null;
+      let activeMap = maps[0] || { width: 1920, height: 1080, image_path: '' };
+      const hiddenLayerIds = new Set();
+
+      function initMap() {
+        const w = activeMap.width || 1920;
+        const h = activeMap.height || 1080;
+        const bounds = [[0, 0], [h, w]];
+
+        mapInstance = L.map('map', {
+          crs: L.CRS.Simple,
+          minZoom: -2,
+          maxZoom: 2,
+          zoomSnap: 0.5
+        });
+
+        if (activeMap.image_path) {
+          L.imageOverlay(activeMap.image_path, bounds).addTo(mapInstance);
+        }
+        mapInstance.fitBounds(bounds);
+
+        const svg = document.querySelector('.leaflet-container svg');
+        if (svg && !svg.querySelector('#pattern-stripe')) {
+          let defs = svg.querySelector('defs');
+          if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svg.insertBefore(defs, svg.firstChild);
+          }
+          const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+          pattern.setAttribute('id', 'pattern-stripe');
+          pattern.setAttribute('width', '12');
+          pattern.setAttribute('height', '12');
+          pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+          pattern.setAttribute('patternTransform', 'rotate(45)');
+          pattern.innerHTML = '<line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" /><line x1="6" y1="0" x2="6" y2="12" stroke="#f59e0b" stroke-width="4" opacity="0.6" />';
+          defs.appendChild(pattern);
+        }
+
+        renderLayersList();
+        renderTerritories();
+        renderPins();
+      }
+
+      function renderLayersList() {
+        const listEl = document.getElementById('layers-list');
+        if (!listEl) return;
+        if (!layers || layers.length === 0) {
+          listEl.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted);">No layers defined</div>';
+          return;
+        }
+        listEl.innerHTML = layers.map(l => \`
+          <label class="layer-item">
+            <input type="checkbox" \${hiddenLayerIds.has(l.id) ? '' : 'checked'} data-layer-id="\${l.id}">
+            <span class="layer-badge" style="background:\${l.color_badge || '#38bdf8'};"></span>
+            <span>\${escapeHtml(l.name)}</span>
+          </label>
+        \`).join('');
+
+        listEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            const lid = e.target.getAttribute('data-layer-id');
+            if (e.target.checked) {
+              hiddenLayerIds.delete(lid);
+            } else {
+              hiddenLayerIds.add(lid);
+            }
+            renderTerritories();
+            renderPins();
+          });
+        });
+      }
+
+      let territoryPolygons = [];
+      function renderTerritories() {
+        territoryPolygons.forEach(p => p.remove());
+        territoryPolygons = [];
+
+        const w = activeMap.width || 1920;
+        const h = activeMap.height || 1080;
+
+        (territories || []).forEach(t => {
+          if (t.layer_id && hiddenLayerIds.has(t.layer_id)) return;
+
+          let points = [];
+          try {
+            points = typeof t.points_json === 'string' ? JSON.parse(t.points_json) : (t.points_json || []);
+          } catch(e) { points = []; }
+
+          if (!Array.isArray(points) || points.length < 3) return;
+
+          const latlngs = points.map(pt => [pt[1] * h, pt[0] * w]);
+          let dashArray = null;
+          if (t.stroke_style === 'dashed') dashArray = '6, 6';
+          if (t.stroke_style === 'dotted') dashArray = '2, 4';
+
+          const isContested = !!t.is_contested;
+
+          const poly = L.polygon(latlngs, {
+            color: t.stroke_color || '#ef4444',
+            weight: t.stroke_width || 3,
+            dashArray: dashArray,
+            fillColor: isContested ? 'url(#pattern-stripe)' : (t.fill_color || '#ef4444'),
+            fillOpacity: t.fill_opacity !== undefined ? t.fill_opacity : 0.25
+          }).addTo(mapInstance);
+
+          if (isContested && poly._path) {
+            poly._path.setAttribute('fill', 'url(#pattern-stripe)');
+          }
+
+          poly.bindTooltip(t.title, { permanent: false, direction: 'center' });
+
+          poly.on('click', () => {
+            openTerritoryDetails(t);
+          });
+
+          territoryPolygons.push(poly);
+        });
+      }
+
+      let pinMarkers = [];
+      function renderPins() {
+        pinMarkers.forEach(m => m.remove());
+        pinMarkers = [];
+
+        const w = activeMap.width || 1920;
+        const h = activeMap.height || 1080;
+
+        (pins || []).forEach(p => {
+          if (p.layer_id && hiddenLayerIds.has(p.layer_id)) return;
+
+          const lat = p.y_pct * h;
+          const lng = p.x_pct * w;
+
+          const marker = L.marker([lat, lng]).addTo(mapInstance);
+          marker.bindTooltip(p.title, { permanent: false, direction: 'top' });
+          marker.on('click', () => {
+            openPinDetails(p);
+          });
+
+          pinMarkers.push(marker);
+        });
+      }
+
+      function openPinDetails(pin) {
+        const article = (articles || []).find(a => a.id === pin.article_id);
+        const titleEl = document.getElementById('drawer-title');
+        const subtitleEl = document.getElementById('drawer-subtitle');
+        const bodyEl = document.getElementById('drawer-body');
+
+        if (titleEl) titleEl.innerText = pin.title;
+        if (subtitleEl) subtitleEl.innerText = pin.category || 'Map Pin';
+
+        if (article) {
+          if (bodyEl) bodyEl.innerHTML = \`<div class="tag-badge">\${escapeHtml(article.category || '')}</div><div>\${article.content || article.summary || ''}</div>\`;
+        } else {
+          if (bodyEl) bodyEl.innerHTML = \`<p>\${escapeHtml(pin.description || 'No detailed article linked.')}</p>\`;
+        }
+      }
+
+      function openTerritoryDetails(t) {
+        const article = (articles || []).find(a => a.id === t.article_id);
+        const contestedArticle = (articles || []).find(a => a.id === t.contested_article_id);
+        const titleEl = document.getElementById('drawer-title');
+        const subtitleEl = document.getElementById('drawer-subtitle');
+        const bodyEl = document.getElementById('drawer-body');
+
+        if (titleEl) titleEl.innerText = t.title + (t.is_contested ? ' (Contested Zone)' : '');
+        if (subtitleEl) subtitleEl.innerText = 'Territory Boundary';
+
+        let html = '';
+        if (t.is_contested) {
+          html += \`<div style="background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:10px; border-radius:6px; margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> <strong>Active Border Conflict</strong></div>\`;
+        }
+
+        if (article) {
+          html += \`<div class="tag-badge">\${escapeHtml(article.category || 'Lore')}</div><h4>\${escapeHtml(article.title)}</h4><div>\${article.content || article.summary || ''}</div>\`;
+        }
+        if (contestedArticle) {
+          html += \`<hr style="border-color:var(--border-color); margin:16px 0;" /><div class="tag-badge" style="background:rgba(245,158,11,0.15); color:#f59e0b; border-color:rgba(245,158,11,0.3);">Contesting Faction</div><h4>\${escapeHtml(contestedArticle.title)}</h4><div>\${contestedArticle.content || contestedArticle.summary || ''}</div>\`;
+        }
+
+        if (!article && !contestedArticle) {
+          html += \`<p>Territory polygon boundary: \${escapeHtml(t.title)}</p>\`;
+        }
+
+        if (bodyEl) bodyEl.innerHTML = html;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      window.addEventListener('DOMContentLoaded', initMap);
+    })();
   </script>
 </body>
 </html>`;
 
-          res.setHeader('Content-Type', 'text/html');
-          res.setHeader('Content-Disposition', `attachment; filename="lore-vault-atlas-${targetWorld.id}.html"`);
-          res.send(bundleHtml);
-        });
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `attachment; filename="lore-vault-atlas-${targetWorld.id}.html"`);
+        res.send(bundleHtml);
+      };
+
+      runQueries().catch(err3 => {
+        res.status(500).json({ error: 'Failed to generate offline HTML bundle', details: err3.message });
       });
     });
   });

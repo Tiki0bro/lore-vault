@@ -149,10 +149,13 @@ async function runTests() {
   assert(atlas.aiGhostPolygons.length === 0, 'Ghost polygon overlays cleared after batch import approval');
 
   console.log(`\n=== Test Results: ${passed} passed, ${failed} failed ===`);
+  dom.window.close();
   if (failed > 0) process.exit(1);
+  process.exit(0);
 }
 
 runTests().catch(err => {
   console.error('Test execution error:', err);
   process.exit(1);
 });
+
