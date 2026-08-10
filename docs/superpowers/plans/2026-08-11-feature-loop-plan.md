@@ -1,0 +1,220 @@
+# LoreVault Feature Loop Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Create a custom workspace skill `.agents/skills/feature-loop/SKILL.md` that enables invoking `/feature-loop` to execute a 6-stage Socratic development loop driven by Arthur "The Griller" Vance and LoreVault's 10 user personas.
+
+**Architecture:** Define `.agents/skills/feature-loop/SKILL.md` with YAML frontmatter, 6 pipeline stage instructions, persona roleplay rules, Arthur interrogation protocols, artifact template paths, and 4 gate approval report checkpoints. Build a verification script in `scratch/test-feature-loop.js` to test artifact generation and gate reporting logic.
+
+**Tech Stack:** Markdown (AGY Skill Frontmatter & Rules), Node.js (Verification test runner)
+
+## Global Constraints
+
+- **Skill Path**: `.agents/skills/feature-loop/SKILL.md`
+- **Artifact Path Pattern**: `docs/feature-loops/YYYY-MM-DD-<feature-slug>/`
+- **Spec Path**: `docs/superpowers/specs/2026-08-11-feature-loop-design.md`
+- **Gate Checkpoints**: 4 Gate Checkpoints (Gate 1: Design Spec, Gate 2: Implementation Plan, Gate 3: QA Verification, Gate 4: Customer Sign-Off)
+
+---
+
+### Task 1: Create Workspace Skill `.agents/skills/feature-loop/SKILL.md`
+
+**Files:**
+- Create: `.agents/skills/feature-loop/SKILL.md`
+
+**Interfaces:**
+- Consumes: `docs/USER_PERSONAS.md` (Persona definitions & Arthur "The Griller" Vance)
+- Produces: Workspace slash command `/feature-loop` and custom skill instructions.
+
+- [ ] **Step 1: Write the workspace skill file `.agents/skills/feature-loop/SKILL.md`**
+
+```markdown
+---
+name: feature-loop
+description: Use when initiating a comprehensive feature development loop driven by LoreVault's 10 user personas and Arthur "The Griller" Vance across 6 stages and 4 Socratic approval gates.
+---
+
+# LoreVault Feature Loop (`/feature-loop`)
+
+## Overview
+
+The **Feature Loop** skill orchestrates a persona-driven, Socratic Software Development Lifecycle (SDLC) inside LoreVault. It turns Arthur "The Griller" Vance and LoreVault's 10 user personas into an autonomous design, engineering, QA, and feedback panel.
+
+## Triggering the Loop
+
+Invoke with:
+- `/feature-loop "<Feature Title / Description>"`
+- `"Start a feature loop for <Feature Title>"`
+
+---
+
+## Workspace Setup & State Tracking
+
+Every feature loop creates a tracking directory: `docs/feature-loops/YYYY-MM-DD-<feature-slug>/` containing 6 artifacts:
+1. `01-ideation-grill.md`
+2. `02-design-spec.md`
+3. `03-implementation-plan.md`
+4. `04-qa-verification.md`
+5. `05-customer-feedback.md`
+6. `06-release-retrospective.md`
+
+---
+
+## Personas & Socratic Grilling Rules
+
+### Persona Roster
+- 👔 **Ethen**: Product Owner (Scope & user value balance).
+- 🧪 **Riley**: QA Lead & Edge-Case Specialist (Boundary checks, zero silent errors).
+- 🎭 **Alex**: Dev & VTT Specialist (API design, serializers, token performance).
+- 🎭 **Morgan**: World Anvil Migrator (Cross-links, tags, categories, DM secrets).
+- 🎭 **Elena**: Novelist (Character voice, scene slate, narrative tone).
+- 🎨 **Maya**: Lead UI/UX Designer (Zero-overflow layout, progressive disclosure).
+- 🤖 **Grant**: AI-Forward Novelist (AI feature coverage, model agility).
+- 🖋️ **Merryn**: Craft Purist (No-generate mode, analytical boundaries).
+- 📢 **Marcus**: Marketing Strategist (Promotional slates, public excerpts).
+- 🔍 **Arthur "The Griller" Vance**: Socratic Architect & Stress-Tester ("Grill Me").
+
+### Arthur's Interrogation Directives
+1. **The 5-Whys Deep Probe**: Interrogate feature requests down to their root value (*"Why build this? What breaks if we don't?"*).
+2. **Cross-Persona Friction**: Force personas with competing interests to defend trade-offs (e.g., Grant's AI enthusiasm vs. Merryn's craft purism).
+3. **YAGNI & Complexity Tax**: Challenge over-engineered solutions and calculate maintenance debt.
+4. **Edge-Case & Failure-Mode Auditing**: Force failure mode definitions upfront before code is written.
+
+---
+
+## Pipeline Stages & Approval Gates
+
+### Stage 1: Persona Ideation & Initial Grilling
+- Synthesize feature concept across impacted personas.
+- Arthur grills raw idea. Save to `01-ideation-grill.md`.
+- Auto-advances to Stage 2.
+
+### Stage 2: Design Spec & Gap Remediation Loop [GATE 1]
+- Write formal spec in `02-design-spec.md`.
+- Arthur grills spec line-by-line against Alex, Riley, Maya, Merryn, etc.
+- Gaps identified produce remediation plans, re-grilled until clean.
+- **PAUSE & PRESENT GATE 1 CHECKPOINT REPORT**.
+
+### Stage 3: Implementation Plan & Team Validation [GATE 2]
+- Convert spec to TDD/SDD plan in `03-implementation-plan.md`.
+- Arthur grills dev team on boundaries, test strategy, model fallback safety.
+- **PAUSE & PRESENT GATE 2 CHECKPOINT REPORT**.
+
+### Stage 4: Execution & QA Verification Loop [GATE 3]
+- Execute implementation plan (TDD/SDD).
+- Riley & QA run boundary, schema, and zero-silent-error checks.
+- Arthur grills final build (`04-qa-verification.md`).
+- **PAUSE & PRESENT GATE 3 CHECKPOINT REPORT**.
+
+### Stage 5: Customer Review & Feedback Collection [GATE 4]
+- Simulate user feedback across target personas evaluating live feature (`05-customer-feedback.md`).
+- **PAUSE & PRESENT GATE 4 CHECKPOINT REPORT**.
+
+### Stage 6: Release Retrospective & Next Release Brainstorming
+- Log architectural choices & post-mortems in `DECISIONS.md`.
+- Save retro in `06-release-retrospective.md`. Complete loop.
+
+---
+
+## Gate Approval Report Template
+
+When reaching any Gate Checkpoint (Gate 1..4), output this block:
+
+```markdown
+=====================================================
+🔥 ARTHUR'S GRILLING REPORT & GATE CHECKPOINT [GATE X/4]
+Feature: <Feature Name>
+Status: READY FOR USER APPROVAL
+=====================================================
+
+### 🔍 Arthur's Key Interrogations & Verdict:
+- [Issue 1]: <Description & How it was resolved in artifact>
+- [Issue 2]: <Description & How it was resolved>
+
+### 👥 Persona Sign-Offs:
+- 👔 Ethen (PO): Approved
+- 🧪 Riley (QA): Approved
+- 🎭 Alex (Dev): Approved
+- 🎨 Maya (UI/UX): Approved
+
+### 📄 Artifact Link:
+[View Artifact](file:///<absolute-path-to-artifact>)
+
+-----------------------------------------------------
+👉 Action Required: Reply 'Approved' to proceed to Stage X+1, or specify revisions.
+```
+```
+
+- [ ] **Step 2: Commit skill file**
+
+```bash
+git add .agents/skills/feature-loop/SKILL.md
+git commit -m "feat: add feature-loop workspace skill for persona-driven SDLC"
+```
+
+---
+
+### Task 2: Build Verification Test Runner `scratch/test-feature-loop.js`
+
+**Files:**
+- Create: `scratch/test-feature-loop.js`
+
+- [ ] **Step 1: Write test script to verify skill structure and directory generation**
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+const skillPath = path.join(__dirname, '../.agents/skills/feature-loop/SKILL.md');
+
+console.log('Testing Feature Loop Skill setup...');
+
+if (!fs.existsSync(skillPath)) {
+  console.error('FAIL: Skill file does not exist at', skillPath);
+  process.exit(1);
+}
+
+const content = fs.readFileSync(skillPath, 'utf8');
+
+const requiredTokens = [
+  'name: feature-loop',
+  'Arthur "The Griller" Vance',
+  'GATE 1',
+  'GATE 2',
+  'GATE 3',
+  'GATE 4',
+  '01-ideation-grill.md',
+  '02-design-spec.md',
+  '03-implementation-plan.md',
+  '04-qa-verification.md',
+  '05-customer-feedback.md',
+  '06-release-retrospective.md',
+  'ARTHUR\'S GRILLING REPORT & GATE CHECKPOINT'
+];
+
+let failed = false;
+for (const token of requiredTokens) {
+  if (!content.includes(token)) {
+    console.error(`FAIL: Skill file missing required token: "${token}"`);
+    failed = true;
+  }
+}
+
+if (failed) {
+  process.exit(1);
+}
+
+console.log('PASS: Feature Loop Skill verified successfully!');
+```
+
+- [ ] **Step 2: Execute verification script**
+
+Run: `node scratch/test-feature-loop.js`
+Expected: PASS: Feature Loop Skill verified successfully!
+
+- [ ] **Step 3: Commit verification test script**
+
+```bash
+git add scratch/test-feature-loop.js
+git commit -m "test: add verification test runner for feature-loop skill"
+```
