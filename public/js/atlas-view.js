@@ -31,6 +31,8 @@ class AtlasView {
     this.rulerPoints = [];
     this.rulerPolyline = null;
     this.rulerMarkers = [];
+    this.pinSearchQuery = '';
+    this.selectedPinCategory = 'all';
   }
 
   async init() {
@@ -86,6 +88,10 @@ class AtlasView {
           <span id="atlas-territory-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-draw-polygon"></i> Click on map to add vertices... <button id="atlas-complete-territory-btn" class="tool-btn primary btn-sm" style="margin-left:8px; padding:2px 8px; font-size:0.8rem;">[✓ Complete Boundary]</button> <button id="atlas-cancel-territory-btn" class="btn-text" style="margin-left:6px;">[✕ Cancel]</button></span>
         </div>
         <div class="atlas-toolbar-right">
+          <div class="atlas-search-wrapper" style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="text" id="atlas-pin-search" class="toolbar-input" placeholder="🔍 Search pins & lore..." value="${this.pinSearchQuery || ''}">
+            <button id="atlas-pin-clear-filter-btn" class="tool-btn btn-sm danger" style="display:${(this.pinSearchQuery || (this.selectedPinCategory && this.selectedPinCategory !== 'all')) ? 'inline-flex' : 'none'};">[✕ Clear Filter]</button>
+          </div>
           <div class="segmented-control">
             <button id="atlas-mode-dm" class="segmented-btn ${this.viewMode === 'dm' ? 'active' : ''}">DM Canon View</button>
             <button id="atlas-mode-player" class="segmented-btn ${this.viewMode === 'player' ? 'active' : ''}">Public Player View</button>
@@ -93,6 +99,16 @@ class AtlasView {
           <button id="atlas-share-btn" class="tool-btn primary"><i class="fa-solid fa-share-nodes"></i> Share Atlas</button>
           <button id="atlas-export-btn" class="tool-btn"><i class="fa-solid fa-download"></i> Export HTML</button>
         </div>
+      </div>
+      <div id="atlas-pin-category-bar" class="atlas-category-bar">
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'all' ? 'active' : ''}" data-category="all">All</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'settlements' ? 'active' : ''}" data-category="settlements">Settlements</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'fortresses' ? 'active' : ''}" data-category="fortresses">Fortresses</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'dungeons' ? 'active' : ''}" data-category="dungeons">Dungeons</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'natural wonders' ? 'active' : ''}" data-category="natural wonders">Natural Wonders</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'quests' ? 'active' : ''}" data-category="quests">Quests</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'factions' ? 'active' : ''}" data-category="factions">Factions</button>
+        <button class="atlas-category-chip ${this.selectedPinCategory === 'relics' ? 'active' : ''}" data-category="relics">Relics</button>
       </div>
       <div id="atlas-viewport">
         <div id="atlas-breadcrumbs" class="atlas-breadcrumbs" style="display:none;"></div>
@@ -580,6 +596,68 @@ class AtlasView {
         }
       });
     }
+
+    // Pin Search Input Listener
+    const pinSearchInput = document.getElementById('atlas-pin-search');
+    if (pinSearchInput) {
+      pinSearchInput.addEventListener('input', (e) => {
+        this.pinSearchQuery = e.target.value;
+        this.updateClearFilterBtnVisibility();
+        this.renderPinsOnCanvas();
+      });
+    }
+
+    // Category Filter Chips Listener
+    const categoryBar = document.getElementById('atlas-pin-category-bar');
+    if (categoryBar) {
+      categoryBar.addEventListener('click', (e) => {
+        const chip = e.target.closest('.atlas-category-chip');
+        if (chip) {
+          const category = chip.getAttribute('data-category');
+          if (category) {
+            this.selectedPinCategory = category;
+            categoryBar.querySelectorAll('.atlas-category-chip').forEach(c => {
+              c.classList.toggle('active', c.getAttribute('data-category') === category);
+            });
+            this.updateClearFilterBtnVisibility();
+            this.renderPinsOnCanvas();
+          }
+        }
+      });
+    }
+
+    // Clear Filter Button Listener
+    const clearFilterBtn = document.getElementById('atlas-pin-clear-filter-btn');
+    if (clearFilterBtn) {
+      clearFilterBtn.addEventListener('click', () => {
+        this.clearPinFilters();
+      });
+    }
+  }
+
+  updateClearFilterBtnVisibility() {
+    const clearBtn = document.getElementById('atlas-pin-clear-filter-btn');
+    if (clearBtn) {
+      const isFiltered = (this.pinSearchQuery && this.pinSearchQuery.trim() !== '') || (this.selectedPinCategory && this.selectedPinCategory !== 'all');
+      clearBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+    }
+  }
+
+  clearPinFilters() {
+    this.pinSearchQuery = '';
+    this.selectedPinCategory = 'all';
+    const searchInput = document.getElementById('atlas-pin-search');
+    if (searchInput) searchInput.value = '';
+
+    const categoryBar = document.getElementById('atlas-pin-category-bar');
+    if (categoryBar) {
+      categoryBar.querySelectorAll('.atlas-category-chip').forEach(c => {
+        c.classList.toggle('active', c.getAttribute('data-category') === 'all');
+      });
+    }
+
+    this.updateClearFilterBtnVisibility();
+    this.renderPinsOnCanvas();
   }
 
   async autoGenerateMap() {
@@ -1927,18 +2005,85 @@ class AtlasView {
 
     const hiddenLayerIds = new Set(this.layers.filter(l => !l.is_visible).map(l => l.id));
 
+    const selectedCat = (this.selectedPinCategory || 'all').toLowerCase();
+    const query = (this.pinSearchQuery || '').trim().toLowerCase();
+
+    const matchingPins = [];
+
     this.pins.forEach(pin => {
+      // 1. Layer visibility check
       if (pin.layer_id && hiddenLayerIds.has(pin.layer_id)) {
         return;
       }
-      const latlng = [pin.y_pct * h, pin.x_pct * w];
-      const marker = L.marker(latlng).addTo(this.mapInstance);
+
+      // 2. Linked article lookup
+      const linkedArticle = Array.isArray(this.articles) ? this.articles.find(a => a.id === pin.article_id) : null;
+
+      // 3. Category matching (check pin.category, linkedArticle.category, or pin.label)
+      const pinCat = (pin.category || (linkedArticle && linkedArticle.category) || '').toLowerCase();
+      const matchesCategory = selectedCat === 'all' ||
+                              pinCat.includes(selectedCat) ||
+                              (pin.label && pin.label.toLowerCase().includes(selectedCat));
+
+      if (!matchesCategory) return;
+
+      // 4. Text Search Query matching (case-insensitive substring match on pin label or linked article title/summary/content)
+      const labelMatch = pin.label && pin.label.toLowerCase().includes(query);
+      const articleMatch = linkedArticle && (
+        (linkedArticle.title && linkedArticle.title.toLowerCase().includes(query)) ||
+        (linkedArticle.summary && linkedArticle.summary.toLowerCase().includes(query)) ||
+        (linkedArticle.content && linkedArticle.content.toLowerCase().includes(query))
+      );
+
+      const matchesSearch = !query || labelMatch || articleMatch;
+
+      if (!matchesSearch) return;
+
+      matchingPins.push(pin);
+
+      // 5. Marker Creation & Search Highlight
+      const latlng = [(pin.y_pct || 0) * h, (pin.x_pct || 0) * w];
+      const isSearchActive = query !== '';
+      const isHighlighted = isSearchActive && matchesSearch;
+      const highlightClass = isHighlighted ? ' pin-search-highlight' : '';
+
+      let markerIcon = null;
+      if (typeof L.divIcon === 'function') {
+        markerIcon = L.divIcon({
+          className: `atlas-pin-marker${highlightClass}`,
+          html: `<div class="atlas-pin-icon" style="background-color:${pin.pin_color || '#d97706'};"><i class="fa-solid ${pin.pin_icon || 'fa-location-dot'}"></i></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28]
+        });
+      }
+
+      const markerOpts = markerIcon ? { icon: markerIcon } : {};
+      const marker = L.marker(latlng, markerOpts).addTo(this.mapInstance);
       const targetSubMapId = pin.target_sub_map_id || pin.sub_map_id;
       const tooltipLabel = targetSubMapId ? `🗺️ ${pin.label}` : pin.label;
       marker.bindTooltip(tooltipLabel, { permanent: false, direction: 'top' });
       marker.on('click', () => this.openArticleDrawer(pin.article_id, pin.label, pin));
+
+      marker._pinData = pin;
+      marker._isHighlighted = isHighlighted;
+      if (isHighlighted && marker._icon && typeof marker._icon.classList?.add === 'function') {
+        marker._icon.classList.add('pin-search-highlight');
+      }
+
       this.markers.push(marker);
     });
+
+    // 6. Auto-pan map to target pin if single search result matches
+    if (query !== '' && matchingPins.length === 1) {
+      const targetPin = matchingPins[0];
+      const panLat = (targetPin.y_pct || 0) * h;
+      const panLng = (targetPin.x_pct || 0) * w;
+      if (this.mapInstance && typeof this.mapInstance.panTo === 'function') {
+        this.mapInstance.panTo([panLat, panLng]);
+      } else if (this.mapInstance && typeof this.mapInstance.setView === 'function') {
+        this.mapInstance.setView([panLat, panLng]);
+      }
+    }
   }
 
   openCreatePinModal(x_pct, y_pct) {

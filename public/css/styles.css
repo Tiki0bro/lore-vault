@@ -6026,4 +6026,128 @@ a.breadcrumb-item:hover {
   cursor: pointer;
 }
 
+/* --- Atlas Pin Search Input & Category Bar --- */
+.atlas-search-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#atlas-pin-search {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  background: var(--bg-surface-secondary, rgba(15, 23, 42, 0.7));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary, #f8fafc);
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+#atlas-pin-search:focus {
+  border-color: var(--accent-primary, #38bdf8);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+[data-mode="light"] #atlas-pin-search {
+  background: rgba(250, 246, 237, 0.9);
+  border-color: rgba(124, 106, 90, 0.3);
+  color: var(--text-primary, #2c221e);
+}
+
+[data-mode="light"] #atlas-pin-search:focus {
+  border-color: var(--accent-primary, #8b5cf6);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.25);
+}
+
+#atlas-pin-category-bar, .atlas-category-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  z-index: 10;
+}
+
+[data-mode="light"] #atlas-pin-category-bar,
+[data-mode="light"] .atlas-category-bar {
+  background: rgba(250, 246, 237, 0.95);
+  border-bottom-color: rgba(124, 106, 90, 0.25);
+}
+
+.atlas-category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-secondary, #94a3b8);
+  font-family: var(--font-body, inherit);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.atlas-category-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f8fafc);
+  border-color: var(--accent-primary, #38bdf8);
+  transform: translateY(-1px);
+}
+
+.atlas-category-chip.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border-color: var(--accent-primary, #38bdf8);
+  color: var(--accent-primary, #38bdf8);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+  font-weight: 700;
+}
+
+[data-mode="light"] .atlas-category-chip {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(124, 106, 90, 0.2);
+  color: var(--text-secondary, #7c6a5a);
+}
+
+[data-mode="light"] .atlas-category-chip:hover {
+  background: rgba(124, 106, 90, 0.1);
+  color: var(--text-primary, #2c221e);
+}
+
+[data-mode="light"] .atlas-category-chip.active {
+  background: #e8d7b8;
+  border-color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary, #8b5cf6);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+/* Marker Search Highlight Glow */
+.pin-search-highlight {
+  animation: pinHighlightGlow 1.5s infinite alternate;
+  z-index: 1000 !important;
+}
+
+@keyframes pinHighlightGlow {
+  0% {
+    filter: drop-shadow(0 0 4px #f59e0b) drop-shadow(0 0 10px #f59e0b);
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 10px #f59e0b) drop-shadow(0 0 20px #f59e0b);
+    transform: scale(1.15);
+  }
+}
+
 
