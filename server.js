@@ -131,7 +131,13 @@ db.serialize(() => {
   db.run("ALTER TABLE articles ADD COLUMN world_id TEXT DEFAULT 'default'", (err) => {});
   db.run("UPDATE articles SET world_id = 'default' WHERE world_id IS NULL", (err) => {});
   db.run("ALTER TABLE worlds ADD COLUMN theme TEXT DEFAULT 'ancient-codex'", (err) => {});
+  db.run("ALTER TABLE worlds ADD COLUMN banner_image TEXT DEFAULT '/uploads/images/default-banner.png'", (err) => {});
+  db.run("ALTER TABLE worlds ADD COLUMN tagline TEXT DEFAULT 'An intricate custom setting waiting to be explored.'", (err) => {});
+  db.run("ALTER TABLE worlds ADD COLUMN pinned_article_ids TEXT DEFAULT '[]'", (err) => {});
+  db.run("ALTER TABLE worlds ADD COLUMN template_style TEXT DEFAULT 'grand-codex'", (err) => {});
   db.run("ALTER TABLE articles ADD COLUMN header_image TEXT", (err) => {});
+  db.run("ALTER TABLE articles ADD COLUMN visibility TEXT DEFAULT 'public'", (err) => {});
+  db.run("UPDATE articles SET category = 'Races & Species' WHERE category = 'Species'", (err) => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS personas (
@@ -173,6 +179,73 @@ db.serialize(() => {
       needs TEXT,
       speech_mannerisms TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS maps (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      parent_map_id TEXT REFERENCES maps(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      image_path TEXT NOT NULL,
+      width INTEGER NOT NULL,
+      height INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS map_pins (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL,
+      article_id TEXT REFERENCES articles(id) ON DELETE CASCADE,
+      x_pct REAL NOT NULL,
+      y_pct REAL NOT NULL,
+      label TEXT NOT NULL,
+      pin_icon TEXT DEFAULT 'fa-location-dot',
+      pin_color TEXT DEFAULT '#d97706',
+      is_secret INTEGER DEFAULT 0,
+      sub_map_id TEXT REFERENCES maps(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS map_layers (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      color_badge TEXT DEFAULT '#38bdf8',
+      is_visible INTEGER DEFAULT 1,
+      is_secret INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS map_territories (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL,
+      layer_id TEXT,
+      article_id TEXT,
+      title TEXT NOT NULL,
+      points_json TEXT NOT NULL,
+      stroke_color TEXT DEFAULT '#ef4444',
+      stroke_width INTEGER DEFAULT 3,
+      stroke_style TEXT DEFAULT 'solid',
+      fill_color TEXT DEFAULT '#ef4444',
+      fill_opacity REAL DEFAULT 0.25,
+      is_contested INTEGER DEFAULT 0,
+      contested_article_id TEXT,
+      is_secret INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -221,6 +294,34 @@ db.serialize(() => {
       mime_type TEXT,
       size INTEGER,
       world_id TEXT DEFAULT 'default',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS slates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      world_id TEXT DEFAULT 'all',
+      plot_hook TEXT,
+      scene_steps TEXT,
+      cast_ids TEXT,
+      pinned_lore_ids TEXT,
+      tone_chips TEXT,
+      visibility TEXT DEFAULT 'public',
+      format TEXT DEFAULT 'markdown',
+      max_tokens INTEGER DEFAULT 4000,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS custom_categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      parent_category TEXT,
+      icon TEXT DEFAULT '📁',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -433,7 +534,7 @@ app.put('/api/articles/:id/move-world', (req, res) => {
 
 // GET /api/articles - List & Search (with world_id filter)
 app.get('/api/articles', (req, res) => {
-  const { q, search, category, tag, content, world_id } = req.query;
+  const { q, search, category, tag, sub_category, content, world_id } = req.query;
   const searchTerm = (q || search || '').trim();
 
   let query = 'SELECT id, title, category, sub_category, world_id, summary, header_image, tags, created_at, updated_at FROM articles WHERE 1=1';
@@ -447,9 +548,13 @@ app.get('/api/articles', (req, res) => {
     query += ' AND category = ?';
     params.push(category);
   }
+  if (sub_category) {
+    query += ' AND (sub_category = ? OR tags LIKE ?)';
+    params.push(sub_category, `%${sub_category}%`);
+  }
   if (tag) {
-    query += ' AND tags LIKE ?';
-    params.push(`%${tag}%`);
+    query += ' AND (tags LIKE ? OR sub_category = ?)';
+    params.push(`%${tag}%`, tag);
   }
   if (searchTerm) {
     if (content === 'true' || content === '1') {
@@ -602,6 +707,7 @@ app.get('/api/categories', (req, res) => {
     // Group sub-categories under primary categories
     const categoriesMap = {};
     rows.forEach(r => {
+      if (!r.category) return;
       if (!categoriesMap[r.category]) {
         categoriesMap[r.category] = { category: r.category, count: 0, subCategories: [] };
       }
@@ -611,7 +717,67 @@ app.get('/api/categories', (req, res) => {
       }
     });
 
-    res.json(Object.values(categoriesMap));
+    // Merge entries from custom_categories table
+    db.all('SELECT name, parent_category, icon FROM custom_categories', [], (cErr, cRows) => {
+      if (!cErr && Array.isArray(cRows)) {
+        cRows.forEach(c => {
+          if (c.parent_category) {
+            // Custom Sub-Category
+            if (!categoriesMap[c.parent_category]) {
+              categoriesMap[c.parent_category] = { category: c.parent_category, count: 0, subCategories: [] };
+            }
+            const exists = categoriesMap[c.parent_category].subCategories.some(s => s.subCategory === c.name);
+            if (!exists) {
+              categoriesMap[c.parent_category].subCategories.push({ subCategory: c.name, count: 0, isCustom: true });
+            }
+          } else {
+            // Custom Primary Category
+            if (!categoriesMap[c.name]) {
+              categoriesMap[c.name] = { category: c.name, count: 0, subCategories: [], icon: c.icon || '📁', isCustom: true };
+            } else {
+              categoriesMap[c.name].icon = c.icon || '📁';
+              categoriesMap[c.name].isCustom = true;
+            }
+          }
+        });
+      }
+      res.json(Object.values(categoriesMap));
+    });
+  });
+});
+
+// POST /api/categories - Create Custom Primary or Sub-Category
+app.post('/api/categories', (req, res) => {
+  const { name, parent_category, icon } = req.body;
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Category name is required' });
+  }
+
+  const cleanName = name.trim();
+  const cleanParent = parent_category ? parent_category.trim() : null;
+  const cleanIcon = icon || '📁';
+  const id = 'cat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+
+  db.run(
+    'INSERT OR REPLACE INTO custom_categories (id, name, parent_category, icon) VALUES (?, ?, ?, ?)',
+    [id, cleanName, cleanParent, cleanIcon],
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Failed to save custom category: ' + err.message });
+      res.json({ success: true, id, name: cleanName, parent_category: cleanParent, icon: cleanIcon });
+    }
+  );
+});
+
+// DELETE /api/categories/:name - Remove Custom Category
+app.delete('/api/categories/:name', (req, res) => {
+  const { name } = req.params;
+  const standardCats = ['Characters', 'Locations', 'Factions', 'Races & Species', 'Magic & Tech', 'History', 'Items'];
+  if (standardCats.includes(name)) {
+    return res.status(400).json({ error: 'Standard built-in categories cannot be deleted.' });
+  }
+  db.run('DELETE FROM custom_categories WHERE name = ? OR parent_category = ?', [name, name], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: `Category '${name}' deleted` });
   });
 });
 
@@ -628,12 +794,66 @@ app.get('/api/graph', (req, res) => {
 
 // --- Weave Matrix Pipeline & Helper Utilities ---
 
-function stripSecretBlocks(text) {
-  if (!text) return '';
-  return text
+function serializeMarkdown(articles) {
+  if (!Array.isArray(articles)) return '';
+  return articles.map(a => `# Entity: ${a.title} (${a.category})\n> ${a.summary || ''}\n\n${a.content || ''}`).join('\n\n---\n\n');
+}
+
+function serializeXML(articles) {
+  if (!Array.isArray(articles)) return '<context>\n</context>';
+  const items = articles.map(a => `  <entity id="${a.id}" category="${a.category}">\n    <title>${a.title}</title>\n    <summary>${a.summary || ''}</summary>\n    <content><![CDATA[${a.content || ''}]]></content>\n  </entity>`).join('\n');
+  return `<context>\n${items}\n</context>`;
+}
+
+function serializeJSON(articles) {
+  const list = Array.isArray(articles) ? articles : [];
+  return JSON.stringify({ count: list.length, entities: list }, null, 2);
+}
+
+function serializeYAML(articles) {
+  if (!Array.isArray(articles)) return 'entities:\n';
+  let yaml = 'entities:\n';
+  articles.forEach(a => {
+    const content = (a.content || '').replace(/\n/g, '\n      ');
+    yaml += `  - id: ${a.id}\n    title: "${a.title}"\n    category: "${a.category}"\n    summary: "${a.summary || ''}"\n    content: |\n      ${content}\n`;
+  });
+  return yaml;
+}
+
+function serializeContext(articles, format) {
+  switch ((format || '').toLowerCase()) {
+    case 'xml': return serializeXML(articles);
+    case 'json': return serializeJSON(articles);
+    case 'yaml': return serializeYAML(articles);
+    default: return serializeMarkdown(articles);
+  }
+}
+
+function stripSecretBlocks(content) {
+  if (!content) return '';
+  return content
+    .replace(/\[(secret|dm)\][\s\S]*?(?:\[\/(secret|dm)\]|$)/gi, '')
     .replace(/\[box=secret\][\s\S]*?(?:\[\/box\]|$)/gi, '')
-    .replace(/\[secret\][\s\S]*?(?:\[\/secret\]|$)/gi, '')
     .trim();
+}
+
+function filterArticleVisibility(article, visibilityMode = 'public') {
+  if (!article) return null;
+  if (visibilityMode === 'public' && article.visibility === 'dm_only') {
+    return null;
+  }
+  const cleanSummary = (visibilityMode === 'public')
+    ? stripSecretBlocks(article.summary)
+    : (article.summary || '');
+  const cleanContent = (visibilityMode === 'public')
+    ? stripSecretBlocks(article.content)
+    : (article.content || '');
+
+  return {
+    ...article,
+    summary: cleanSummary,
+    content: cleanContent
+  };
 }
 
 function escapeXml(str) {
@@ -1004,10 +1224,116 @@ function compileContextEngine(db, config, callback) {
 
 // POST /api/context/compile - Generate structured LLM prompt context
 app.post('/api/context/compile', (req, res) => {
-  compileContextEngine(db, req.body, (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(result);
-  });
+  try {
+    if (req.body && (req.body.buckets || req.body.presetId)) {
+      compileContextEngine(db, req.body, (err, result) => {
+        if (err) return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+        res.json(result);
+      });
+      return;
+    }
+
+    const {
+      world_id,
+      pinned_ids = [],
+      query = '',
+      format = 'markdown',
+      visibility = 'public',
+      max_tokens = 4000
+    } = req.body || {};
+
+    let sql = 'SELECT * FROM articles';
+    let params = [];
+    if (world_id && world_id !== 'all') {
+      sql += ' WHERE world_id = ?';
+      params.push(world_id);
+    }
+
+    db.all(sql, params, (err, rows) => {
+      if (err) return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+
+      try {
+        // Filter by visibility
+        let available = (rows || [])
+          .map(r => filterArticleVisibility(r, visibility))
+          .filter(Boolean);
+
+        // Priority Tiers
+        let tier1 = [], tier2 = [], tier3 = [];
+        const pinnedSet = new Set(Array.isArray(pinned_ids) ? pinned_ids : []);
+
+        // Find cross-links in Tier 1 articles
+        const linkedSet = new Set();
+        available.forEach(art => {
+          if (pinnedSet.has(art.id)) {
+            tier1.push(art);
+            const text = (art.content || '') + ' ' + (art.summary || '');
+            const waRegex = /@\[([^\]]+)\]\((?:[^:]+:)?([^)]+)\)/g;
+            let match;
+            while ((match = waRegex.exec(text)) !== null) {
+              const targetId = match[2].trim();
+              if (targetId) linkedSet.add(targetId);
+            }
+            const wikiRegex = /\[\[([^\]]+)\]\]/g;
+            while ((match = wikiRegex.exec(text)) !== null) {
+              const title = match[1].trim();
+              const targetId = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+              if (targetId) linkedSet.add(targetId);
+            }
+          }
+        });
+
+        const qLower = query ? query.toLowerCase() : '';
+
+        available.forEach(art => {
+          if (pinnedSet.has(art.id)) {
+            return;
+          }
+          const titleMatch = art.title && art.title.toLowerCase().includes(qLower);
+          const contentMatch = art.content && art.content.toLowerCase().includes(qLower);
+          const summaryMatch = art.summary && art.summary.toLowerCase().includes(qLower);
+
+          if (linkedSet.has(art.id) || (qLower && (titleMatch || contentMatch || summaryMatch))) {
+            tier2.push(art);
+          } else {
+            tier3.push(art);
+          }
+        });
+
+        let selected = [];
+        let currentChars = 0;
+        const maxChars = Number(max_tokens) * 4;
+
+        [...tier1, ...tier2, ...tier3].forEach(art => {
+          const artChars = (art.title + (art.summary || '') + (art.content || '')).length;
+          if (currentChars + artChars <= maxChars) {
+            selected.push(art);
+            currentChars += artChars;
+          }
+        });
+
+        const compiled_context = serializeContext(selected, format);
+        const estimated_tokens = Math.ceil(compiled_context.length / 4);
+
+        return res.json({
+          status: 'success',
+          format,
+          visibility,
+          compiled_context,
+          token_metrics: {
+            total_tokens: estimated_tokens,
+            max_budget: Number(max_tokens),
+            selected_count: selected.length,
+            total_available: available.length
+          }
+        });
+      } catch (innerErr) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: innerErr.message });
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
 });
 
 // POST /api/context/preview - Preview prompt compilation & token breakdown
@@ -1131,7 +1457,9 @@ function runLocalAIRefiner(action, title, rawContent, currentCategory) {
     return formatted.trim();
   } else if (action === 'expand_lore') {
     let expanded = content;
-    expanded += `\n\n[hr]\n\n[h2]II. Cultural Traditions & Secrets[/h2]\n[b]Secret Lore:[/b] Ancient chronicles mention rumors of hidden vaults beneath the primary region.\n[b]Social Customs:[/b] Local inhabitants observe a seasonal festival commemorating past victories.`;
+    if (!expanded.includes('II. Cultural Traditions') && !expanded.includes('Cultural Traditions & Secrets')) {
+      expanded += `\n\n[hr]\n\n[h2]II. Cultural Traditions & Secrets[/h2]\n[b]Secret Lore:[/b] Ancient chronicles mention rumors of hidden vaults beneath the primary region.\n[b]Social Customs:[/b] Local inhabitants observe a seasonal festival commemorating past victories.`;
+    }
     return expanded;
   } else {
     // Clean & sanitize
@@ -1438,8 +1766,8 @@ ${question}`;
     return res.json({ answer: extractedAnswer, sources: contextArticles.map(r => ({ id: r.id, title: r.title })) });
 }
 
-// ALL /api/audit/run - Canon Guard AI Audit Scanner (Supports GET & POST with world_id scoping)
-app.all('/api/audit/run', (req, res) => {
+// ALL /api/audit/run & /api/audit/scan - Canon Guard AI Audit Scanner (Supports GET & POST with world_id scoping)
+app.all(['/api/audit/run', '/api/audit/scan'], (req, res) => {
   const world_id = req.body?.world_id || req.query?.world_id;
   let sql = 'SELECT id, title, category, sub_category, world_id, summary, content, tags FROM articles WHERE 1=1';
   const params = [];
@@ -1997,7 +2325,6 @@ app.post('/api/import/worldanvil', (req, res) => {
         categoryCounts,
         misclassifiedCount: auditStats.misclassifiedCount,
         duplicateCount: auditStats.duplicateCount,
-        stubCount: auditStats.stubCount,
         world_id: targetWorldId
       };
 
@@ -2020,7 +2347,7 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
     'Characters': 0,
     'Locations': 0,
     'Factions': 0,
-    'Species': 0,
+    'Races & Species': 0,
     'Magic & Tech': 0,
     'History': 0,
     'Items': 0
@@ -2030,7 +2357,7 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
   if (/\b(city|town|village|kingdom|realm|continent|region|mountain|mountains|river|ocean|sea|forest|fortress|castle|garrison|gate|mill|isles|island|lake|reach|harbor|bay|valley|ruins)\b/i.test(cleanTitle)) scores['Locations'] += 5;
   if (/\b(house|syndicate|vanguard|guild|order|clan|empire|alliance|organization|faction|council|cult|rebellion|covenant|society)\b/i.test(cleanTitle)) scores['Factions'] += 5;
   if (/\b(lord|lady|king|queen|empress|emperor|prince|princess|sir|captain|elder|seer|cantor|warlock|wizard|sorcerer|sameral|character|biography)\b/i.test(cleanTitle)) scores['Characters'] += 5;
-  if (/\b(species|race|humanoid|elf|elves|dwarf|dwarves|orc|orcs|dragon|dragons|fae|beast|monster)\b/i.test(cleanTitle)) scores['Species'] += 5;
+  if (/\b(species|race|races|humanoid|elf|elves|dwarf|dwarves|orc|orcs|dragon|dragons|fae|beast|monster|lineage|ancestry)\b/i.test(cleanTitle)) scores['Races & Species'] += 5;
   if (/\b(spell|spells|magic|mana|arcane|alchemy|tech|technology|artifact|rune|words of power)\b/i.test(cleanTitle)) scores['Magic & Tech'] += 5;
   if (/\b(war|battle|era|age|chronicle|timeline|event|history)\b/i.test(cleanTitle)) scores['History'] += 5;
   if (/\b(sword|blade|shield|armor|potion|ring|amulet|item|weapon|relic)\b/i.test(cleanTitle)) scores['Items'] += 5;
@@ -2039,119 +2366,96 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
   if (/born|age|biography|personality|eyes|hair|lineage|father|mother|husband|wife|hero|villain|adventurer|person|character/i.test(textLower)) scores['Characters'] += 2;
   if (/city|town|village|kingdom|realm|continent|region|mountain|river|ocean|sea|forest|fortress|castle|climate|location|geography|settlement/i.test(textLower)) scores['Locations'] += 2;
   if (/guild|house|syndicate|army|legion|order|clan|empire|alliance|organization|faction|council|cult|rebellion/i.test(textLower)) scores['Factions'] += 2;
-  if (/race|species|humanoid|elf|dwarf|orc|dragon|fae|creature|lifespan|subspecies|beast/i.test(textLower)) scores['Species'] += 2;
+  if (/race|species|humanoid|elf|dwarf|orc|dragon|fae|creature|lifespan|subspecies|beast|ancestry|lineage/i.test(textLower)) scores['Races & Species'] += 2;
   if (/magic|spell|mana|arcane|alchemy|element|enchantment|crystal|technology|machine|artifact|rune/i.test(textLower)) scores['Magic & Tech'] += 2;
   if (/war|battle|era|age of|founding|shattering|treaty|historical|chronicle|timeline|event|century/i.test(textLower)) scores['History'] += 2;
   if (/sword|blade|shield|armor|potion|ring|amulet|artifact|item|weapon|relic|reagent/i.test(textLower)) scores['Items'] += 2;
-
-  let topCategory = 'Locations';
-  let maxScore = -1;
-  for (const [cat, score] of Object.entries(scores)) {
-    if (score > maxScore && score > 0) {
-      maxScore = score;
-      topCategory = cat;
-    }
-  }
-
-  // Sub-category subset classification
-  let subCategory = 'General';
-  if (topCategory === 'Locations') {
-    if (/city|town|settlement|capital|village/i.test(textLower)) subCategory = 'Cities & Settlements';
-    else if (/fortress|castle|garrison|keep|citadel|eyrie/i.test(textLower)) subCategory = 'Fortresses & Strongholds';
-    else if (/realm|kingdom|empire|continent|region/i.test(textLower)) subCategory = 'Realms & Territories';
-    else if (/mountain|forest|river|sea|ocean|wilderness|bay|valley/i.test(textLower)) subCategory = 'Geography & Wilderness';
-    else subCategory = 'Landmarks & Sites';
-  } else if (topCategory === 'Characters') {
-    if (/lord|lady|king|queen|empress|emperor|prince|princess|noble/i.test(textLower)) subCategory = 'Rulers & Nobility';
-    else if (/seer|wizard|sorcerer|warlock|mage|priest|cantor/i.test(textLower)) subCategory = 'Mages & Mystics';
-    else if (/captain|commander|soldier|guard|knight/i.test(textLower)) subCategory = 'Warriors & Officers';
-    else subCategory = 'Key Figures';
-  } else if (topCategory === 'Factions') {
-    if (/house|bloodline|dynasty/i.test(textLower)) subCategory = 'Noble Houses';
-    else if (/syndicate|underground|guild|rogue/i.test(textLower)) subCategory = 'Syndicates & Guilds';
-    else if (/army|legion|guard|vanguard/i.test(textLower)) subCategory = 'Military Orders';
-    else subCategory = 'Organizations';
-  } else if (topCategory === 'Magic & Tech') {
-    if (/spell|incantation|rune|words of power/i.test(textLower)) subCategory = 'Spells & Incantations';
-    else if (/artifact|crystal|catalyst/i.test(textLower)) subCategory = 'Arcane Artifacts';
-    else subCategory = 'Magic Systems';
-  }
 
   let cleanText = content.replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
   let firstParagraph = cleanText.split(/\n\n+/)[0] || '';
   let summary = firstParagraph.substring(0, 160);
   if (summary.length >= 160) summary += '...';
 
-  let keywordMaxScore = 0;
+  let topCategory = 'Locations';
+  let subCategory = 'Cities & Settlements';
+  let keywordMaxScore = -1;
 
   const keywordsMap = {
     'Characters': {
       weight: 3,
       keywords: ['character', 'person', 'hero', 'villain', 'king', 'queen', 'emperor', 'npc', 'biography', 'lord', 'lady', 'warrior', 'mage', 'rogue', 'paladin', 'cleric', 'born', 'died', 'father', 'mother', 'son', 'daughter', 'height', 'weight', 'eyes', 'hair'],
       subCategories: {
-        'Historical Figures': ['king', 'queen', 'emperor', 'legendary', 'ancient'],
-        'Protagonists & NPCs': ['companion', 'ally', 'merchant', 'quest-giver'],
-        'Villains & Antagonists': ['villain', 'dark lord', 'tyrant', 'enemy', 'boss']
+        'Rulers & Nobility': ['king', 'queen', 'emperor', 'empress', 'prince', 'princess', 'lord', 'lady', 'noble', 'nobility', 'duke', 'duchess', 'baron'],
+        'Mages & Mystics': ['seer', 'wizard', 'sorcerer', 'warlock', 'mage', 'priest', 'cantor', 'mystic', 'archmage', 'druid', 'cleric'],
+        'Warriors & Officers': ['captain', 'commander', 'soldier', 'guard', 'knight', 'warrior', 'officer', 'general', 'champion'],
+        'Key Figures & Personages': ['figure', 'hero', 'villain', 'adventurer', 'biography', 'npc', 'person', 'character']
       }
     },
     'Locations': {
       weight: 2,
-      keywords: ['location', 'city', 'town', 'village', 'settlement', 'kingdom', 'realm', 'region', 'continent', 'mountain', 'river', 'forest', 'ocean', 'sea', 'lake', 'castle', 'fortress', 'dungeon', 'temple', 'shrine', 'capital', 'province'],
+      keywords: ['location', 'city', 'town', 'village', 'settlement', 'kingdom', 'realm', 'region', 'continent', 'mountain', 'river', 'forest', 'ocean', 'sea', 'lake', 'castle', 'fortress', 'dungeon', 'temple', 'shrine', 'capital', 'province', 'wilderness', 'ruins'],
       subCategories: {
-        'Cities & Settlements': ['city', 'town', 'village', 'capital', 'settlement', 'port'],
-        'Geographic Features': ['mountain', 'river', 'forest', 'valley', 'desert', 'ocean', 'sea', 'lake', 'island'],
-        'Dungeons & Landmarks': ['dungeon', 'ruin', 'temple', 'castle', 'fortress', 'shrine', 'tower']
+        'Cities & Settlements': ['city', 'town', 'village', 'capital', 'settlement', 'port', 'metropolis'],
+        'Fortresses & Strongholds': ['fortress', 'castle', 'garrison', 'keep', 'citadel', 'eyrie', 'stronghold'],
+        'Realms & Territories': ['realm', 'kingdom', 'empire', 'continent', 'region', 'territory', 'province'],
+        'Geography & Wilderness': ['mountain', 'river', 'forest', 'valley', 'desert', 'ocean', 'sea', 'lake', 'island', 'wilderness'],
+        'Landmarks & Ruins': ['landmark', 'ruin', 'ruins', 'temple', 'shrine', 'monument', 'spire', 'tower', 'dungeon', 'site']
       }
     },
     'Factions': {
       weight: 3,
-      keywords: ['faction', 'organization', 'guild', 'order', 'cult', 'clan', 'house', 'syndicate', 'alliance', 'covenant', 'brotherhood', 'fleet', 'company', 'court', 'council'],
+      keywords: ['faction', 'organization', 'guild', 'order', 'cult', 'clan', 'house', 'syndicate', 'alliance', 'covenant', 'brotherhood', 'fleet', 'company', 'court', 'council', 'society', 'dynasty'],
       subCategories: {
-        'Guilds & Orders': ['guild', 'order', 'brotherhood', 'knights', 'mercenary'],
-        'Noble Houses': ['house', 'dynasty', 'clan', 'noble', 'family'],
-        'Secret Societies & Cults': ['cult', 'cabal', 'syndicate', 'secret', 'shadow']
+        'Noble Houses & Dynasties': ['house', 'dynasty', 'clan', 'noble', 'bloodline', 'family'],
+        'Syndicates & Guilds': ['guild', 'syndicate', 'rogue', 'underground', 'merchant', 'cartel', 'trade'],
+        'Military Orders': ['army', 'legion', 'guard', 'vanguard', 'military', 'order', 'knights', 'company'],
+        'Organizations & Societies': ['organization', 'society', 'council', 'cult', 'covenant', 'alliance', 'brotherhood', 'cabal', 'faction']
       }
     },
-    'Species': {
+    'Races & Species': {
       weight: 3,
-      keywords: ['species', 'race', 'creature', 'monster', 'beast', 'fauna', 'flora', 'plant', 'herb', 'beast', 'dragon', 'elf', 'dwarf', 'orc', 'goblin', 'undead', 'demon', 'elemental'],
+      keywords: ['species', 'race', 'races', 'creature', 'monster', 'beast', 'fauna', 'flora', 'plant', 'herb', 'dragon', 'elf', 'elves', 'dwarf', 'dwarves', 'orc', 'orcs', 'goblin', 'undead', 'demon', 'elemental', 'lineage', 'ancestry', 'humanoid', 'playable'],
       subCategories: {
-        'Sentient Races': ['elf', 'dwarf', 'orc', 'human', 'gnome', 'halfling', 'race', 'people'],
-        'Monsters & Beasts': ['monster', 'beast', 'dragon', 'demon', 'undead', 'aberration'],
-        'Flora & Natural Life': ['plant', 'herb', 'tree', 'flower', 'fauna', 'flora', 'fungus']
+        'Playable Races & Lineages': ['elf', 'elves', 'dwarf', 'dwarves', 'orc', 'orcs', 'human', 'humans', 'gnome', 'halfling', 'tiefling', 'dragonborn', 'race', 'races', 'ancestry', 'lineage', 'subrace', 'playable', 'people', 'culture'],
+        'Beasts & Creatures': ['beast', 'beasts', 'creature', 'creatures', 'animal', 'fauna', 'mount', 'pet', 'wild', 'aquatic'],
+        'Monsters & Entities': ['monster', 'monsters', 'dragon', 'dragons', 'demon', 'demons', 'undead', 'aberration', 'fiend', 'devil', 'construct', 'boss', 'horror'],
+        'Flora & Ecology': ['plant', 'plants', 'herb', 'herbs', 'tree', 'flower', 'fauna', 'flora', 'fungus', 'ecosystem', 'botanical']
       }
     },
     'Items': {
       weight: 3,
-      keywords: ['item', 'weapon', 'armor', 'artifact', 'relic', 'potion', 'scroll', 'tool', 'equipment', 'sword', 'shield', 'ring', 'amulet', 'staff', 'blade', 'bow', 'crown'],
+      keywords: ['item', 'weapon', 'armor', 'artifact', 'relic', 'potion', 'scroll', 'tool', 'equipment', 'sword', 'blade', 'bow', 'crown', 'helm', 'elixir', 'salve', 'reagent', 'trinket', 'valuable'],
       subCategories: {
-        'Weapons & Armor': ['sword', 'blade', 'bow', 'shield', 'armor', 'helm', 'spear', 'staff', 'axe'],
-        'Artifacts & Relics': ['artifact', 'relic', 'crown', 'ring', 'amulet', 'orb', 'tome'],
-        'Consumables & Tools': ['potion', 'scroll', 'elixir', 'tool', 'key', 'kit']
+        'Weapons & Armaments': ['sword', 'blade', 'bow', 'staff', 'weapon', 'armaments', 'spear', 'axe', 'hammer', 'dagger'],
+        'Armor & Relics': ['armor', 'shield', 'relic', 'relics', 'helm', 'plate', 'mail', 'gauntlet', 'cuirass'],
+        'Potions & Reagents': ['potion', 'potions', 'elixir', 'salve', 'reagent', 'reagents', 'ingredient', 'alchemy', 'vial'],
+        'Trinkets & Valuables': ['trinket', 'trinkets', 'valuable', 'gem', 'ring', 'amulet', 'coin', 'tome', 'pendant', 'crown', 'item']
       }
     },
     'Magic & Tech': {
       weight: 3,
-      keywords: ['magic', 'spell', 'technology', 'tech', 'alchemy', 'rune', 'enchantment', 'ritual', 'system', 'device', 'construct', 'golem', 'ship', 'airship', 'engine', 'power'],
+      keywords: ['magic', 'spell', 'spells', 'technology', 'tech', 'alchemy', 'rune', 'runes', 'enchantment', 'ritual', 'system', 'device', 'construct', 'golem', 'ship', 'airship', 'engine', 'power', 'catalyst', 'artifact', 'machinery'],
       subCategories: {
-        'Spells & Rituals': ['spell', 'incantation', 'ritual', 'enchantment', 'hex', 'curse'],
-        'Magical Systems': ['mana', 'ether', 'weave', 'school of magic', 'elemental'],
-        'Technology & Gizmos': ['device', 'engine', 'airship', 'construct', 'golem', 'machine', 'tech']
+        'Spells & Incantations': ['spell', 'spells', 'incantation', 'incantations', 'rune', 'runes', 'words of power', 'hex', 'curse', 'ritual'],
+        'Arcane Artifacts & Catalysts': ['artifact', 'artifacts', 'catalyst', 'catalysts', 'crystal', 'crystals', 'orb', 'focus', 'wand'],
+        'Technology & Machinery': ['technology', 'tech', 'machinery', 'machine', 'machines', 'device', 'construct', 'golem', 'engine', 'airship'],
+        'Magic Systems & Theories': ['system', 'systems', 'theory', 'mana', 'ether', 'weave', 'school of magic', 'magic']
       }
     },
     'History': {
       weight: 3,
-      keywords: ['history', 'event', 'war', 'battle', 'era', 'age', 'siege', 'treaty', 'revolution', 'cataclysm', 'shattering', 'rebellion', 'fall', 'rise', 'chronicle', 'timeline'],
+      keywords: ['history', 'event', 'war', 'battle', 'era', 'age', 'siege', 'treaty', 'accord', 'revolution', 'cataclysm', 'shattering', 'rebellion', 'fall', 'rise', 'chronicle', 'timeline', 'century', 'epoch'],
       subCategories: {
-        'Wars & Conflicts': ['war', 'battle', 'siege', 'rebellion', 'crusade', 'conflict'],
-        'Historical Eras': ['era', 'age', 'period', 'century', 'epoch'],
-        'Cataclysms & Pivotal Events': ['cataclysm', 'shattering', 'fall', 'founding', 'treaty', 'disaster']
+        'Wars & Battles': ['war', 'wars', 'battle', 'battles', 'siege', 'rebellion', 'crusade', 'conflict', 'clash'],
+        'Eras & Ages': ['era', 'eras', 'age', 'ages', 'period', 'century', 'epoch'],
+        'Treaties & Accords': ['treaty', 'treaties', 'accord', 'accords', 'pact', 'charter', 'pardon'],
+        'Chronicles & Key Events': ['chronicle', 'chronicles', 'event', 'events', 'shattering', 'cataclysm', 'founding', 'fall', 'rise', 'history']
       }
     }
   };
 
   for (const [catName, catData] of Object.entries(keywordsMap)) {
-    let score = 0;
+    let score = (scores[catName] || 0) * 5;
     catData.keywords.forEach(kw => {
       if (cleanTitle.includes(kw)) score += kw.length * 4;
       if (textLower.includes(kw)) score += 1;
@@ -2163,7 +2467,8 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
       keywordMaxScore = score;
       topCategory = catName;
 
-      let subScore = 0;
+      let subScore = -1;
+      let chosenSub = Object.keys(catData.subCategories)[0];
       for (const [subName, subKws] of Object.entries(catData.subCategories)) {
         let currentSubScore = 0;
         subKws.forEach(skw => {
@@ -2172,9 +2477,10 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
         });
         if (currentSubScore > subScore) {
           subScore = currentSubScore;
-          subCategory = subName;
+          chosenSub = subName;
         }
       }
+      subCategory = chosenSub;
     }
   }
 
@@ -2182,7 +2488,7 @@ function smartCategorizeArticle(title, rawContent, filename = '') {
   summary = sentences.slice(0, 2).join(' ').trim() || summary || `${title} lore article.`;
 
   const autoTags = new Set([topCategory.toLowerCase()]);
-  if (subCategory !== 'General') autoTags.add(subCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+  if (subCategory && subCategory !== 'General') autoTags.add(subCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
 
   return {
     category: topCategory,
@@ -2507,6 +2813,46 @@ app.put('/api/personas/:article_id', (req, res) => {
   );
 });
 
+/**
+ * Helper to select persona profiles (wants, needs, thoughts, history_log) for given article IDs.
+ * @param {Array<string>|string} cast_ids
+ * @param {function(Error, Array): void} callback
+ */
+function getCastPersonaContext(cast_ids, callback) {
+  if (typeof callback !== 'function') {
+    throw new Error('Callback function required for getCastPersonaContext');
+  }
+
+  let ids = [];
+  if (Array.isArray(cast_ids)) {
+    ids = cast_ids;
+  } else if (typeof cast_ids === 'string' && cast_ids.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(cast_ids);
+      if (Array.isArray(parsed)) {
+        ids = parsed;
+      } else {
+        ids = cast_ids.split(',').map(id => id.trim()).filter(Boolean);
+      }
+    } catch (e) {
+      ids = cast_ids.split(',').map(id => id.trim()).filter(Boolean);
+    }
+  }
+
+  if (!ids || ids.length === 0) {
+    return callback(null, []);
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const query = `SELECT article_id, wants, needs, thoughts, history_log FROM personas WHERE article_id IN (${placeholders})`;
+
+  db.all(query, ids, (err, rows) => {
+    if (err) return callback(err, []);
+    callback(null, rows || []);
+  });
+}
+
+
 // POST /api/personas/generate
 app.post('/api/personas/generate', async (req, res) => {
   const { article_id } = req.body;
@@ -2791,6 +3137,1085 @@ app.post('/api/scenes', (req, res) => {
   );
 });
 
-app.listen(PORT, () => {
-  console.log(`LoreVault Server running locally on http://localhost:${PORT}`);
+// ==========================================
+// NARRATIVE SLATE API SUITE
+// ==========================================
+
+function safeParseArray(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input;
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) return parsed;
+      return input.split(',').map(s => s.trim()).filter(Boolean);
+    } catch (e) {
+      return input.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+async function callGeminiText(prompt) {
+  const serverCfg = getAIConfig();
+  const activeKey = serverCfg.apiKey || process.env.GEMINI_API_KEY || '';
+  if (!activeKey) return null;
+
+  const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-flash-latest', 'gemini-pro-latest'];
+  for (const targetModel of candidateModels) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      clearTimeout(timer);
+      if (geminiRes.ok) {
+        const gData = await geminiRes.json();
+        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+// POST /api/narrative/compile-slate
+app.post('/api/narrative/compile-slate', (req, res) => {
+  try {
+    const { plot_hook, scene_steps, cast_ids, pinned_lore_ids, tone_chips, visibility, max_tokens } = req.body || {};
+
+    const parsedCastIds = safeParseArray(cast_ids);
+    const parsedLoreIds = safeParseArray(pinned_lore_ids);
+    const parsedSteps = safeParseArray(scene_steps);
+    const parsedTones = safeParseArray(tone_chips);
+
+    getCastPersonaContext(parsedCastIds, (err, personas) => {
+      if (err) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+      }
+
+      const fetchLore = (cb) => {
+        if (!parsedLoreIds || parsedLoreIds.length === 0) return cb(null, []);
+        const placeholders = parsedLoreIds.map(() => '?').join(',');
+        db.all(`SELECT id, title, summary, content FROM articles WHERE id IN (${placeholders})`, parsedLoreIds, (err, rows) => {
+          cb(err, rows || []);
+        });
+      };
+
+      fetchLore((loreErr, loreArticles) => {
+        if (loreErr) {
+          return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: loreErr.message });
+        }
+
+        try {
+          let compiled = `=== NARRATIVE SLATE PROMPT ===\n\n`;
+          if (plot_hook) {
+            compiled += `[PLOT HOOK]\n${plot_hook}\n\n`;
+          }
+          if (parsedSteps.length > 0) {
+            compiled += `[SCENE ACTION STEPS]\n` + parsedSteps.map((step, idx) => `${idx + 1}. ${step}`).join('\n') + `\n\n`;
+          }
+          if (personas && personas.length > 0) {
+            compiled += `[CAST PERSONAS & DRIVERS]\n`;
+            personas.forEach(p => {
+              compiled += `- Character ID: ${p.article_id}\n`;
+              if (p.wants) compiled += `  Wants: ${p.wants}\n`;
+              if (p.needs) compiled += `  Needs: ${p.needs}\n`;
+              if (p.thoughts) compiled += `  Thoughts: ${p.thoughts}\n`;
+              if (p.history_log) compiled += `  History: ${p.history_log}\n`;
+            });
+            compiled += `\n`;
+          }
+          if (loreArticles && loreArticles.length > 0) {
+            compiled += `[PINNED LORE ARTICLES]\n`;
+            loreArticles.forEach(art => {
+              compiled += `- ${art.title} (${art.id}): ${art.summary || (art.content || '').substring(0, 300)}\n`;
+            });
+            compiled += `\n`;
+          }
+          if (parsedTones.length > 0) {
+            compiled += `[TONE & ATMOSPHERE]\n${parsedTones.join(', ')}\n\n`;
+          }
+          compiled += `[SYSTEM INSTRUCTION]\nWrite vivid, immersive prose honoring all scene steps, character drivers, and tone chips.`;
+
+          const estTokens = Math.ceil(compiled.length / 4);
+          return res.json({
+            status: 'success',
+            compiled_prompt: compiled,
+            token_metrics: {
+              estimated_tokens: estTokens,
+              char_count: compiled.length,
+              max_tokens: max_tokens || 4000
+            }
+          });
+        } catch (innerErr) {
+          return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: innerErr.message });
+        }
+      });
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
 });
+
+// POST /api/narrative/continue-prose
+app.post('/api/narrative/continue-prose', async (req, res) => {
+  try {
+    const { compiled_prompt, current_draft } = req.body || {};
+
+    const prompt = `${compiled_prompt || ''}
+
+[CURRENT DRAFT PROSE]
+${current_draft || '(Beginning of scene)'}
+
+[TASK]
+Continue the scene prose smoothly from the current draft, generating 2-3 detailed, immersive paragraphs. Focus on vivid sensory details, sharp character dialogue, and advancing the scene action steps. Do NOT repeat text already in the draft. Return ONLY the newly generated continuation prose.`;
+
+    try {
+      const generatedText = await callGeminiText(prompt);
+      if (generatedText) {
+        return res.json({ status: 'success', generated_text: generatedText });
+      }
+    } catch (e) {}
+
+    // Extract names or key titles mentioned in prompt for contextual fallback
+    const names = [];
+    const nameMatches = (compiled_prompt || '').match(/###\s+([A-Za-z0-9_\s]+)/g) || (compiled_prompt || '').match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g) || [];
+    nameMatches.forEach(m => {
+      const clean = m.replace(/###\s+/, '').trim();
+      if (clean && !['System', 'World', 'Active', 'Task', 'Tone', 'Scope', 'Directives', 'Characters', 'Neutral', 'Role'].includes(clean) && !names.includes(clean)) {
+        names.push(clean);
+      }
+    });
+
+    const charA = names[0] || 'Semarel';
+    const charB = names[1] || 'Khemos';
+
+    const fallbackProse = `The tension between ${charA} and ${charB} crackled in the silence like static in the ambient air. Each measured breath was a deliberate calculation, a quiet struggle between contrasting agendas.
+
+"${charA}," ${charB} spoke softly, voice echoing with unyielding intent. "You know as well as I that our paths cannot remain parallel for much longer."
+
+${charA} shifted position, eyes locked on ${charB}. "Then speak your piece, before the hour forces our hands."`;
+
+    return res.json({ status: 'success', generated_text: fallbackProse });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// POST /api/narrative/pov-rewrite
+app.post('/api/narrative/pov-rewrite', async (req, res) => {
+  try {
+    const { highlighted_text, pov_character_id } = req.body || {};
+
+    if (!highlighted_text) {
+      return res.status(400).json({ status: 'error', code: 'ERR_BAD_REQUEST', error: 'highlighted_text is required', message: 'highlighted_text is required' });
+    }
+
+    const charId = pov_character_id || 'unknown';
+
+    db.get('SELECT title FROM articles WHERE id = ?', [charId], (err, articleRow) => {
+      if (err) return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+
+      const charName = articleRow ? articleRow.title : charId;
+
+      getCastPersonaContext([charId], async (pErr, personas) => {
+        if (pErr) return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: pErr.message });
+
+        try {
+          const persona = (personas && personas[0]) || {};
+
+          const prompt = `Rewrite the following text passage strictly through the First-Person POV ("I") of ${charName}.
+
+CHARACTER DRIVERS & PERSONA:
+- Wants: ${persona.wants || 'Unknown'}
+- Needs: ${persona.needs || 'Unknown'}
+- Thoughts: ${persona.thoughts || 'Unknown'}
+
+ORIGINAL PASSAGE:
+"${highlighted_text}"
+
+TASK:
+Rewrite this passage in first-person perspective ("I"), deeply reflecting ${charName}'s internal thoughts, desires, emotional filter, and personality. Keep the narrative flow intact while making the voice distinctly theirs. Return ONLY the rewritten text passage.`;
+
+          try {
+            const rewritten = await callGeminiText(prompt);
+            if (rewritten) {
+              return res.json({ status: 'success', rewritten_text: rewritten });
+            }
+          } catch (e) {}
+
+          const fallbackRewritten = `I watched the shadows shift against the damp wall, my chest tightening with anticipation. Every instinct in me screamed to stay alert—there was no room for error here. "${highlighted_text}"`;
+
+          return res.json({ status: 'success', rewritten_text: fallbackRewritten });
+        } catch (innerErr) {
+          return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: innerErr.message });
+        }
+      });
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// POST /api/narrative/suggest-beats
+app.post('/api/narrative/suggest-beats', async (req, res) => {
+  try {
+    const { compiled_prompt, current_draft } = req.body || {};
+
+    const prompt = `${compiled_prompt || ''}
+
+[CURRENT DRAFT PROSE]
+${current_draft || '(Beginning of scene)'}
+
+[TASK]
+Suggest 3 dramatic scene direction choices / next beats that could happen next in this narrative scene.
+Return EXACTLY a JSON array containing 3 objects with fields:
+- "title": Short action title
+- "description": 1-2 sentence description of the choice
+- "type": One of "Action & Conflict", "Lore Discovery", "Dialogue", or "Emotional Shift"
+
+Example format:
+[
+  { "title": "Direct Confrontation", "description": "Confront the pursuer head-on before they reach the courtyard.", "type": "Action & Conflict" },
+  { "title": "Search the Cipher", "description": "Examine the pouch on the courier for encrypted Imperial notes.", "type": "Lore Discovery" },
+  { "title": "Tactical Retreat", "description": "Fade into the shadowy alleyway to observe who meets the courier.", "type": "Emotional Shift" }
+]`;
+
+    try {
+      const rawText = await callGeminiText(prompt);
+      if (rawText) {
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return res.json({ status: 'success', beats: parsed });
+        }
+      }
+    } catch (e) {}
+
+    const fallbackBeats = [
+      {
+        title: "Direct Confrontation",
+        description: "Step out into the open and challenge the approaching figure directly.",
+        type: "Action & Conflict"
+      },
+      {
+        title: "Investigate Hidden Marker",
+        description: "Notice a subtle sigil etched near the threshold that reveals secret allegiance.",
+        type: "Lore Discovery"
+      },
+      {
+        title: "Whispered Exchange",
+        description: "Demand immediate answers before any weapon is drawn.",
+        type: "Dialogue"
+      }
+    ];
+
+    return res.json({ status: 'success', beats: fallbackBeats });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// POST /api/narrative/save-slate
+app.post('/api/narrative/save-slate', (req, res) => {
+  try {
+    const { id, name, world_id, plot_hook, scene_steps, cast_ids, pinned_lore_ids, tone_chips, visibility, format, max_tokens } = req.body || {};
+
+    if (!name) {
+      return res.status(400).json({ status: 'error', code: 'ERR_BAD_REQUEST', error: 'Slate name is required', message: 'Slate name is required' });
+    }
+
+    const slateId = id || ('slate-' + Date.now());
+    const stepsStr = typeof scene_steps === 'string' ? scene_steps : JSON.stringify(scene_steps || []);
+    const castStr = typeof cast_ids === 'string' ? cast_ids : JSON.stringify(cast_ids || []);
+    const loreStr = typeof pinned_lore_ids === 'string' ? pinned_lore_ids : JSON.stringify(pinned_lore_ids || []);
+    const toneStr = typeof tone_chips === 'string' ? tone_chips : JSON.stringify(tone_chips || []);
+
+    const query = `
+      INSERT INTO slates (id, name, world_id, plot_hook, scene_steps, cast_ids, pinned_lore_ids, tone_chips, visibility, format, max_tokens, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        world_id = excluded.world_id,
+        plot_hook = excluded.plot_hook,
+        scene_steps = excluded.scene_steps,
+        cast_ids = excluded.cast_ids,
+        pinned_lore_ids = excluded.pinned_lore_ids,
+        tone_chips = excluded.tone_chips,
+        visibility = excluded.visibility,
+        format = excluded.format,
+        max_tokens = excluded.max_tokens,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+
+    db.run(query, [
+      slateId,
+      name,
+      world_id || 'all',
+      plot_hook || '',
+      stepsStr,
+      castStr,
+      loreStr,
+      toneStr,
+      visibility || 'public',
+      format || 'markdown',
+      max_tokens || 4000
+    ], function (err) {
+      if (err) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+      }
+      return res.json({ status: 'success', id: slateId, message: 'Slate saved successfully' });
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// GET /api/narrative/slates
+app.get('/api/narrative/slates', (req, res) => {
+  try {
+    const { world_id } = req.query || {};
+    let query = 'SELECT * FROM slates ORDER BY updated_at DESC';
+    let params = [];
+
+    if (world_id && world_id !== 'all') {
+      query = 'SELECT * FROM slates WHERE world_id = ? OR world_id = \'all\' ORDER BY updated_at DESC';
+      params = [world_id];
+    }
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+      }
+
+      try {
+        const formattedRows = (rows || []).map(row => ({
+          ...row,
+          scene_steps: safeParseArray(row.scene_steps),
+          cast_ids: safeParseArray(row.cast_ids),
+          pinned_lore_ids: safeParseArray(row.pinned_lore_ids),
+          tone_chips: safeParseArray(row.tone_chips)
+        }));
+
+        return res.json({ status: 'success', slates: formattedRows });
+      } catch (innerErr) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: innerErr.message });
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// POST /api/marketing/generate
+app.post('/api/marketing/generate', async (req, res) => {
+  try {
+    const { article_ids, preset, tone_chip, cta_type } = req.body || {};
+
+    if (!article_ids || (Array.isArray(article_ids) && article_ids.length === 0)) {
+      return res.status(400).json({ status: 'error', code: 'ERR_BAD_REQUEST', error: 'article_ids is required', message: 'article_ids is required' });
+    }
+
+    let ids = [];
+    if (Array.isArray(article_ids)) {
+      ids = article_ids;
+    } else if (typeof article_ids === 'string') {
+      try {
+        const parsed = JSON.parse(article_ids);
+        if (Array.isArray(parsed)) ids = parsed;
+        else ids = article_ids.split(',').map(s => s.trim()).filter(Boolean);
+      } catch (e) {
+        ids = article_ids.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    if (ids.length === 0) {
+      return res.status(400).json({ status: 'error', code: 'ERR_BAD_REQUEST', error: 'article_ids is required', message: 'article_ids is required' });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.all(`SELECT * FROM articles WHERE id IN (${placeholders})`, ids, async (err, rows) => {
+      if (err) return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ status: 'error', code: 'ERR_NOT_FOUND', error: 'No articles found', message: 'No articles found' });
+      }
+
+      try {
+        // Pass through filterArticleVisibility and stripSecretBlocks
+        const sanitizedArticles = rows
+          .map(row => filterArticleVisibility(row, 'public'))
+          .filter(Boolean)
+          .map(row => ({
+            ...row,
+            title: stripSecretBlocks(row.title),
+            summary: stripSecretBlocks(row.summary),
+            content: stripSecretBlocks(row.content)
+          }));
+
+        if (sanitizedArticles.length === 0) {
+          return res.status(400).json({ status: 'error', code: 'ERR_RESTRICTED', error: 'Selected articles are private or restricted.', message: 'Selected articles are private or restricted.' });
+        }
+
+        // Determine CTA text
+        const ctaMap = {
+          kickstarter: 'CTA: Back our Kickstarter campaign today to unlock this exclusive lore expansion!',
+          patreon: 'CTA: Join our Patreon to get early access to full lore chapters and world updates!',
+          vtt: 'CTA: Get the full module on Roll20 and Foundry VTT now!',
+          newsletter: 'CTA: Subscribe to our newsletter to receive weekly world lore updates in your inbox!',
+          none: ''
+        };
+
+        let ctaText = '';
+        if (cta_type) {
+          const normalizedCta = String(cta_type).toLowerCase().trim();
+          if (ctaMap[normalizedCta] !== undefined) {
+            ctaText = ctaMap[normalizedCta];
+          } else {
+            ctaText = cta_type;
+          }
+        }
+
+        // Determine Preset Instructions
+        const presetMap = {
+          kickstarter: 'Write a high-converting Kickstarter campaign feature section highlighting this lore. Focus on exciting world-building hooks, gameplay/setting features, and compelling pitch copy.',
+          'vtt-store': 'Write a Virtual Tabletop (VTT) store module description (e.g. Roll20, Foundry VTT). Focus on key locations, NPCs, factions, and adventure hooks included in this module.',
+          'serial-fiction': 'Write an engaging serial fiction newsletter update / author\'s notes introducing readers to these lore elements. Focus on intrigue, character motivations, and narrative stakes.',
+          'social-teaser': 'Write a catchy, viral social media teaser post (Twitter/X, Discord announcement, Reddit showcase) showcasing this lore item. Include engaging hooks and emojis.'
+        };
+
+        const selectedPreset = (preset && presetMap[preset.toLowerCase()]) ? preset.toLowerCase() : 'kickstarter';
+        const presetInstruction = presetMap[selectedPreset];
+
+        const loreSummaryText = sanitizedArticles.map(a => 
+          `### ${a.title} (${a.category || 'Lore'})\n${a.summary ? `Summary: ${a.summary}\n` : ''}${a.content || ''}`
+        ).join('\n\n---\n\n');
+
+        const prompt = `You are a professional marketing copywriter for tabletop roleplaying games and speculative fiction.
+Generate public promotional copy based ONLY on the sanitized lore provided below.
+
+Preset Style: ${presetInstruction}
+${tone_chip ? `Tone & Atmosphere: ${tone_chip}` : ''}
+${ctaText ? `Call to Action: ${ctaText}` : ''}
+
+[SANITIZED LORE]
+${loreSummaryText}
+
+[TASK]
+Write high-converting, polished promotional copy.
+RULES:
+1. Do NOT reveal any secret plot twists or spoilers.
+2. Structure with clear headers, bullet points, and engaging copy.
+3. Append the Call to Action at the end if provided.`;
+
+        let generatedCopy = '';
+        try {
+          const rawRes = await callGeminiText(prompt);
+          if (rawRes) {
+            generatedCopy = rawRes;
+          }
+        } catch (e) {}
+
+        // Fallback copy generator if Gemini API key is missing or fails
+        if (!generatedCopy) {
+          const mainArticle = sanitizedArticles[0];
+          const tonePrefix = tone_chip ? `[Tone: ${tone_chip}] ` : '';
+          if (selectedPreset === 'kickstarter') {
+            generatedCopy = `${tonePrefix}🔥 **UNVEILING THE LORE: ${mainArticle.title.toUpperCase()}** 🔥\n\n` +
+              `Step into a world rich with deep narrative mystery and epic world-building! ` +
+              `${mainArticle.summary || mainArticle.content.substring(0, 200)}...\n\n` +
+              `✨ **Campaign Highlights:**\n` +
+              `- Fully detailed lore entries & faction guides\n` +
+              `- Ready-to-run encounter hooks and setting background\n` +
+              `- Beautifully crafted world assets for DMs and players alike\n\n` +
+              (ctaText ? `${ctaText}` : 'Back our campaign now to bring this world to life!');
+          } else if (selectedPreset === 'vtt-store') {
+            generatedCopy = `${tonePrefix}📦 **VTT MODULE: ${mainArticle.title.toUpperCase()}** 📦\n\n` +
+              `Enhance your virtual tabletop experience with ${mainArticle.title}! ` +
+              `${mainArticle.summary || mainArticle.content.substring(0, 200)}...\n\n` +
+              `🎮 **Module Features:**\n` +
+              `- Complete setting details and interactive world notes\n` +
+              `- Pre-configured lore handouts for your players\n` +
+              `- Seamless integration with your favourite fantasy RPG system\n\n` +
+              (ctaText ? `${ctaText}` : 'Available now on Roll20 and Foundry VTT!');
+          } else if (selectedPreset === 'serial-fiction') {
+            generatedCopy = `${tonePrefix}📜 **FROM THE AUTHOR'S DESK: ${mainArticle.title}** 📜\n\n` +
+              `Dear Readers,\n\n` +
+              `Today we take a deep dive into ${mainArticle.title}. ` +
+              `${mainArticle.summary || mainArticle.content.substring(0, 200)}...\n\n` +
+              `As our characters travel deeper into this realm, the stakes grow higher and old secrets unravel.\n\n` +
+              (ctaText ? `${ctaText}` : 'Stay tuned for the next chapter!');
+          } else {
+            // social-teaser
+            generatedCopy = `${tonePrefix}✨ **EXPLORE THE LORE: ${mainArticle.title}** ✨\n\n` +
+              `${mainArticle.summary || mainArticle.content.substring(0, 150)}...\n\n` +
+              `What mysteries lie hidden within? Discover the full entry in the Lore Vault! 🌌\n\n` +
+              (ctaText ? `${ctaText}` : '#TTRPG #Worldbuilding #Fantasy');
+          }
+        }
+
+        // Final safety check to strip any secrets if they somehow appeared
+        generatedCopy = stripSecretBlocks(generatedCopy);
+
+        return res.json({
+          status: 'success',
+          generated_copy: generatedCopy
+        });
+      } catch (innerErr) {
+        return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: innerErr.message });
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', code: 'ERR_INTERNAL', message: err.message });
+  }
+});
+
+// ==========================================
+// 🗺️ INTERACTIVE WORLD ATLAS & SHARING ENGINE
+// ==========================================
+
+// Stack-Based Secret Sanitizer (Handles nested & unclosed secret tags safely)
+function sanitizeSecretContent(content) {
+  if (!content) return '';
+  
+  let result = '';
+  let depth = 0;
+  let i = 0;
+  const openTag = '[secret]';
+  const closeTag = '[/secret]';
+
+  while (i < content.length) {
+    const lower = content.toLowerCase();
+    if (lower.startsWith(openTag, i)) {
+      if (depth === 0) {
+        result += ' *[Secret Details Redacted]* ';
+      }
+      depth++;
+      i += openTag.length;
+    } else if (lower.startsWith(closeTag, i)) {
+      if (depth > 0) {
+        depth--;
+      }
+      i += closeTag.length;
+    } else {
+      if (depth === 0) {
+        result += content[i];
+      }
+      i++;
+    }
+  }
+
+  return result;
+}
+
+// Fetch Frontpage Payload
+app.get('/api/worlds/:worldId/frontpage', (req, res) => {
+  const { worldId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+
+  db.get('SELECT * FROM worlds WHERE id = ? OR id = "default"', [worldId], (err, world) => {
+    if (err || !world) {
+      return res.status(404).json({ error: 'World not found' });
+    }
+
+    let pinnedIds = [];
+    try {
+      pinnedIds = JSON.parse(world.pinned_article_ids || '[]');
+    } catch (e) {
+      pinnedIds = [];
+    }
+
+    let articleQuery = 'SELECT id, title, category, sub_category, summary, content, header_image, tags, updated_at FROM articles WHERE world_id = ? OR world_id = "default"';
+    db.all(articleQuery, [world.id], (err2, allArticles) => {
+      const articles = allArticles || [];
+      
+      const pinnedArticles = articles.filter(a => pinnedIds.includes(a.id)).slice(0, 6);
+      const featured = pinnedArticles.length ? pinnedArticles : articles.slice(0, 4);
+
+      const sanitizedFeatured = featured.map(art => ({
+        ...art,
+        content: isPlayerMode ? sanitizeSecretContent(art.content) : art.content
+      }));
+
+      const categoryCounts = {};
+      articles.forEach(a => {
+        categoryCounts[a.category] = (categoryCounts[a.category] || 0) + 1;
+      });
+
+      res.json({
+        world,
+        stats: {
+          totalArticles: articles.length,
+          totalCategories: Object.keys(categoryCounts).length,
+          categoryCounts
+        },
+        pinnedArticles: sanitizedFeatured
+      });
+    });
+  });
+});
+
+// Update Frontpage Settings
+app.put('/api/worlds/:worldId/frontpage', (req, res) => {
+  const { worldId } = req.params;
+  const { banner_image, tagline, pinned_article_ids, template_style } = req.body;
+
+  const query = `
+    UPDATE worlds
+    SET banner_image = COALESCE(?, banner_image),
+        tagline = COALESCE(?, tagline),
+        pinned_article_ids = COALESCE(?, pinned_article_ids),
+        template_style = COALESCE(?, template_style)
+    WHERE id = ? OR id = "default"
+  `;
+
+  const pinnedStr = Array.isArray(pinned_article_ids) ? JSON.stringify(pinned_article_ids) : pinned_article_ids;
+
+  db.run(query, [banner_image, tagline, pinnedStr, template_style, worldId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM worlds WHERE id = ? OR id = "default"', [worldId], (err2, world) => {
+      res.json({ success: true, world });
+    });
+  });
+});
+
+// Fetch all maps for a given world
+app.get('/api/worlds/:worldId/maps', (req, res) => {
+  const { worldId } = req.params;
+  db.all('SELECT * FROM maps WHERE world_id = ? ORDER BY created_at ASC', [worldId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ maps: rows || [] });
+  });
+});
+
+// Upload/Create new map
+app.post('/api/maps', imageUpload.single('image'), (req, res) => {
+  const { world_id, title, description, parent_map_id } = req.body;
+  if (!title || !world_id) {
+    return res.status(400).json({ error: 'Missing required map fields (title, world_id)' });
+  }
+
+  const id = `map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const image_path = req.file ? `/uploads/images/${req.file.filename}` : '/uploads/images/default-map.png';
+  const width = 1920;
+  const height = 1080;
+
+  const query = `
+    INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  db.run(query, [id, world_id, parent_map_id || null, title, description || '', image_path, width, height], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM maps WHERE id = ?', [id], (err2, map) => {
+      res.status(201).json({ success: true, map });
+    });
+  });
+});
+
+// Delete map and cascade pins
+app.delete('/api/maps/:id', (req, res) => {
+  db.run('DELETE FROM maps WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// Fetch pins for a map
+app.get('/api/maps/:mapId/pins', (req, res) => {
+  const { mapId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+  
+  let query = 'SELECT * FROM map_pins WHERE map_id = ?';
+  const params = [mapId];
+
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ pins: rows || [] });
+  });
+});
+
+// Create/Update map pin
+app.post('/api/map-pins', (req, res) => {
+  const { id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id } = req.body;
+  if (!map_id || x_pct === undefined || y_pct === undefined || !label) {
+    return res.status(400).json({ error: 'Missing required pin fields (map_id, x_pct, y_pct, label)' });
+  }
+
+  const pinId = id || `pin-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const clampedX = Math.max(0, Math.min(1, parseFloat(x_pct)));
+  const clampedY = Math.max(0, Math.min(1, parseFloat(y_pct)));
+
+  const query = `
+    INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      article_id=excluded.article_id,
+      x_pct=excluded.x_pct,
+      y_pct=excluded.y_pct,
+      label=excluded.label,
+      pin_icon=excluded.pin_icon,
+      pin_color=excluded.pin_color,
+      is_secret=excluded.is_secret,
+      sub_map_id=excluded.sub_map_id,
+      updated_at=CURRENT_TIMESTAMP
+  `;
+
+  db.run(query, [pinId, map_id, article_id || null, clampedX, clampedY, label, pin_icon || 'fa-location-dot', pin_color || '#d97706', is_secret ? 1 : 0, sub_map_id || null], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_pins WHERE id = ?', [pinId], (err2, pin) => {
+      res.status(201).json({ success: true, pin });
+    });
+  });
+});
+
+// Delete map pin
+app.delete('/api/map-pins/:id', (req, res) => {
+  db.run('DELETE FROM map_pins WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- MAP LAYERS REST API ENDPOINTS ---
+
+// GET /api/maps/:mapId/layers
+app.get('/api/maps/:mapId/layers', (req, res) => {
+  const { mapId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+  let query = 'SELECT * FROM map_layers WHERE map_id = ?';
+  const params = [mapId];
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+  query += ' ORDER BY sort_order ASC, created_at ASC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ layers: rows || [] });
+  });
+});
+
+// POST /api/maps/:mapId/layers
+app.post('/api/maps/:mapId/layers', (req, res) => {
+  const { mapId } = req.params;
+  const { name, color_badge, is_visible, is_secret, sort_order } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Layer name is required' });
+  }
+
+  const id = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const badge = color_badge || '#38bdf8';
+  const visible = is_visible !== undefined ? (is_visible ? 1 : 0) : 1;
+  const secret = is_secret ? 1 : 0;
+  const sort = sort_order !== undefined ? parseInt(sort_order, 10) : 0;
+
+  const query = `
+    INSERT INTO map_layers (id, map_id, name, color_badge, is_visible, is_secret, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(query, [id, mapId, name, badge, visible, secret, sort], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_layers WHERE id = ?', [id], (err2, layer) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.status(201).json({ success: true, layer });
+    });
+  });
+});
+
+// DELETE /api/maps/:mapId/layers/:layerId
+app.delete('/api/maps/:mapId/layers/:layerId', (req, res) => {
+  const { mapId, layerId } = req.params;
+  db.run('DELETE FROM map_layers WHERE id = ? AND map_id = ?', [layerId, mapId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- MAP TERRITORIES REST API ENDPOINTS ---
+
+// GET /api/maps/:mapId/territories
+app.get('/api/maps/:mapId/territories', (req, res) => {
+  const { mapId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+  let query = 'SELECT * FROM map_territories WHERE map_id = ?';
+  const params = [mapId];
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+  query += ' ORDER BY created_at ASC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ territories: rows || [] });
+  });
+});
+
+// POST /api/maps/:mapId/territories
+app.post('/api/maps/:mapId/territories', (req, res) => {
+  const { mapId } = req.params;
+  const {
+    title, layer_id, article_id, points_json,
+    stroke_color, stroke_width, stroke_style,
+    fill_color, fill_opacity, is_contested,
+    contested_article_id, is_secret
+  } = req.body;
+
+  if (!title || !points_json) {
+    return res.status(400).json({ error: 'Missing required territory fields (title, points_json)' });
+  }
+
+  const id = `territory-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const strokeColor = stroke_color || '#ef4444';
+  const strokeWidth = stroke_width !== undefined ? parseInt(stroke_width, 10) : 3;
+  const strokeStyle = stroke_style || 'solid';
+  const fillColor = fill_color || '#ef4444';
+  const fillOpacity = fill_opacity !== undefined ? parseFloat(fill_opacity) : 0.25;
+  const contested = is_contested ? 1 : 0;
+  const secret = is_secret ? 1 : 0;
+
+  const query = `
+    INSERT INTO map_territories (
+      id, map_id, layer_id, article_id, title, points_json,
+      stroke_color, stroke_width, stroke_style, fill_color, fill_opacity,
+      is_contested, contested_article_id, is_secret
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(query, [
+    id, mapId, layer_id || null, article_id || null, title, points_json,
+    strokeColor, strokeWidth, strokeStyle, fillColor, fillOpacity,
+    contested, contested_article_id || null, secret
+  ], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_territories WHERE id = ?', [id], (err2, territory) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.status(201).json({ success: true, territory });
+    });
+  });
+});
+
+// PUT /api/maps/:mapId/territories/:territoryId
+app.put('/api/maps/:mapId/territories/:territoryId', (req, res) => {
+  const { mapId, territoryId } = req.params;
+  const updates = req.body;
+
+  const allowedFields = [
+    'title', 'layer_id', 'article_id', 'points_json',
+    'stroke_color', 'stroke_width', 'stroke_style',
+    'fill_color', 'fill_opacity', 'is_contested',
+    'contested_article_id', 'is_secret'
+  ];
+
+  const fieldsToUpdate = [];
+  const params = [];
+
+  for (const field of allowedFields) {
+    if (updates[field] !== undefined) {
+      fieldsToUpdate.push(`${field} = ?`);
+      params.push(updates[field]);
+    }
+  }
+
+  if (fieldsToUpdate.length === 0) {
+    db.get('SELECT * FROM map_territories WHERE id = ? AND map_id = ?', [territoryId, mapId], (err, territory) => {
+      if (err) return res.status(500).json({ error: err.message });
+      return res.json({ territory });
+    });
+    return;
+  }
+
+  params.push(territoryId, mapId);
+  const sql = `UPDATE map_territories SET ${fieldsToUpdate.join(', ')} WHERE id = ? AND map_id = ?`;
+
+  db.run(sql, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_territories WHERE id = ? AND map_id = ?', [territoryId, mapId], (err2, territory) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ territory });
+    });
+  });
+});
+
+// DELETE /api/maps/:mapId/territories/:territoryId
+app.delete('/api/maps/:mapId/territories/:territoryId', (req, res) => {
+  const { mapId, territoryId } = req.params;
+  db.run('DELETE FROM map_territories WHERE id = ? AND map_id = ?', [territoryId, mapId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// Live Public Web Gateway View — World Frontpage Wiki Portal
+app.get('/view/:shareToken', (req, res) => {
+  const worldId = req.params.shareToken;
+  
+  db.get('SELECT * FROM worlds WHERE id = ? OR id = "default"', [worldId], (err, world) => {
+    const targetWorld = world || {
+      id: 'default',
+      name: 'LoreVault Atlas',
+      description: 'Interactive World Lore Explorer',
+      tagline: 'An intricate custom setting waiting to be explored.',
+      banner_image: '/uploads/images/default-banner.png',
+      theme: 'ancient-codex'
+    };
+
+    db.all('SELECT id, title, category, summary, content, header_image, tags FROM articles WHERE world_id = ? OR world_id = "default"', [targetWorld.id], (err2, articles) => {
+      const allArticles = articles || [];
+      
+      let pinnedIds = [];
+      try { pinnedIds = JSON.parse(targetWorld.pinned_article_ids || '[]'); } catch (e) {}
+
+      const pinned = allArticles.filter(a => pinnedIds.includes(a.id)).slice(0, 6);
+      const featured = pinned.length ? pinned : allArticles.slice(0, 4);
+
+      const host = req.get('host') || 'localhost:3000';
+      const protocol = req.protocol || 'http';
+      const ogImage = (targetWorld.banner_image && targetWorld.banner_image.startsWith('http'))
+        ? targetWorld.banner_image
+        : `${protocol}://${host}${targetWorld.banner_image || '/uploads/images/default-banner.png'}`;
+
+      const html = `<!DOCTYPE html>
+<html lang="en" data-theme="${targetWorld.theme}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${targetWorld.name} — World Lore Portal</title>
+  <meta property="og:title" content="${targetWorld.name} — LoreVault World Portal">
+  <meta property="og:description" content="${targetWorld.tagline || targetWorld.description || 'Explore the lore, maps, and codex.'}">
+  <meta property="og:image" content="${ogImage}">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { margin: 0; padding: 0; background: var(--bg-main, #0b0f19); color: var(--text-primary, #e2e8f0); font-family: sans-serif; }
+    .public-portal-container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .world-hero-banner {
+      height: 320px;
+      border-radius: 16px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(11,15,25,0.95)), url('${targetWorld.banner_image || '/uploads/images/default-banner.png'}') center/cover;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 32px; box-sizing: border-box; border: 1px solid var(--border-color, #1e293b);
+    }
+    .world-hero-banner h1 { margin: 0; font-size: 2.8rem; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+    .world-hero-banner p { font-size: 1.2rem; color: var(--accent-amber, #f59e0b); font-style: italic; margin-top: 8px; }
+    .action-dock { display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap; align-items: center; }
+    .featured-spotlight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 16px; }
+    .spotlight-card { background: var(--surface-card, #0f172a); border: 1px solid var(--border-color, #1e293b); border-radius: 12px; padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+    .spotlight-card:hover { transform: translateY(-4px); border-color: var(--accent-primary, #38bdf8); }
+  </style>
+</head>
+<body>
+  <div class="public-portal-container">
+    <div class="world-hero-banner">
+      <h1>${targetWorld.name}</h1>
+      <p>“${targetWorld.tagline || 'An intricate custom setting waiting to be explored.'}”</p>
+    </div>
+
+    <div class="action-dock">
+      <span class="badge" style="font-size:0.95rem; padding: 8px 14px;">📚 ${allArticles.length} Articles</span>
+      <span class="badge" style="font-size:0.95rem; padding: 8px 14px;">🌍 ${targetWorld.theme || 'ancient-codex'} Theme</span>
+    </div>
+
+    <section style="margin-top: 32px;">
+      <h2>⭐ Featured Lore Spotlight</h2>
+      <div class="featured-spotlight-grid">
+        ${featured.map(art => `
+          <div class="spotlight-card">
+            <span class="category-badge">${art.category}</span>
+            <h3 style="margin:8px 0;">${art.title}</h3>
+            <p style="font-size:0.9rem; color:var(--text-secondary,#94a3b8);">${art.summary || (art.content ? art.content.substring(0, 120) + '...' : '')}</p>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  </div>
+</body>
+</html>`;
+      res.send(html);
+    });
+  });
+});
+
+// Standalone Static Web Exporter
+app.post('/api/export/atlas/:worldId', (req, res) => {
+  const { worldId } = req.params;
+  const isPlayerMode = req.body.mode === 'player';
+
+  db.get('SELECT * FROM worlds WHERE id = ? OR id = "default"', [worldId], (err, world) => {
+    const targetWorld = world || { id: 'default', name: 'LoreVault Atlas', theme: 'ancient-codex' };
+
+    db.all('SELECT * FROM maps WHERE world_id = ?', [targetWorld.id], (err2, maps) => {
+      const mapList = maps || [];
+      const mapIds = mapList.map(m => m.id);
+      
+      let pinQuery = 'SELECT * FROM map_pins';
+      let params = [];
+      if (mapIds.length > 0) {
+        pinQuery += ' WHERE map_id IN (' + mapIds.map(() => '?').join(',') + ')';
+        params = mapIds;
+        if (isPlayerMode) pinQuery += ' AND is_secret = 0';
+      } else if (isPlayerMode) {
+        pinQuery += ' WHERE is_secret = 0';
+      }
+
+      db.all(pinQuery, params, (err3, pins) => {
+        db.all('SELECT id, title, category, summary, content FROM articles WHERE world_id = ? OR world_id = "default"', [targetWorld.id], (err4, articles) => {
+          
+          const sanitizedArticles = (articles || []).map(art => ({
+            ...art,
+            content: isPlayerMode ? sanitizeSecretContent(art.content) : art.content
+          }));
+
+          const bundleHtml = `<!DOCTYPE html>
+<html lang="en" data-theme="${targetWorld.theme}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${targetWorld.name} — Standalone World Atlas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <style>
+    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; height: 100vh; }
+    #map { flex: 1; height: 100%; background: #000; }
+    #drawer { width: 400px; padding: 24px; background: #161b22; border-left: 1px solid #30363d; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="drawer">
+    <h2 id="title">${targetWorld.name} Atlas</h2>
+    <div id="body">Select a marker on the map to explore lore.</div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script>
+    const maps = ${JSON.stringify(mapList)};
+    const pins = ${JSON.stringify(pins || [])};
+    const articles = ${JSON.stringify(sanitizedArticles)};
+  </script>
+</body>
+</html>`;
+
+          res.setHeader('Content-Type', 'text/html');
+          res.setHeader('Content-Disposition', `attachment; filename="lore-vault-atlas-${targetWorld.id}.html"`);
+          res.send(bundleHtml);
+        });
+      });
+    });
+  });
+});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`LoreVault Server running locally on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { app, db, getCastPersonaContext, stripSecretBlocks, filterArticleVisibility, serializeMarkdown, serializeXML, serializeJSON, serializeYAML, serializeContext, smartCategorizeArticle };
+
