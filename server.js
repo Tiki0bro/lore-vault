@@ -187,6 +187,10 @@ db.serialize(() => {
       id TEXT PRIMARY KEY,
       world_id TEXT NOT NULL,
       parent_map_id TEXT REFERENCES maps(id) ON DELETE SET NULL,
+      parent_pin_id TEXT,
+      scale_pixels REAL DEFAULT 100.0,
+      scale_distance REAL DEFAULT 10.0,
+      scale_unit TEXT DEFAULT 'miles',
       title TEXT NOT NULL,
       description TEXT DEFAULT '',
       image_path TEXT NOT NULL,
@@ -197,6 +201,12 @@ db.serialize(() => {
       FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE
     )
   `);
+
+  db.run("ALTER TABLE maps ADD COLUMN parent_map_id TEXT", (err) => {});
+  db.run("ALTER TABLE maps ADD COLUMN parent_pin_id TEXT", (err) => {});
+  db.run("ALTER TABLE maps ADD COLUMN scale_pixels REAL DEFAULT 100.0", (err) => {});
+  db.run("ALTER TABLE maps ADD COLUMN scale_distance REAL DEFAULT 10.0", (err) => {});
+  db.run("ALTER TABLE maps ADD COLUMN scale_unit TEXT DEFAULT 'miles'", (err) => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS map_pins (
@@ -210,8 +220,30 @@ db.serialize(() => {
       pin_color TEXT DEFAULT '#d97706',
       is_secret INTEGER DEFAULT 0,
       sub_map_id TEXT REFERENCES maps(id) ON DELETE SET NULL,
+      target_sub_map_id TEXT,
+      category TEXT DEFAULT 'Location',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run("ALTER TABLE map_pins ADD COLUMN target_sub_map_id TEXT", (err) => {});
+  db.run("ALTER TABLE map_pins ADD COLUMN category TEXT DEFAULT 'Location'", (err) => {});
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS map_routes (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL,
+      layer_id TEXT,
+      title TEXT NOT NULL,
+      points_json TEXT NOT NULL,
+      stroke_color TEXT DEFAULT '#f59e0b',
+      stroke_width INTEGER DEFAULT 3,
+      stroke_style TEXT DEFAULT 'dashed',
+      calculated_distance REAL DEFAULT 0.0,
+      is_secret INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
     )
   `);
@@ -3794,7 +3826,7 @@ app.get('/api/worlds/:worldId/maps', (req, res) => {
 
 // Upload/Create new map
 app.post('/api/maps', imageUpload.single('image'), (req, res) => {
-  const { world_id, title, description, parent_map_id } = req.body;
+  const { world_id, title, description, parent_map_id, parent_pin_id, scale_pixels, scale_distance, scale_unit } = req.body;
   if (!title || !world_id) {
     return res.status(400).json({ error: 'Missing required map fields (title, world_id)' });
   }
@@ -3803,12 +3835,15 @@ app.post('/api/maps', imageUpload.single('image'), (req, res) => {
   const image_path = req.file ? `/uploads/images/${req.file.filename}` : '/uploads/images/default-map.png';
   const width = 1920;
   const height = 1080;
+  const sPixels = scale_pixels !== undefined ? parseFloat(scale_pixels) : 100.0;
+  const sDistance = scale_distance !== undefined ? parseFloat(scale_distance) : 10.0;
+  const sUnit = scale_unit || 'miles';
 
   const query = `
-    INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO maps (id, world_id, parent_map_id, parent_pin_id, scale_pixels, scale_distance, scale_unit, title, description, image_path, width, height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  db.run(query, [id, world_id, parent_map_id || null, title, description || '', image_path, width, height], function(err) {
+  db.run(query, [id, world_id, parent_map_id || null, parent_pin_id || null, sPixels, sDistance, sUnit, title, description || '', image_path, width, height], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     db.get('SELECT * FROM maps WHERE id = ?', [id], (err2, map) => {
       res.status(201).json({ success: true, map });
@@ -3844,7 +3879,7 @@ app.get('/api/maps/:mapId/pins', (req, res) => {
 
 // Create/Update map pin
 app.post('/api/map-pins', (req, res) => {
-  const { id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id } = req.body;
+  const { id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id, target_sub_map_id, category } = req.body;
   if (!map_id || x_pct === undefined || y_pct === undefined || !label) {
     return res.status(400).json({ error: 'Missing required pin fields (map_id, x_pct, y_pct, label)' });
   }
@@ -3852,10 +3887,12 @@ app.post('/api/map-pins', (req, res) => {
   const pinId = id || `pin-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
   const clampedX = Math.max(0, Math.min(1, parseFloat(x_pct)));
   const clampedY = Math.max(0, Math.min(1, parseFloat(y_pct)));
+  const effectiveSubMapId = target_sub_map_id || sub_map_id || null;
+  const pinCategory = category || 'Location';
 
   const query = `
-    INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret, sub_map_id, target_sub_map_id, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       article_id=excluded.article_id,
       x_pct=excluded.x_pct,
@@ -3865,10 +3902,12 @@ app.post('/api/map-pins', (req, res) => {
       pin_color=excluded.pin_color,
       is_secret=excluded.is_secret,
       sub_map_id=excluded.sub_map_id,
+      target_sub_map_id=excluded.target_sub_map_id,
+      category=excluded.category,
       updated_at=CURRENT_TIMESTAMP
   `;
 
-  db.run(query, [pinId, map_id, article_id || null, clampedX, clampedY, label, pin_icon || 'fa-location-dot', pin_color || '#d97706', is_secret ? 1 : 0, sub_map_id || null], function(err) {
+  db.run(query, [pinId, map_id, article_id || null, clampedX, clampedY, label, pin_icon || 'fa-location-dot', pin_color || '#d97706', is_secret ? 1 : 0, effectiveSubMapId, effectiveSubMapId, pinCategory], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     db.get('SELECT * FROM map_pins WHERE id = ?', [pinId], (err2, pin) => {
       res.status(201).json({ success: true, pin });
@@ -4250,6 +4289,172 @@ app.put('/api/maps/:mapId/territories/:territoryId', (req, res) => {
 app.delete('/api/maps/:mapId/territories/:territoryId', (req, res) => {
   const { mapId, territoryId } = req.params;
   db.run('DELETE FROM map_territories WHERE id = ? AND map_id = ?', [territoryId, mapId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- Atlas v2 REST API Endpoints ---
+
+// GET /api/maps/:mapId/tree — Hierarchy resolution (map, parentMap, childMaps, ancestors)
+app.get('/api/maps/:mapId/tree', async (req, res) => {
+  const { mapId } = req.params;
+  try {
+    const map = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err, row) => err ? reject(err) : resolve(row));
+    });
+    if (!map) {
+      return res.status(404).json({ error: 'Map not found' });
+    }
+
+    const childMaps = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM maps WHERE parent_map_id = ? ORDER BY title ASC', [mapId], (err, rows) => err ? reject(err) : resolve(rows));
+    });
+
+    let parentMap = null;
+    if (map.parent_map_id) {
+      parentMap = await new Promise((resolve, reject) => {
+        db.get('SELECT * FROM maps WHERE id = ?', [map.parent_map_id], (err, row) => err ? reject(err) : resolve(row || null));
+      });
+    }
+
+    const rawAncestors = [];
+    const visited = new Set([map.id]);
+    let currParentId = map.parent_map_id;
+
+    while (currParentId && !visited.has(currParentId)) {
+      visited.add(currParentId);
+      const parentRow = await new Promise((resolve, reject) => {
+        db.get('SELECT * FROM maps WHERE id = ?', [currParentId], (err, row) => err ? reject(err) : resolve(row || null));
+      });
+      if (!parentRow) break;
+      rawAncestors.push(parentRow);
+      currParentId = parentRow.parent_map_id;
+    }
+
+    rawAncestors.reverse();
+
+    res.json({
+      map,
+      parentMap,
+      childMaps: childMaps || [],
+      ancestors: rawAncestors
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/maps/:mapId/scale — Update scale calibration
+app.put('/api/maps/:mapId/scale', async (req, res) => {
+  const { mapId } = req.params;
+  const { scale_pixels, scale_distance, scale_unit } = req.body;
+
+  try {
+    const map = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err, row) => err ? reject(err) : resolve(row));
+    });
+    if (!map) {
+      return res.status(404).json({ error: 'Map not found' });
+    }
+
+    const pixels = scale_pixels !== undefined ? parseFloat(scale_pixels) : (map.scale_pixels || 100.0);
+    const distance = scale_distance !== undefined ? parseFloat(scale_distance) : (map.scale_distance || 10.0);
+    const unit = scale_unit !== undefined ? String(scale_unit).trim() : (map.scale_unit || 'miles');
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE maps SET scale_pixels = ?, scale_distance = ?, scale_unit = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [pixels, distance, unit, mapId],
+        function(err) { err ? reject(err) : resolve(this); }
+      );
+    });
+
+    const updatedMap = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err, row) => err ? reject(err) : resolve(row));
+    });
+
+    res.json({ success: true, map: updatedMap });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/maps/:mapId/routes — Fetch routes for map
+app.get('/api/maps/:mapId/routes', (req, res) => {
+  const { mapId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+
+  let query = 'SELECT * FROM map_routes WHERE map_id = ?';
+  const params = [mapId];
+
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+
+  query += ' ORDER BY created_at ASC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ routes: rows || [] });
+  });
+});
+
+// POST /api/maps/:mapId/routes — Create or update route
+app.post('/api/maps/:mapId/routes', (req, res) => {
+  const { mapId } = req.params;
+  const {
+    id,
+    layer_id,
+    title,
+    points_json,
+    stroke_color,
+    stroke_width,
+    stroke_style,
+    calculated_distance,
+    is_secret
+  } = req.body;
+
+  if (!title || points_json === undefined || points_json === null) {
+    return res.status(400).json({ error: 'Missing required route fields (title, points_json)' });
+  }
+
+  const routeId = id || `route-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const pointsStr = typeof points_json === 'string' ? points_json : JSON.stringify(points_json);
+  const color = stroke_color || '#f59e0b';
+  const width = stroke_width !== undefined ? parseInt(stroke_width, 10) : 3;
+  const style = stroke_style || 'dashed';
+  const dist = calculated_distance !== undefined ? parseFloat(calculated_distance) : 0.0;
+  const secret = is_secret ? 1 : 0;
+  const layer = layer_id || null;
+
+  const query = `
+    INSERT INTO map_routes (id, map_id, layer_id, title, points_json, stroke_color, stroke_width, stroke_style, calculated_distance, is_secret)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      layer_id = excluded.layer_id,
+      title = excluded.title,
+      points_json = excluded.points_json,
+      stroke_color = excluded.stroke_color,
+      stroke_width = excluded.stroke_width,
+      stroke_style = excluded.stroke_style,
+      calculated_distance = excluded.calculated_distance,
+      is_secret = excluded.is_secret
+  `;
+
+  db.run(query, [routeId, mapId, layer, title, pointsStr, color, width, style, dist, secret], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_routes WHERE id = ?', [routeId], (err2, route) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.status(201).json({ success: true, route });
+    });
+  });
+});
+
+// DELETE /api/maps/:mapId/routes/:routeId — Delete route
+app.delete('/api/maps/:mapId/routes/:routeId', (req, res) => {
+  const { mapId, routeId } = req.params;
+  db.run('DELETE FROM map_routes WHERE id = ? AND map_id = ?', [routeId, mapId], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, deleted: this.changes });
   });

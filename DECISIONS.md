@@ -8,6 +8,7 @@ This file records all major technical, architectural, and design decisions made 
 - **Architecture**: Local-first single-page web app with Node.js/Express server and Vanilla JS/HTML/CSS frontend.
 - **Storage Strategy**: Dual SQLite (`lore.db`) for relational metadata and local Markdown files (`/data/` or `/storage/`) for content preservation.
 - **Map Layers & Territory Boundaries Schema**: Added `map_layers` and `map_territories` SQLite relational tables and CRUD REST endpoints in `server.js`, storing polygons as normalized percentage coordinate arrays (`[x_pct, y_pct]`) with DM secret filtering (`?mode=player`).
+- **Interactive World Atlas v2 DB Schema & REST Endpoints**: Expanded `maps` (`parent_map_id`, `parent_pin_id`, `scale_pixels`, `scale_distance`, `scale_unit`) and `map_pins` (`target_sub_map_id`, `category`), created `map_routes` table, and added hierarchy tree resolution (`GET /api/maps/:mapId/tree`), scale calibration (`PUT /api/maps/:mapId/scale`), and route CRUD endpoints (`GET/POST/DELETE /api/maps/:mapId/routes`) with `?mode=player` secret filtering in [server.js](file:///c:/Users/EthenGreening/.gemini/antigravity/scratch/lore-vault/server.js).
 - **Gemini Multimodal Vision Territory Auto-Detection**: Added `POST /api/maps/:mapId/ai-auto-boundaries` multimodal vision endpoint with Gemini candidate model retries, image/lore context prompt, smart fallback polygons, ghost overlay canvas rendering, and candidate approval drawer in `public/js/atlas-view.js`.
 
 
