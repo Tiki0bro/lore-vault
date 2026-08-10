@@ -26,8 +26,11 @@ class AtlasView {
     this.isLayersDrawerOpen = false;
     this.contestedPairs = [];
     this.aiGhostPolygons = [];
-    this.aiCandidates = [];
     this.breadcrumbStack = [];
+    this.isRulerActive = false;
+    this.rulerPoints = [];
+    this.rulerPolyline = null;
+    this.rulerMarkers = [];
   }
 
   async init() {
@@ -76,6 +79,7 @@ class AtlasView {
           <button id="atlas-auto-pin-btn" class="tool-btn"><i class="fa-solid fa-map-pin"></i> Auto-Place Pins</button>
           <button id="atlas-layers-btn" class="tool-btn"><i class="fa-solid fa-layer-group"></i> 🥞 Layers</button>
           <button id="atlas-ai-detect-btn" class="tool-btn"><i class="fa-solid fa-robot"></i> 🤖 Auto-Detect Borders</button>
+          <button id="atlas-ruler-mode-btn" class="tool-btn"><i class="fa-solid fa-ruler-combined"></i> 📏 Ruler & Scale</button>
           <button id="atlas-pin-mode-btn" class="tool-btn"><i class="fa-solid fa-location-crosshairs"></i> Drop Pin</button>
           <button id="atlas-territory-mode-btn" class="tool-btn"><i class="fa-solid fa-draw-polygon"></i> 🗺️ Draw Boundary</button>
           <span id="atlas-reticle-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-crosshairs"></i> Click on map to place pin... <button id="atlas-cancel-pin-btn" class="btn-text">Cancel</button></span>
@@ -93,6 +97,37 @@ class AtlasView {
       <div id="atlas-viewport">
         <div id="atlas-breadcrumbs" class="atlas-breadcrumbs" style="display:none;"></div>
         <div id="atlas-canvas-container"></div>
+        <div id="atlas-ruler-toast" class="atlas-ruler-toast" style="display:none;">
+          <div class="ruler-toast-header">
+            <span class="ruler-toast-title"><i class="fa-solid fa-ruler-horizontal"></i> Measuring Tape</span>
+            <div class="ruler-toast-actions">
+              <button id="atlas-scale-calibrate-btn" class="tool-btn btn-sm"><i class="fa-solid fa-gear"></i> Calibrate Scale</button>
+              <button id="atlas-ruler-clear-btn" class="tool-btn btn-sm danger"><i class="fa-solid fa-xmark"></i> Clear</button>
+            </div>
+          </div>
+          <div class="ruler-toast-body">
+            <div class="ruler-distance-display">
+              <span id="ruler-distance-val">0.0</span> <span id="ruler-distance-unit">miles</span>
+            </div>
+            <div class="ruler-travel-times">
+              <div class="travel-badge" title="On Foot (~30 miles/day)">
+                <span class="travel-icon">🚶</span>
+                <span class="travel-label">Foot:</span>
+                <span id="ruler-time-foot" class="travel-val">0 days</span>
+              </div>
+              <div class="travel-badge" title="Horseback (~60 miles/day)">
+                <span class="travel-icon">🐎</span>
+                <span class="travel-label">Horse:</span>
+                <span id="ruler-time-horse" class="travel-val">0 days</span>
+              </div>
+              <div class="travel-badge" title="Sailing (~100 miles/day)">
+                <span class="travel-icon">⛵</span>
+                <span class="travel-label">Sail:</span>
+                <span id="ruler-time-sail" class="travel-val">0 days</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="atlas-layers-drawer" class="atlas-layers-drawer" style="display:none;">
           <div class="layers-drawer-header">
             <h4><i class="fa-solid fa-layer-group"></i> Map Layers</h4>
@@ -303,6 +338,40 @@ class AtlasView {
           </div>
         </div>
       </div>
+
+      <!-- Scale Calibration Modal -->
+      <div id="atlas-scale-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-ruler"></i> Calibrate Map Distance Scale</h3>
+            <button id="close-scale-modal-btn" class="drawer-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:12px;">
+              Set the reference pixel length and corresponding real-world distance unit for this map.
+            </p>
+            <div class="form-group">
+              <label>Reference Pixel Length (px) *</label>
+              <input type="number" id="scale-pixels-input" class="form-control" min="1" step="any" value="100" placeholder="e.g. 100">
+            </div>
+            <div class="form-group">
+              <label>Real-World Distance *</label>
+              <input type="number" id="scale-distance-input" class="form-control" min="0.01" step="any" value="10" placeholder="e.g. 10">
+            </div>
+            <div class="form-group">
+              <label>Distance Unit *</label>
+              <input type="text" id="scale-unit-input" class="form-control" value="miles" placeholder="e.g. miles, km, leagues">
+            </div>
+            <div id="scale-use-current-box" style="display:none; margin-top:12px; padding:10px; background:rgba(56, 189, 248, 0.1); border:1px dashed var(--accent-primary); border-radius:6px;">
+              <button id="scale-use-ruler-btn" class="tool-btn btn-sm full-width"><i class="fa-solid fa-crosshairs"></i> Set Reference Pixels from Current Measuring Tape (<span id="scale-ruler-px-val">0</span> px)</button>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button id="cancel-scale-modal-btn" class="tool-btn">Cancel</button>
+            <button id="save-scale-modal-btn" class="tool-btn primary">Save Scale Calibration</button>
+          </div>
+        </div>
+      </div>
     `;
 
     this.bindEvents();
@@ -474,6 +543,43 @@ class AtlasView {
         opacityVal.textContent = e.target.value;
       });
     }
+
+    // Ruler & Scale mode triggers
+    const rulerModeBtn = document.getElementById('atlas-ruler-mode-btn');
+    if (rulerModeBtn) {
+      rulerModeBtn.addEventListener('click', () => this.toggleRulerMode());
+    }
+
+    const scaleCalibrateBtn = document.getElementById('atlas-scale-calibrate-btn');
+    if (scaleCalibrateBtn) {
+      scaleCalibrateBtn.addEventListener('click', () => this.openScaleModal());
+    }
+
+    const rulerClearBtn = document.getElementById('atlas-ruler-clear-btn');
+    if (rulerClearBtn) {
+      rulerClearBtn.addEventListener('click', () => this.clearRulerTape());
+    }
+
+    const closeScaleModalBtn = document.getElementById('close-scale-modal-btn');
+    const cancelScaleModalBtn = document.getElementById('cancel-scale-modal-btn');
+    if (closeScaleModalBtn) closeScaleModalBtn.addEventListener('click', () => this.closeScaleModal());
+    if (cancelScaleModalBtn) cancelScaleModalBtn.addEventListener('click', () => this.closeScaleModal());
+
+    const saveScaleModalBtn = document.getElementById('save-scale-modal-btn');
+    if (saveScaleModalBtn) {
+      saveScaleModalBtn.addEventListener('click', () => this.saveMapScale());
+    }
+
+    const scaleUseRulerBtn = document.getElementById('scale-use-ruler-btn');
+    if (scaleUseRulerBtn) {
+      scaleUseRulerBtn.addEventListener('click', () => {
+        const pxDist = this.calculatePixelDistance(this.rulerPoints);
+        if (pxDist > 0) {
+          const pixelsInput = document.getElementById('scale-pixels-input');
+          if (pixelsInput) pixelsInput.value = Math.round(pxDist);
+        }
+      });
+    }
   }
 
   async autoGenerateMap() {
@@ -541,6 +647,9 @@ class AtlasView {
     if (this.isPinPlacementActive && this.isTerritoryDrawingActive) {
       this.toggleTerritoryDrawingMode(false);
     }
+    if (this.isPinPlacementActive && this.isRulerActive) {
+      this.toggleRulerMode(false);
+    }
     const btn = document.getElementById('atlas-pin-mode-btn');
     const toast = document.getElementById('atlas-reticle-toast');
     const canvas = document.getElementById('atlas-canvas-container');
@@ -553,6 +662,9 @@ class AtlasView {
     this.isTerritoryDrawingActive = forceState !== undefined ? forceState : !this.isTerritoryDrawingActive;
     if (this.isTerritoryDrawingActive && this.isPinPlacementActive) {
       this.togglePinPlacementMode(false);
+    }
+    if (this.isTerritoryDrawingActive && this.isRulerActive) {
+      this.toggleRulerMode(false);
     }
 
     const btn = document.getElementById('atlas-territory-mode-btn');
@@ -576,6 +688,218 @@ class AtlasView {
         this.activeDrawPolyline = null;
       }
       this.activeDrawVertices = [];
+    }
+  }
+
+  toggleRulerMode(forceState) {
+    this.isRulerActive = forceState !== undefined ? forceState : !this.isRulerActive;
+    if (this.isRulerActive) {
+      if (this.isPinPlacementActive) this.togglePinPlacementMode(false);
+      if (this.isTerritoryDrawingActive) this.toggleTerritoryDrawingMode(false);
+    }
+    const btn = document.getElementById('atlas-ruler-mode-btn');
+    const toast = document.getElementById('atlas-ruler-toast');
+    const canvas = document.getElementById('atlas-canvas-container');
+    if (btn) btn.classList.toggle('active', this.isRulerActive);
+    if (toast) toast.style.display = this.isRulerActive ? 'flex' : 'none';
+    if (canvas) canvas.style.cursor = this.isRulerActive ? 'crosshair' : 'grab';
+
+    if (!this.isRulerActive) {
+      this.clearRulerTape();
+    }
+  }
+
+  clearRulerTape() {
+    this.rulerPoints = [];
+    if (this.rulerPolyline) {
+      this.rulerPolyline.remove();
+      this.rulerPolyline = null;
+    }
+    if (Array.isArray(this.rulerMarkers)) {
+      this.rulerMarkers.forEach(m => {
+        if (m && typeof m.remove === 'function') m.remove();
+      });
+    }
+    this.rulerMarkers = [];
+    this.updateRulerToast();
+  }
+
+  addRulerPoint(x_px, y_px) {
+    this.rulerPoints.push([x_px, y_px]);
+    if (!this.mapInstance || typeof L === 'undefined') {
+      this.updateRulerToast();
+      return;
+    }
+
+    const latlngs = this.rulerPoints.map(pt => [pt[1], pt[0]]);
+
+    if (!this.rulerPolyline) {
+      this.rulerPolyline = L.polyline(latlngs, {
+        color: '#06b6d4',
+        weight: 4,
+        dashArray: '8, 8'
+      }).addTo(this.mapInstance);
+    } else {
+      this.rulerPolyline.setLatLngs(latlngs);
+    }
+
+    const marker = L.marker([y_px, x_px], {
+      icon: L.divIcon({
+        className: 'ruler-point-handle',
+        html: `<div class="ruler-node" title="Measurement Point ${this.rulerPoints.length}"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      })
+    }).addTo(this.mapInstance);
+
+    this.rulerMarkers.push(marker);
+    this.updateRulerToast();
+  }
+
+  calculatePixelDistance(points) {
+    if (!Array.isArray(points) || points.length < 2) return 0;
+    let totalPx = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const dx = points[i + 1][0] - points[i][0];
+      const dy = points[i + 1][1] - points[i][1];
+      totalPx += Math.sqrt(dx * dx + dy * dy);
+    }
+    return totalPx;
+  }
+
+  calculateRealDistance(pixelDist, scale_pixels, scale_distance) {
+    const sPx = (scale_pixels !== undefined && parseFloat(scale_pixels) > 0) ? parseFloat(scale_pixels) : 100.0;
+    const sDist = (scale_distance !== undefined && parseFloat(scale_distance) > 0) ? parseFloat(scale_distance) : 10.0;
+    return (pixelDist / sPx) * sDist;
+  }
+
+  calculateTravelTimes(distance) {
+    const d = parseFloat(distance) || 0;
+    return {
+      footDays: d / 30,
+      horseDays: d / 60,
+      sailDays: d / 100
+    };
+  }
+
+  formatTravelTime(days) {
+    const d = parseFloat(days) || 0;
+    if (d <= 0) return '0 days';
+    if (d < 1) {
+      const hrs = Math.round(d * 24);
+      return hrs <= 1 ? `${hrs || 1} hr` : `${hrs} hrs`;
+    }
+    return `${d.toFixed(1)} days`;
+  }
+
+  updateRulerToast() {
+    const distValEl = document.getElementById('ruler-distance-val');
+    const distUnitEl = document.getElementById('ruler-distance-unit');
+    const footEl = document.getElementById('ruler-time-foot');
+    const horseEl = document.getElementById('ruler-time-horse');
+    const sailEl = document.getElementById('ruler-time-sail');
+
+    const pxDist = this.calculatePixelDistance(this.rulerPoints);
+    const sPx = (this.currentMap && this.currentMap.scale_pixels) || 100.0;
+    const sDist = (this.currentMap && this.currentMap.scale_distance) || 10.0;
+    const sUnit = (this.currentMap && this.currentMap.scale_unit) || 'miles';
+
+    const realDist = this.calculateRealDistance(pxDist, sPx, sDist);
+    const travel = this.calculateTravelTimes(realDist);
+
+    if (distValEl) distValEl.textContent = realDist.toFixed(1);
+    if (distUnitEl) distUnitEl.textContent = sUnit;
+    if (footEl) footEl.textContent = this.formatTravelTime(travel.footDays);
+    if (horseEl) horseEl.textContent = this.formatTravelTime(travel.horseDays);
+    if (sailEl) sailEl.textContent = this.formatTravelTime(travel.sailDays);
+  }
+
+  openScaleModal() {
+    if (this.currentMap) {
+      const pxInput = document.getElementById('scale-pixels-input');
+      const distInput = document.getElementById('scale-distance-input');
+      const unitInput = document.getElementById('scale-unit-input');
+
+      if (pxInput) pxInput.value = this.currentMap.scale_pixels || 100.0;
+      if (distInput) distInput.value = this.currentMap.scale_distance || 10.0;
+      if (unitInput) unitInput.value = this.currentMap.scale_unit || 'miles';
+    }
+
+    const useBox = document.getElementById('scale-use-current-box');
+    const rulerPxVal = document.getElementById('scale-ruler-px-val');
+    const pxDist = this.calculatePixelDistance(this.rulerPoints);
+
+    if (pxDist > 0) {
+      if (useBox) useBox.style.display = 'block';
+      if (rulerPxVal) rulerPxVal.textContent = Math.round(pxDist);
+    } else {
+      if (useBox) useBox.style.display = 'none';
+    }
+
+    const modal = document.getElementById('atlas-scale-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeScaleModal() {
+    const modal = document.getElementById('atlas-scale-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async saveMapScale() {
+    if (!this.currentMap) {
+      alert('Please select or upload a map first.');
+      return;
+    }
+
+    const pxInput = document.getElementById('scale-pixels-input');
+    const distInput = document.getElementById('scale-distance-input');
+    const unitInput = document.getElementById('scale-unit-input');
+
+    const scale_pixels = pxInput ? parseFloat(pxInput.value) : 100.0;
+    const scale_distance = distInput ? parseFloat(distInput.value) : 10.0;
+    const scale_unit = unitInput ? unitInput.value.trim() : 'miles';
+
+    if (isNaN(scale_pixels) || scale_pixels <= 0) {
+      alert('Please enter a valid positive number for reference pixels.');
+      return;
+    }
+    if (isNaN(scale_distance) || scale_distance <= 0) {
+      alert('Please enter a valid positive number for real-world distance.');
+      return;
+    }
+    if (!scale_unit) {
+      alert('Please enter a valid distance unit (e.g., miles).');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/scale`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scale_pixels, scale_distance, scale_unit })
+      });
+
+      const data = await res.json();
+      if (data.map || data.success) {
+        const updated = data.map || data;
+        this.currentMap.scale_pixels = updated.scale_pixels || scale_pixels;
+        this.currentMap.scale_distance = updated.scale_distance || scale_distance;
+        this.currentMap.scale_unit = updated.scale_unit || scale_unit;
+
+        const mapInList = this.maps.find(m => m.id === this.currentMap.id);
+        if (mapInList) {
+          mapInList.scale_pixels = this.currentMap.scale_pixels;
+          mapInList.scale_distance = this.currentMap.scale_distance;
+          mapInList.scale_unit = this.currentMap.scale_unit;
+        }
+
+        this.closeScaleModal();
+        this.updateRulerToast();
+      } else {
+        alert(data.error || 'Failed to update map scale.');
+      }
+    } catch (e) {
+      alert(`Failed to update map scale: ${e.message}`);
     }
   }
 
@@ -673,7 +997,11 @@ class AtlasView {
     this.mapInstance.fitBounds(bounds);
 
     this.mapInstance.on('click', (e) => {
-      if (this.isPinPlacementActive) {
+      if (this.isRulerActive) {
+        const x_px = e.latlng.lng;
+        const y_px = e.latlng.lat;
+        this.addRulerPoint(x_px, y_px);
+      } else if (this.isPinPlacementActive) {
         const x_pct = e.latlng.lng / w;
         const y_pct = e.latlng.lat / h;
         this.openCreatePinModal(x_pct, y_pct);
