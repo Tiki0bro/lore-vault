@@ -27,6 +27,7 @@ class AtlasView {
     this.contestedPairs = [];
     this.aiGhostPolygons = [];
     this.aiCandidates = [];
+    this.breadcrumbStack = [];
   }
 
   async init() {
@@ -90,6 +91,7 @@ class AtlasView {
         </div>
       </div>
       <div id="atlas-viewport">
+        <div id="atlas-breadcrumbs" class="atlas-breadcrumbs" style="display:none;"></div>
         <div id="atlas-canvas-container"></div>
         <div id="atlas-layers-drawer" class="atlas-layers-drawer" style="display:none;">
           <div class="layers-drawer-header">
@@ -166,6 +168,12 @@ class AtlasView {
                 <label>Color</label>
                 <input type="color" id="pin-color-input" class="form-control" value="#d97706" style="height:38px; padding:2px;">
               </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label>Target Sub-Map (Drill Down)</label>
+              <select id="pin-submap-select" class="form-control">
+                <option value="">-- None (Standard Pin) --</option>
+              </select>
             </div>
             <div class="form-group checkbox-group" style="margin-top:12px;">
               <label><input type="checkbox" id="pin-secret-checkbox"> 🔒 DM Secret (Hide from Public Player View)</label>
@@ -571,9 +579,73 @@ class AtlasView {
     }
   }
 
+  async fetchMapTree(mapId) {
+    if (!mapId) return null;
+    try {
+      const res = await fetch(`/api/maps/${mapId}/tree`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      console.error('Failed to fetch map tree:', e);
+      return null;
+    }
+  }
+
+  renderBreadcrumbs() {
+    const container = document.getElementById('atlas-breadcrumbs');
+    if (!container) return;
+
+    if (!this.breadcrumbStack || this.breadcrumbStack.length === 0) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    container.style.display = 'flex';
+    const html = `
+      <span class="breadcrumb-icon" title="Map Hierarchy"><i class="fa-solid fa-compass"></i></span>
+      ${this.breadcrumbStack.map((m, index) => {
+        const isLast = index === this.breadcrumbStack.length - 1;
+        const separator = index > 0 ? `<span class="breadcrumb-separator"><i class="fa-solid fa-chevron-right"></i></span>` : '';
+        if (isLast) {
+          return `${separator}<span class="breadcrumb-item active">${m.title}</span>`;
+        } else {
+          return `${separator}<a href="#" class="breadcrumb-item breadcrumb-link" data-map-id="${m.id}">${m.title}</a>`;
+        }
+      }).join('')}
+    `;
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('.breadcrumb-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetMapId = link.getAttribute('data-map-id');
+        if (targetMapId) {
+          this.loadMap(targetMapId);
+        }
+      });
+    });
+  }
+
   async loadMap(mapId) {
     this.currentMap = this.maps.find(m => m.id === mapId) || null;
     if (!this.currentMap) return;
+
+    const treeData = await this.fetchMapTree(mapId);
+    if (treeData && treeData.map) {
+      const ancestors = Array.isArray(treeData.ancestors) ? treeData.ancestors : [];
+      this.breadcrumbStack = [...ancestors, treeData.map];
+    } else {
+      this.breadcrumbStack = [this.currentMap];
+    }
+    this.renderBreadcrumbs();
+
+    const mapSelect = document.getElementById('atlas-map-select');
+    if (mapSelect && mapSelect.value !== mapId) {
+      mapSelect.value = mapId;
+    }
 
     this.clearAiGhostPolygons();
     this.closeAiCandidatesDrawer();
@@ -1533,8 +1605,10 @@ class AtlasView {
       }
       const latlng = [pin.y_pct * h, pin.x_pct * w];
       const marker = L.marker(latlng).addTo(this.mapInstance);
-      marker.bindTooltip(pin.label, { permanent: false, direction: 'top' });
-      marker.on('click', () => this.openArticleDrawer(pin.article_id, pin.label));
+      const targetSubMapId = pin.target_sub_map_id || pin.sub_map_id;
+      const tooltipLabel = targetSubMapId ? `🗺️ ${pin.label}` : pin.label;
+      marker.bindTooltip(tooltipLabel, { permanent: false, direction: 'top' });
+      marker.on('click', () => this.openArticleDrawer(pin.article_id, pin.label, pin));
       this.markers.push(marker);
     });
   }
@@ -1542,6 +1616,12 @@ class AtlasView {
   openCreatePinModal(x_pct, y_pct) {
     this.tempCoords = { x_pct, y_pct };
     document.getElementById('pin-label-input').value = '';
+    const subMapSelect = document.getElementById('pin-submap-select');
+    if (subMapSelect) {
+      subMapSelect.innerHTML = `<option value="">-- None (Standard Pin) --</option>` +
+        this.maps.filter(m => !this.currentMap || m.id !== this.currentMap.id).map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+      subMapSelect.value = '';
+    }
     document.getElementById('atlas-pin-modal').style.display = 'flex';
   }
 
@@ -1552,6 +1632,8 @@ class AtlasView {
       alert('Please enter a pin label.');
       return;
     }
+    const subMapSelect = document.getElementById('pin-submap-select');
+    const targetSubMapId = subMapSelect ? (subMapSelect.value || null) : null;
 
     const payload = {
       map_id: this.currentMap.id,
@@ -1561,7 +1643,9 @@ class AtlasView {
       label: label,
       pin_icon: document.getElementById('pin-icon-select').value,
       pin_color: document.getElementById('pin-color-input').value,
-      is_secret: document.getElementById('pin-secret-checkbox').checked ? 1 : 0
+      is_secret: document.getElementById('pin-secret-checkbox').checked ? 1 : 0,
+      target_sub_map_id: targetSubMapId,
+      sub_map_id: targetSubMapId
     };
 
     try {
@@ -1621,30 +1705,67 @@ class AtlasView {
     }
   }
 
-  async openArticleDrawer(articleId, label) {
+  async openArticleDrawer(articleId, label, pin = null) {
     const drawer = document.getElementById('atlas-reader-drawer');
     const content = document.getElementById('atlas-drawer-content');
     if (!drawer || !content) return;
 
     drawer.style.display = 'block';
-    if (!articleId) {
-      content.innerHTML = `<h3>${label}</h3><p>No detailed lore article linked to this marker.</p>`;
-      return;
-    }
 
-    try {
-      const res = await fetch(`/api/articles/${articleId}`);
-      const article = await res.json();
+    const targetSubMapId = pin ? (pin.target_sub_map_id || pin.sub_map_id) : null;
+    const drilldownHtml = targetSubMapId ? `
+      <div class="submap-drilldown-box" style="margin-top: 16px; padding: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent-primary, #38bdf8); border-radius: 8px;">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary, #38bdf8); margin-bottom: 8px;">
+          <i class="fa-solid fa-sitemap"></i> Nested Sub-Map Available
+        </div>
+        <button id="atlas-drilldown-btn" class="tool-btn primary full-width" data-submap-id="${targetSubMapId}">
+          <i class="fa-solid fa-map-location-dot"></i> 🗺️ Drill Down into Sub-Map
+        </button>
+      </div>
+    ` : '';
+
+    if (!articleId) {
       content.innerHTML = `
-        <div class="article-detail">
-          <h2>${article.title}</h2>
-          <span class="category-badge">${article.category || 'General'}</span>
-          <hr style="border-color: var(--border-color, #334155); margin: 12px 0;">
-          <div class="article-body">${article.content || article.summary || 'No content available.'}</div>
+        <div class="pin-detail">
+          <h3 style="margin-top:0; font-family:var(--font-heading);">${label}</h3>
+          <p style="color:var(--text-secondary, #94a3b8); font-size:0.9rem;">No detailed lore article linked to this marker.</p>
+          ${drilldownHtml}
         </div>
       `;
-    } catch (e) {
-      content.innerHTML = `<h3>${label}</h3><p>Error loading article content.</p>`;
+    } else {
+      try {
+        const res = await fetch(`/api/articles/${articleId}`);
+        const article = await res.json();
+        content.innerHTML = `
+          <div class="article-detail">
+            <h2 style="margin-top:0; font-family:var(--font-heading);">${article.title}</h2>
+            <span class="category-badge">${article.category || 'General'}</span>
+            <hr style="border-color: var(--border-color, #334155); margin: 12px 0;">
+            <div class="article-body" style="font-size:0.9rem; line-height:1.6; color:var(--text-primary);">${article.content || article.summary || 'No content available.'}</div>
+            ${drilldownHtml}
+          </div>
+        `;
+      } catch (e) {
+        content.innerHTML = `
+          <div class="pin-detail">
+            <h3>${label}</h3>
+            <p>Error loading article content.</p>
+            ${drilldownHtml}
+          </div>
+        `;
+      }
+    }
+
+    if (targetSubMapId) {
+      const drillBtn = document.getElementById('atlas-drilldown-btn');
+      if (drillBtn) {
+        drillBtn.addEventListener('click', () => {
+          const subMapId = drillBtn.getAttribute('data-submap-id');
+          if (subMapId) {
+            this.loadMap(subMapId);
+          }
+        });
+      }
     }
   }
 
