@@ -5430,6 +5430,63 @@ body[data-mode="light"] .add-to-slate-btn.added,
 }
 
 /* ==========================================
+ * 🗺️ TERRITORY VECTOR DRAWING & VERTEX HANDLES
+ * ========================================== */
+.atlas-vertex-handle {
+  background: transparent !important;
+  border: none !important;
+}
+
+.vertex-node {
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border: 2px solid var(--accent-primary, #38bdf8);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.vertex-node:hover {
+  transform: scale(1.35);
+  border-color: #f59e0b;
+  background: #ffffff;
+  cursor: grabbing;
+}
+
+.atlas-midpoint-handle {
+  background: transparent !important;
+  border: none !important;
+}
+
+.midpoint-node {
+  width: 10px;
+  height: 10px;
+  background: var(--accent-purple, #a855f7);
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.midpoint-node:hover {
+  transform: scale(1.4);
+  opacity: 1;
+  background: #38bdf8;
+}
+
+.form-range {
+  width: 100%;
+  accent-color: var(--accent-primary, #38bdf8);
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+}
+
+/* ==========================================
  * 🌐 WORLD FRONTPAGE WIKI PORTAL STYLING
  * ========================================== */
 #view-frontpage {

@@ -12,6 +12,14 @@ class AtlasView {
     this.maps = [];
     this.pins = [];
     this.layers = [];
+    this.territories = [];
+    this.territoryPolygons = [];
+    this.isTerritoryDrawingActive = false;
+    this.activeDrawVertices = [];
+    this.activeDrawPolyline = null;
+    this.activeVertexMarkers = [];
+    this.selectedTerritory = null;
+    this.editingTerritoryId = null;
     this.articles = [];
     this.markers = [];
     this.tempCoords = null;
@@ -64,7 +72,9 @@ class AtlasView {
           <button id="atlas-auto-pin-btn" class="tool-btn"><i class="fa-solid fa-map-pin"></i> Auto-Place Pins</button>
           <button id="atlas-layers-btn" class="tool-btn"><i class="fa-solid fa-layer-group"></i> 🥞 Layers</button>
           <button id="atlas-pin-mode-btn" class="tool-btn"><i class="fa-solid fa-location-crosshairs"></i> Drop Pin</button>
+          <button id="atlas-territory-mode-btn" class="tool-btn"><i class="fa-solid fa-draw-polygon"></i> 🗺️ Draw Boundary</button>
           <span id="atlas-reticle-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-crosshairs"></i> Click on map to place pin... <button id="atlas-cancel-pin-btn" class="btn-text">Cancel</button></span>
+          <span id="atlas-territory-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-draw-polygon"></i> Click on map to add vertices... <button id="atlas-complete-territory-btn" class="tool-btn primary btn-sm" style="margin-left:8px; padding:2px 8px; font-size:0.8rem;">[✓ Complete Boundary]</button> <button id="atlas-cancel-territory-btn" class="btn-text" style="margin-left:6px;">[✕ Cancel]</button></span>
         </div>
         <div class="atlas-toolbar-right">
           <div class="segmented-control">
@@ -97,7 +107,7 @@ class AtlasView {
             <div class="drawer-placeholder">
               <i class="fa-solid fa-map-location-dot" style="font-size:48px; color:var(--accent-primary, #38bdf8); margin-bottom:16px;"></i>
               <h3>Interactive World Atlas</h3>
-              <p>Select a pin on the map to explore linked lore, history, and secret entries.</p>
+              <p>Select a pin or territory on the map to explore linked lore, history, and secret entries.</p>
             </div>
           </div>
         </div>
@@ -200,6 +210,73 @@ class AtlasView {
           </div>
         </div>
       </div>
+
+      <!-- Add/Edit Territory Boundary Modal -->
+      <div id="atlas-territory-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card" style="max-width: 520px; width: 100%;">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-draw-polygon"></i> Configure Territory Boundary</h3>
+            <button id="close-territory-modal-btn" class="drawer-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Territory / Realm Title *</label>
+              <input type="text" id="territory-title-input" class="form-control" placeholder="e.g. Kingdom of Valoria, Whisperwind Forest">
+            </div>
+            <div class="form-group">
+              <label>Linked Layer</label>
+              <select id="territory-layer-select" class="form-control">
+                <option value="">-- Default / None --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Linked Lore Article</label>
+              <select id="territory-article-select" class="form-control">
+                <option value="">-- None (Standalone Territory) --</option>
+                ${this.articles.map(a => `<option value="${a.id}">${a.title} (${a.category})</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-row" style="display:flex; gap:12px; margin-top:8px;">
+              <div class="form-group" style="flex:1;">
+                <label>Border Color</label>
+                <input type="color" id="territory-stroke-color-input" class="form-control" value="#ef4444" style="height:38px; padding:2px;">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Border Width (px)</label>
+                <input type="number" id="territory-stroke-width-input" class="form-control" min="1" max="8" value="3">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Border Style</label>
+                <select id="territory-stroke-style-select" class="form-control">
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row" style="display:flex; gap:12px; margin-top:8px;">
+              <div class="form-group" style="flex:1;">
+                <label>Fill Color</label>
+                <input type="color" id="territory-fill-color-input" class="form-control" value="#ef4444" style="height:38px; padding:2px;">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Fill Opacity (<span id="fill-opacity-val">0.25</span>)</label>
+                <input type="range" id="territory-fill-opacity-input" class="form-range" min="0" max="1" step="0.05" value="0.25">
+              </div>
+            </div>
+            <div class="form-group checkbox-group" style="margin-top:12px;">
+              <label><input type="checkbox" id="territory-secret-checkbox"> 🔒 DM Secret (Hide from Public Player View)</label>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+            <button id="delete-territory-modal-btn" class="tool-btn danger" style="display:none;"><i class="fa-solid fa-trash"></i> Delete Territory</button>
+            <div style="display:flex; gap:10px; margin-left:auto;">
+              <button id="cancel-territory-modal-btn" class="tool-btn">Cancel</button>
+              <button id="save-territory-modal-btn" class="tool-btn primary">Save Territory</button>
+            </div>
+          </div>
+        </div>
+      </div>
     `;
 
     this.bindEvents();
@@ -232,6 +309,7 @@ class AtlasView {
     if (closeDrawerBtn) {
       closeDrawerBtn.addEventListener('click', () => {
         document.getElementById('atlas-reader-drawer').style.display = 'none';
+        this.clearVertexHandles();
       });
     }
 
@@ -273,6 +351,11 @@ class AtlasView {
     if (closePinModalBtn) closePinModalBtn.addEventListener('click', () => document.getElementById('atlas-pin-modal').style.display = 'none');
     if (cancelPinModalBtn) cancelPinModalBtn.addEventListener('click', () => document.getElementById('atlas-pin-modal').style.display = 'none');
 
+    const savePinModalBtn = document.getElementById('save-pin-modal-btn');
+    if (savePinModalBtn) {
+      savePinModalBtn.addEventListener('click', () => this.savePin());
+    }
+
     const autoGenBtn = document.getElementById('atlas-auto-gen-btn');
     if (autoGenBtn) {
       autoGenBtn.addEventListener('click', () => this.autoGenerateMap());
@@ -309,6 +392,46 @@ class AtlasView {
     const saveLayerModalBtn = document.getElementById('save-layer-modal-btn');
     if (saveLayerModalBtn) {
       saveLayerModalBtn.addEventListener('click', () => this.saveLayer());
+    }
+
+    // Territory drawing mode triggers
+    const territoryModeBtn = document.getElementById('atlas-territory-mode-btn');
+    if (territoryModeBtn) {
+      territoryModeBtn.addEventListener('click', () => this.toggleTerritoryDrawingMode());
+    }
+
+    const completeTerritoryBtn = document.getElementById('atlas-complete-territory-btn');
+    if (completeTerritoryBtn) {
+      completeTerritoryBtn.addEventListener('click', () => this.completeTerritoryDrawing());
+    }
+
+    const cancelTerritoryBtn = document.getElementById('atlas-cancel-territory-btn');
+    if (cancelTerritoryBtn) {
+      cancelTerritoryBtn.addEventListener('click', () => this.toggleTerritoryDrawingMode(false));
+    }
+
+    // Territory modal triggers
+    const closeTerritoryModalBtn = document.getElementById('close-territory-modal-btn');
+    const cancelTerritoryModalBtn = document.getElementById('cancel-territory-modal-btn');
+    if (closeTerritoryModalBtn) closeTerritoryModalBtn.addEventListener('click', () => this.closeTerritoryModal());
+    if (cancelTerritoryModalBtn) cancelTerritoryModalBtn.addEventListener('click', () => this.closeTerritoryModal());
+
+    const saveTerritoryModalBtn = document.getElementById('save-territory-modal-btn');
+    if (saveTerritoryModalBtn) {
+      saveTerritoryModalBtn.addEventListener('click', () => this.saveTerritory());
+    }
+
+    const deleteTerritoryModalBtn = document.getElementById('delete-territory-modal-btn');
+    if (deleteTerritoryModalBtn) {
+      deleteTerritoryModalBtn.addEventListener('click', () => this.deleteTerritory());
+    }
+
+    const opacityInput = document.getElementById('territory-fill-opacity-input');
+    const opacityVal = document.getElementById('fill-opacity-val');
+    if (opacityInput && opacityVal) {
+      opacityInput.addEventListener('input', (e) => {
+        opacityVal.textContent = e.target.value;
+      });
     }
   }
 
@@ -358,6 +481,8 @@ class AtlasView {
 
   async setViewMode(mode) {
     this.viewMode = mode;
+    this.clearVertexHandles();
+    this.selectedTerritory = null;
     const dmBtn = document.getElementById('atlas-mode-dm');
     const playerBtn = document.getElementById('atlas-mode-player');
     if (dmBtn) dmBtn.classList.toggle('active', mode === 'dm');
@@ -366,17 +491,51 @@ class AtlasView {
       await this.fetchLayers(this.currentMap.id);
       this.renderLayersDrawer();
       await this.loadMapPins(this.currentMap.id);
+      await this.loadMapTerritories(this.currentMap.id);
     }
   }
 
   togglePinPlacementMode(forceState) {
     this.isPinPlacementActive = forceState !== undefined ? forceState : !this.isPinPlacementActive;
+    if (this.isPinPlacementActive && this.isTerritoryDrawingActive) {
+      this.toggleTerritoryDrawingMode(false);
+    }
     const btn = document.getElementById('atlas-pin-mode-btn');
     const toast = document.getElementById('atlas-reticle-toast');
     const canvas = document.getElementById('atlas-canvas-container');
     if (btn) btn.classList.toggle('active', this.isPinPlacementActive);
     if (toast) toast.style.display = this.isPinPlacementActive ? 'inline-flex' : 'none';
     if (canvas) canvas.style.cursor = this.isPinPlacementActive ? 'crosshair' : 'grab';
+  }
+
+  toggleTerritoryDrawingMode(forceState) {
+    this.isTerritoryDrawingActive = forceState !== undefined ? forceState : !this.isTerritoryDrawingActive;
+    if (this.isTerritoryDrawingActive && this.isPinPlacementActive) {
+      this.togglePinPlacementMode(false);
+    }
+
+    const btn = document.getElementById('atlas-territory-mode-btn');
+    const toast = document.getElementById('atlas-territory-toast');
+    const canvas = document.getElementById('atlas-canvas-container');
+
+    if (btn) btn.classList.toggle('active', this.isTerritoryDrawingActive);
+    if (toast) toast.style.display = this.isTerritoryDrawingActive ? 'inline-flex' : 'none';
+    if (canvas) canvas.style.cursor = this.isTerritoryDrawingActive ? 'crosshair' : 'grab';
+
+    if (this.isTerritoryDrawingActive) {
+      this.activeDrawVertices = [];
+      if (this.activeDrawPolyline) {
+        this.activeDrawPolyline.remove();
+        this.activeDrawPolyline = null;
+      }
+      this.clearVertexHandles();
+    } else {
+      if (this.activeDrawPolyline) {
+        this.activeDrawPolyline.remove();
+        this.activeDrawPolyline = null;
+      }
+      this.activeDrawVertices = [];
+    }
   }
 
   async loadMap(mapId) {
@@ -410,12 +569,454 @@ class AtlasView {
         const x_pct = e.latlng.lng / w;
         const y_pct = e.latlng.lat / h;
         this.openCreatePinModal(x_pct, y_pct);
+      } else if (this.isTerritoryDrawingActive) {
+        const x_pct = Math.max(0, Math.min(1, e.latlng.lng / w));
+        const y_pct = Math.max(0, Math.min(1, e.latlng.lat / h));
+        this.addTerritoryDrawingVertex(x_pct, y_pct);
+      } else {
+        this.clearVertexHandles();
+        this.selectedTerritory = null;
       }
     });
 
     await this.fetchLayers(mapId);
     this.renderLayersDrawer();
     await this.loadMapPins(mapId);
+    await this.loadMapTerritories(mapId);
+  }
+
+  addTerritoryDrawingVertex(x_pct, y_pct) {
+    this.activeDrawVertices.push([x_pct, y_pct]);
+    if (!this.currentMap || !this.mapInstance || typeof L === 'undefined') return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const latlngs = this.activeDrawVertices.map(v => [v[1] * h, v[0] * w]);
+
+    if (!this.activeDrawPolyline) {
+      this.activeDrawPolyline = L.polyline(latlngs, {
+        color: '#38bdf8',
+        weight: 2,
+        dashArray: '5, 5'
+      }).addTo(this.mapInstance);
+    } else {
+      this.activeDrawPolyline.setLatLngs(latlngs);
+    }
+  }
+
+  completeTerritoryDrawing() {
+    if (this.activeDrawVertices.length < 3) {
+      alert('A territory boundary requires at least 3 vertices.');
+      return;
+    }
+    this.openTerritoryModal();
+  }
+
+  openTerritoryModal(territory = null) {
+    const layerSelect = document.getElementById('territory-layer-select');
+    if (layerSelect) {
+      layerSelect.innerHTML = `<option value="">-- Default / None --</option>` +
+        this.layers.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+    }
+
+    const deleteBtn = document.getElementById('delete-territory-modal-btn');
+
+    if (territory) {
+      this.editingTerritoryId = territory.id;
+      document.getElementById('territory-title-input').value = territory.title || '';
+      if (layerSelect) layerSelect.value = territory.layer_id || '';
+      document.getElementById('territory-article-select').value = territory.article_id || '';
+      document.getElementById('territory-stroke-color-input').value = territory.stroke_color || '#ef4444';
+      document.getElementById('territory-stroke-width-input').value = territory.stroke_width || 3;
+      document.getElementById('territory-stroke-style-select').value = territory.stroke_style || 'solid';
+      document.getElementById('territory-fill-color-input').value = territory.fill_color || '#ef4444';
+      const opacity = territory.fill_opacity !== undefined ? territory.fill_opacity : 0.25;
+      document.getElementById('territory-fill-opacity-input').value = opacity;
+      const opacityVal = document.getElementById('fill-opacity-val');
+      if (opacityVal) opacityVal.textContent = opacity;
+      document.getElementById('territory-secret-checkbox').checked = territory.is_secret === 1;
+      if (deleteBtn) deleteBtn.style.display = 'inline-block';
+    } else {
+      this.editingTerritoryId = null;
+      document.getElementById('territory-title-input').value = '';
+      if (layerSelect) layerSelect.value = '';
+      document.getElementById('territory-article-select').value = '';
+      document.getElementById('territory-stroke-color-input').value = '#ef4444';
+      document.getElementById('territory-stroke-width-input').value = 3;
+      document.getElementById('territory-stroke-style-select').value = 'solid';
+      document.getElementById('territory-fill-color-input').value = '#ef4444';
+      document.getElementById('territory-fill-opacity-input').value = 0.25;
+      const opacityVal = document.getElementById('fill-opacity-val');
+      if (opacityVal) opacityVal.textContent = '0.25';
+      document.getElementById('territory-secret-checkbox').checked = false;
+      if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    const modal = document.getElementById('atlas-territory-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeTerritoryModal() {
+    const modal = document.getElementById('atlas-territory-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async saveTerritory() {
+    if (!this.currentMap) {
+      alert('Please select or upload a map first.');
+      return;
+    }
+
+    const title = document.getElementById('territory-title-input').value.trim();
+    if (!title) {
+      alert('Please enter a territory title.');
+      return;
+    }
+
+    const payload = {
+      title,
+      layer_id: document.getElementById('territory-layer-select').value || null,
+      article_id: document.getElementById('territory-article-select').value || null,
+      stroke_color: document.getElementById('territory-stroke-color-input').value,
+      stroke_width: parseInt(document.getElementById('territory-stroke-width-input').value, 10) || 3,
+      stroke_style: document.getElementById('territory-stroke-style-select').value,
+      fill_color: document.getElementById('territory-fill-color-input').value,
+      fill_opacity: parseFloat(document.getElementById('territory-fill-opacity-input').value) || 0.25,
+      is_secret: document.getElementById('territory-secret-checkbox').checked ? 1 : 0
+    };
+
+    try {
+      let res;
+      if (!this.editingTerritoryId) {
+        payload.points_json = JSON.stringify(this.activeDrawVertices);
+        res = await fetch(`/api/maps/${this.currentMap.id}/territories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(`/api/maps/${this.currentMap.id}/territories/${this.editingTerritoryId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const data = await res.json();
+      if (data.success || data.territory) {
+        this.closeTerritoryModal();
+        this.toggleTerritoryDrawingMode(false);
+        this.editingTerritoryId = null;
+        await this.loadMapTerritories(this.currentMap.id);
+      } else {
+        alert(data.error || 'Failed to save territory.');
+      }
+    } catch (e) {
+      alert(`Failed to save territory: ${e.message}`);
+    }
+  }
+
+  async deleteTerritory(territoryId) {
+    const targetId = territoryId || this.editingTerritoryId;
+    if (!this.currentMap || !targetId) return;
+
+    const territory = this.territories.find(t => t.id === targetId);
+    const title = territory ? territory.title : 'this territory';
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/territories/${targetId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.closeTerritoryModal();
+        const drawer = document.getElementById('atlas-reader-drawer');
+        if (drawer) drawer.style.display = 'none';
+        this.clearVertexHandles();
+        this.selectedTerritory = null;
+        await this.loadMapTerritories(this.currentMap.id);
+      } else {
+        alert(data.error || 'Failed to delete territory.');
+      }
+    } catch (e) {
+      alert(`Failed to delete territory: ${e.message}`);
+    }
+  }
+
+  async loadMapTerritories(mapId) {
+    const targetMapId = mapId || (this.currentMap ? this.currentMap.id : null);
+    if (!targetMapId) {
+      this.territories = [];
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/maps/${targetMapId}/territories?mode=${this.viewMode}`);
+      const data = await res.json();
+      this.territories = data.territories || [];
+      this.renderTerritoriesOnCanvas();
+    } catch (e) {
+      console.error('Failed to load map territories:', e);
+      this.territories = [];
+    }
+  }
+
+  renderTerritoriesOnCanvas() {
+    this.territoryPolygons.forEach(p => p.remove());
+    this.territoryPolygons = [];
+
+    if (!this.currentMap || !this.mapInstance || typeof L === 'undefined') return;
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+
+    const hiddenLayerIds = new Set(this.layers.filter(l => !l.is_visible).map(l => l.id));
+
+    this.territories.forEach(t => {
+      if (t.layer_id && hiddenLayerIds.has(t.layer_id)) {
+        return;
+      }
+
+      let points = [];
+      try {
+        points = typeof t.points_json === 'string' ? JSON.parse(t.points_json) : (t.points_json || []);
+      } catch (e) {
+        points = [];
+      }
+
+      if (!Array.isArray(points) || points.length < 3) return;
+
+      const latlngs = points.map(pt => [pt[1] * h, pt[0] * w]);
+      let dashArray = null;
+      if (t.stroke_style === 'dashed') dashArray = '6, 6';
+      if (t.stroke_style === 'dotted') dashArray = '2, 4';
+
+      const poly = L.polygon(latlngs, {
+        color: t.stroke_color || '#ef4444',
+        weight: t.stroke_width || 3,
+        dashArray: dashArray,
+        fillColor: t.fill_color || '#ef4444',
+        fillOpacity: t.fill_opacity !== undefined ? t.fill_opacity : 0.25
+      }).addTo(this.mapInstance);
+
+      poly.bindTooltip(t.title, { permanent: false, direction: 'center' });
+      poly._territoryId = t.id;
+
+      poly.on('click', (e) => {
+        if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e);
+        if (this.viewMode === 'dm') {
+          this.selectTerritoryForEditing(t);
+        } else {
+          this.openArticleDrawer(t.article_id, t.title);
+        }
+      });
+
+      this.territoryPolygons.push(poly);
+    });
+  }
+
+  selectTerritoryForEditing(territory) {
+    this.selectedTerritory = territory;
+    this.renderVertexHandles(territory);
+    this.openTerritoryDrawer(territory);
+  }
+
+  clearVertexHandles() {
+    this.activeVertexMarkers.forEach(m => m.remove());
+    this.activeVertexMarkers = [];
+  }
+
+  renderVertexHandles(territory) {
+    this.clearVertexHandles();
+    if (!territory || !this.currentMap || !this.mapInstance || typeof L === 'undefined') return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+
+    let points = [];
+    try {
+      points = typeof territory.points_json === 'string' ? JSON.parse(territory.points_json) : (territory.points_json || []);
+    } catch (e) {
+      points = [];
+    }
+
+    if (!Array.isArray(points) || points.length < 3) return;
+
+    for (let i = 0; i < points.length; i++) {
+      const lat = points[i][1] * h;
+      const lng = points[i][0] * w;
+
+      const handleMarker = L.marker([lat, lng], {
+        draggable: true,
+        icon: L.divIcon({
+          className: 'atlas-vertex-handle',
+          html: `<div class="vertex-node" title="Drag to move vertex. Right-click to delete node."></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        })
+      }).addTo(this.mapInstance);
+
+      handleMarker._vertexIndex = i;
+
+      handleMarker.on('drag', (e) => {
+        const newPos = e.target.getLatLng();
+        points[i] = [
+          Math.max(0, Math.min(1, newPos.lng / w)),
+          Math.max(0, Math.min(1, newPos.lat / h))
+        ];
+        this.updatePolygonShape(territory.id, points);
+        this.updateMidpointHandlePositions(territory.id, points);
+      });
+
+      handleMarker.on('dragend', async () => {
+        territory.points_json = JSON.stringify(points);
+        await this.updateTerritoryVertices(territory.id, points);
+      });
+
+      handleMarker.on('contextmenu', async (e) => {
+        if (e && e.originalEvent && e.originalEvent.preventDefault) e.originalEvent.preventDefault();
+        if (points.length <= 3) {
+          alert('A territory boundary must have at least 3 vertices.');
+          return;
+        }
+        points.splice(i, 1);
+        territory.points_json = JSON.stringify(points);
+        await this.updateTerritoryVertices(territory.id, points);
+        this.renderTerritoriesOnCanvas();
+        this.selectTerritoryForEditing(territory);
+      });
+
+      this.activeVertexMarkers.push(handleMarker);
+
+      // Midpoint insertion handle between point i and next point
+      const nextIdx = (i + 1) % points.length;
+      const mid_x = (points[i][0] + points[nextIdx][0]) / 2;
+      const mid_y = (points[i][1] + points[nextIdx][1]) / 2;
+
+      const midMarker = L.marker([mid_y * h, mid_x * w], {
+        icon: L.divIcon({
+          className: 'atlas-midpoint-handle',
+          html: `<div class="midpoint-node" title="Click to insert new vertex here."></div>`,
+          iconSize: [10, 10],
+          iconAnchor: [5, 5]
+        })
+      }).addTo(this.mapInstance);
+
+      midMarker._midIndex = i;
+
+      midMarker.on('click', async (e) => {
+        if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e);
+        points.splice(i + 1, 0, [mid_x, mid_y]);
+        territory.points_json = JSON.stringify(points);
+        await this.updateTerritoryVertices(territory.id, points);
+        this.renderTerritoriesOnCanvas();
+        this.selectTerritoryForEditing(territory);
+      });
+
+      this.activeVertexMarkers.push(midMarker);
+    }
+  }
+
+  updatePolygonShape(territoryId, points) {
+    if (!this.currentMap) return;
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const poly = this.territoryPolygons.find(p => p._territoryId === territoryId);
+    if (poly) poly.setLatLngs(points.map(pt => [pt[1] * h, pt[0] * w]));
+  }
+
+  updateMidpointHandlePositions(territoryId, points) {
+    if (!this.currentMap) return;
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+
+    for (let i = 0; i < points.length; i++) {
+      const nextIdx = (i + 1) % points.length;
+      const mid_x = (points[i][0] + points[nextIdx][0]) / 2;
+      const mid_y = (points[i][1] + points[nextIdx][1]) / 2;
+
+      const midMarker = this.activeVertexMarkers.find(m => m._midIndex === i);
+      if (midMarker && typeof midMarker.setLatLng === 'function') {
+        midMarker.setLatLng([mid_y * h, mid_x * w]);
+      }
+    }
+  }
+
+  async updateTerritoryVertices(territoryId, points) {
+    if (!this.currentMap || !territoryId) return;
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/territories/${territoryId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ points_json: JSON.stringify(points) })
+      });
+      const data = await res.json();
+      if (!data.territory) {
+        console.error('Failed to update territory vertices:', data.error);
+      }
+    } catch (e) {
+      console.error('Error updating territory vertices:', e);
+    }
+  }
+
+  openTerritoryDrawer(territory) {
+    const drawer = document.getElementById('atlas-reader-drawer');
+    const content = document.getElementById('atlas-drawer-content');
+    if (!drawer || !content) return;
+
+    drawer.style.display = 'block';
+
+    let points = [];
+    try {
+      points = typeof territory.points_json === 'string' ? JSON.parse(territory.points_json) : (territory.points_json || []);
+    } catch (e) {
+      points = [];
+    }
+
+    const layer = this.layers.find(l => l.id === territory.layer_id);
+    const layerName = layer ? layer.name : 'Default Layer';
+
+    content.innerHTML = `
+      <div class="territory-detail-drawer">
+        <div class="drawer-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-family:var(--font-heading); color:var(--accent-primary, #38bdf8);"><i class="fa-solid fa-draw-polygon"></i> ${territory.title}</h3>
+        </div>
+        <div style="margin: 12px 0; display:flex; gap:6px; flex-wrap:wrap;">
+          <span class="category-badge" style="background:${territory.stroke_color || '#ef4444'}; color:#fff;">${layerName}</span>
+          ${territory.is_secret ? '<span class="category-badge" style="background:#a855f7; color:#fff;">🔒 DM Secret</span>' : ''}
+        </div>
+        <div class="territory-info-body" style="font-size:0.88rem; color:var(--text-secondary, #94a3b8); margin-bottom:20px; line-height:1.6;">
+          <p><strong>Vertices:</strong> ${points.length} boundary nodes</p>
+          <p><strong>Border Style:</strong> ${territory.stroke_style || 'solid'} (${territory.stroke_width || 3}px)</p>
+          <p><strong>Fill Opacity:</strong> ${Math.round((territory.fill_opacity !== undefined ? territory.fill_opacity : 0.25) * 100)}%</p>
+        </div>
+        <div class="territory-actions" style="display:flex; flex-direction:column; gap:10px;">
+          <button id="edit-territory-props-btn" class="tool-btn primary full-width"><i class="fa-solid fa-pen"></i> Edit Territory Properties</button>
+          <button id="redraw-territory-btn" class="tool-btn full-width"><i class="fa-solid fa-rotate-left"></i> Redraw Boundary</button>
+          <button id="delete-territory-drawer-btn" class="tool-btn danger full-width"><i class="fa-solid fa-trash"></i> Delete Territory</button>
+        </div>
+      </div>
+    `;
+
+    const editBtn = document.getElementById('edit-territory-props-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => this.openTerritoryModal(territory));
+    }
+
+    const redrawBtn = document.getElementById('redraw-territory-btn');
+    if (redrawBtn) {
+      redrawBtn.addEventListener('click', () => {
+        this.editingTerritoryId = territory.id;
+        this.clearVertexHandles();
+        drawer.style.display = 'none';
+        this.toggleTerritoryDrawingMode(true);
+      });
+    }
+
+    const deleteBtn = document.getElementById('delete-territory-drawer-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => this.deleteTerritory(territory.id));
+    }
   }
 
   async fetchLayers(mapId) {
