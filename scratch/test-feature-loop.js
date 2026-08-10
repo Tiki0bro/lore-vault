@@ -3,7 +3,7 @@ const path = require('path');
 
 const skillPath = path.join(__dirname, '../.agents/skills/feature-loop/SKILL.md');
 
-console.log('Testing Feature Loop Skill setup...');
+console.log('Testing Feature Loop Skill setup (including --auto mode)...');
 
 if (!fs.existsSync(skillPath)) {
   console.error('FAIL: Skill file does not exist at', skillPath);
@@ -15,6 +15,8 @@ const content = fs.readFileSync(skillPath, 'utf8');
 const requiredTokens = [
   'name: feature-loop',
   'Arthur "The Griller" Vance',
+  'Autonomous Fast-Track Mode',
+  '--auto',
   'GATE 1',
   'GATE 2',
   'GATE 3',
@@ -40,4 +42,4 @@ if (failed) {
   process.exit(1);
 }
 
-console.log('PASS: Feature Loop Skill verified successfully!');
+console.log('PASS: Feature Loop Skill & --auto mode verified successfully!');

@@ -1,6 +1,6 @@
 ---
 name: feature-loop
-description: Use when initiating a comprehensive feature development loop driven by LoreVault's 10 user personas and Arthur "The Griller" Vance across 6 stages and 4 Socratic approval gates.
+description: Use when initiating a comprehensive feature development loop driven by LoreVault's 10 user personas and Arthur "The Griller" Vance across 6 stages and 4 Socratic approval gates (interactive or fully automated --auto mode).
 ---
 
 # LoreVault Feature Loop (`/feature-loop`)
@@ -9,11 +9,15 @@ description: Use when initiating a comprehensive feature development loop driven
 
 The **Feature Loop** skill orchestrates a persona-driven, Socratic Software Development Lifecycle (SDLC) inside LoreVault. It turns Arthur "The Griller" Vance and LoreVault's 10 user personas into an autonomous design, engineering, QA, and feedback panel.
 
-## Triggering the Loop
+## Execution Modes & Invocation
 
-Invoke with:
-- `/feature-loop "<Feature Title / Description>"`
-- `"Start a feature loop for <Feature Title>"`
+1. **Interactive Gate Mode (Default)**:
+   - Invocation: `/feature-loop "<Feature Title / Description>"` or `"Start a feature loop for <Feature Title>"`
+   - Behavior: Pauses at Gates 1, 2, 3, and 4 for explicit human Product Owner sign-off before advancing.
+
+2. **Autonomous Fast-Track Mode (Fully Automated)**:
+   - Invocation: `/feature-loop --auto "<Feature Title / Description>"` or `/feature-loop-auto "<Feature Title>"`
+   - Behavior: Runs Stages 1 through 5 sequentially **without pausing** at intermediate gates (Gates 1–3). Arthur autonomously grills each stage, writes remediation plans, executes the implementation, runs QA tests, captures customer feedback, and pauses **ONLY at Gate 4 (Final Release Package Sign-Off)** for single-touch review.
 
 ---
 
@@ -62,22 +66,25 @@ Every feature loop creates a tracking directory: `docs/feature-loops/YYYY-MM-DD-
 - Write formal spec in `02-design-spec.md`.
 - Arthur grills spec line-by-line against Alex, Riley, Maya, Merryn, etc.
 - Gaps identified produce remediation plans, re-grilled until clean.
-- **PAUSE & PRESENT GATE 1 CHECKPOINT REPORT**.
+- *Interactive Mode*: PAUSE & PRESENT GATE 1 CHECKPOINT REPORT.
+- *Automated Mode (`--auto`)*: Mark as Auto-Approved by Arthur Socratic Pass and proceed directly to Stage 3.
 
 ### Stage 3: Implementation Plan & Team Validation [GATE 2]
 - Convert spec to TDD/SDD plan in `03-implementation-plan.md`.
 - Arthur grills dev team on boundaries, test strategy, model fallback safety.
-- **PAUSE & PRESENT GATE 2 CHECKPOINT REPORT**.
+- *Interactive Mode*: PAUSE & PRESENT GATE 2 CHECKPOINT REPORT.
+- *Automated Mode (`--auto`)*: Mark as Auto-Approved by Arthur Socratic Pass and proceed directly to Stage 4.
 
 ### Stage 4: Execution & QA Verification Loop [GATE 3]
 - Execute implementation plan (TDD/SDD).
 - Riley & QA run boundary, schema, and zero-silent-error checks.
 - Arthur grills final build (`04-qa-verification.md`).
-- **PAUSE & PRESENT GATE 3 CHECKPOINT REPORT**.
+- *Interactive Mode*: PAUSE & PRESENT GATE 3 CHECKPOINT REPORT.
+- *Automated Mode (`--auto`)*: Mark as Auto-Approved by Arthur Socratic Pass and proceed directly to Stage 5.
 
 ### Stage 5: Customer Review & Feedback Collection [GATE 4]
 - Simulate user feedback across target personas evaluating live feature (`05-customer-feedback.md`).
-- **PAUSE & PRESENT GATE 4 CHECKPOINT REPORT**.
+- **PAUSE & PRESENT CONSOLIDATED RELEASE PACKAGE & GATE 4 CHECKPOINT REPORT**.
 
 ### Stage 6: Release Retrospective & Next Release Brainstorming
 - Log architectural choices & post-mortems in `DECISIONS.md`.
@@ -87,12 +94,13 @@ Every feature loop creates a tracking directory: `docs/feature-loops/YYYY-MM-DD-
 
 ## Gate Approval Report Template
 
-When reaching any Gate Checkpoint (Gate 1..4), output this block:
+When reaching any Gate Checkpoint, output this block:
 
 ```markdown
 =====================================================
 🔥 ARTHUR'S GRILLING REPORT & GATE CHECKPOINT [GATE X/4]
 Feature: <Feature Name>
+Mode: <Interactive Gate Mode | Autonomous Fast-Track (--auto)>
 Status: READY FOR USER APPROVAL
 =====================================================
 
@@ -106,9 +114,13 @@ Status: READY FOR USER APPROVAL
 - 🎭 Alex (Dev): Approved
 - 🎨 Maya (UI/UX): Approved
 
-### 📄 Artifact Link:
-[View Artifact](file:///<absolute-path-to-artifact>)
+### 📄 Artifact Links:
+- Ideation: [01-ideation-grill.md](file:///<path>/01-ideation-grill.md)
+- Design Spec: [02-design-spec.md](file:///<path>/02-design-spec.md)
+- Implementation Plan: [03-implementation-plan.md](file:///<path>/03-implementation-plan.md)
+- QA Verification: [04-qa-verification.md](file:///<path>/04-qa-verification.md)
+- Customer Feedback: [05-customer-feedback.md](file:///<path>/05-customer-feedback.md)
 
 -----------------------------------------------------
-👉 Action Required: Reply 'Approved' to proceed to Stage X+1, or specify revisions.
+👉 Action Required: Reply 'Approved' to accept release package & complete retro, or specify revisions.
 ```
