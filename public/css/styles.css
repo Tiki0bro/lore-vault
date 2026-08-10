@@ -3681,8 +3681,22 @@ html, body {
   }
 }
 
+/* Route Vertex Point Handle */
+.route-point-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-
+.route-node {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  cursor: pointer;
+}
 /* --- WEAVE MATRIX SLIDE-OVER DRAWER --- */
 body {
   overflow-x: hidden;

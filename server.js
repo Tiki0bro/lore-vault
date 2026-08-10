@@ -4710,6 +4710,7 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         let pins = [];
         let layers = [];
         let territories = [];
+        let routes = [];
 
         if (mapIds.length > 0) {
           const placeholders = mapIds.map(() => '?').join(',');
@@ -4727,6 +4728,11 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
           if (isPlayerMode) terrQuery += ' AND is_secret = 0';
           terrQuery += ' ORDER BY created_at ASC';
           territories = await dbQueryAll(terrQuery, mapIds);
+
+          let routeQuery = `SELECT * FROM map_routes WHERE map_id IN (${placeholders})`;
+          if (isPlayerMode) routeQuery += ' AND is_secret = 0';
+          routeQuery += ' ORDER BY created_at ASC';
+          routes = await dbQueryAll(routeQuery, mapIds);
         } else {
           let pinQuery = 'SELECT * FROM map_pins';
           if (isPlayerMode) pinQuery += ' WHERE is_secret = 0';
@@ -4741,6 +4747,11 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
           if (isPlayerMode) terrQuery += ' WHERE is_secret = 0';
           terrQuery += ' ORDER BY created_at ASC';
           territories = await dbQueryAll(terrQuery, []);
+
+          let routeQuery = 'SELECT * FROM map_routes';
+          if (isPlayerMode) routeQuery += ' WHERE is_secret = 0';
+          routeQuery += ' ORDER BY created_at ASC';
+          routes = await dbQueryAll(routeQuery, []);
         }
 
         const articles = await dbQueryAll('SELECT id, title, category, summary, content FROM articles WHERE world_id = ? OR world_id = "default"', [targetWorld.id]);
@@ -4750,12 +4761,17 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
           content: isPlayerMode ? sanitizeSecretContent(art.content) : art.content
         }));
 
+        const escapeHtml = (str) => {
+          if (!str) return '';
+          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        };
+
         const bundleHtml = `<!DOCTYPE html>
 <html lang="en" data-theme="${targetWorld.theme}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${targetWorld.name} — Standalone World Atlas</title>
+  <title>${escapeHtml(targetWorld.name)} — Standalone World Atlas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -4768,8 +4784,16 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
       --accent: #38bdf8;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-light); display: flex; height: 100vh; overflow: hidden; }
-    #atlas-viewport { position: relative; flex: 1; height: 100%; }
+    body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-light); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .atlas-top-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid var(--border-color); gap: 12px; }
+    .atlas-breadcrumbs { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; background: rgba(255, 255, 255, 0.05); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-color); }
+    .breadcrumb-item { color: var(--text-muted); cursor: pointer; text-decoration: none; }
+    .breadcrumb-item.active { color: var(--accent); font-weight: 600; cursor: default; }
+    .atlas-search-input { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.3); color: var(--text-light); font-size: 0.85rem; }
+    .atlas-category-bar { display: flex; gap: 6px; overflow-x: auto; padding: 6px 16px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--border-color); }
+    .atlas-chip { padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; }
+    .atlas-chip.active { background: rgba(56, 189, 248, 0.2); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    #atlas-viewport { position: relative; flex: 1; height: 100%; display: flex; }
     #map { width: 100%; height: 100%; background: #020617; }
     #drawer { width: 420px; padding: 24px; background: var(--bg-card); border-left: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
     .drawer-header { border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
@@ -4785,25 +4809,63 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
     .layer-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; margin-bottom: 4px; background: rgba(255, 255, 255, 0.03); font-size: 0.85rem; cursor: pointer; }
     .layer-badge { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
     .tag-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); margin-bottom: 8px; }
+    .atlas-ruler-toast { position: absolute; bottom: 16px; left: 16px; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; z-index: 1000; font-size: 0.85rem; min-width: 240px; }
   </style>
 </head>
 <body>
-  <div id="atlas-viewport">
-    <div id="map"></div>
-    <div class="atlas-layers-drawer">
-      <div class="atlas-layers-header">
-        <span><i class="fa-solid fa-layer-group"></i> Map Layers</span>
-      </div>
-      <div id="layers-list"></div>
+  <div class="atlas-top-bar">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <select id="standalone-map-select" style="background: rgba(30,41,59,0.9); color: var(--text-light); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 6px; font-size: 0.85rem;">
+        ${mapList.map(m => `<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('')}
+      </select>
+      <div id="standalone-breadcrumbs" class="atlas-breadcrumbs" style="display:none;"></div>
+      <button id="standalone-ruler-btn" style="background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;"><i class="fa-solid fa-ruler-combined"></i> 📏 Ruler</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <input type="text" id="standalone-pin-search" class="atlas-search-input" placeholder="🔍 Search pins & lore...">
+      <span class="tag-badge" style="margin:0;">${isPlayerMode ? 'Public Player View' : 'DM Canon View'}</span>
     </div>
   </div>
-  <div id="drawer">
-    <div class="drawer-header">
-      <h2 class="drawer-title" id="drawer-title">${targetWorld.name} Atlas</h2>
-      <p class="drawer-subtitle" id="drawer-subtitle">Offline Interactive Map</p>
+  <div id="standalone-category-bar" class="atlas-category-bar">
+    <button class="atlas-chip active" data-category="all">All</button>
+    <button class="atlas-chip" data-category="settlements">Settlements</button>
+    <button class="atlas-chip" data-category="fortresses">Fortresses</button>
+    <button class="atlas-chip" data-category="dungeons">Dungeons</button>
+    <button class="atlas-chip" data-category="natural wonders">Natural Wonders</button>
+    <button class="atlas-chip" data-category="quests">Quests</button>
+    <button class="atlas-chip" data-category="factions">Factions</button>
+    <button class="atlas-chip" data-category="relics">Relics</button>
+  </div>
+  <div style="display: flex; flex: 1; position: relative; overflow: hidden;">
+    <div id="atlas-viewport">
+      <div id="map"></div>
+      <div id="standalone-ruler-toast" class="atlas-ruler-toast" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; color:var(--accent);">
+          <strong><i class="fa-solid fa-ruler-horizontal"></i> Measuring Tape</strong>
+          <button id="standalone-ruler-clear-btn" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem;">[Clear]</button>
+        </div>
+        <div>Distance: <strong id="ruler-dist-val">0.0</strong> <span id="ruler-dist-unit">miles</span></div>
+        <div style="display:flex; gap:10px; margin-top:6px; font-size:0.75rem; color:var(--text-muted);">
+          <span>🚶 Foot: <strong id="ruler-foot-val">0 days</strong></span>
+          <span>🐎 Horse: <strong id="ruler-horse-val">0 days</strong></span>
+          <span>⛵ Sail: <strong id="ruler-sail-val">0 days</strong></span>
+        </div>
+      </div>
+      <div class="atlas-layers-drawer">
+        <div class="atlas-layers-header">
+          <span><i class="fa-solid fa-layer-group"></i> Map Layers</span>
+        </div>
+        <div id="layers-list"></div>
+      </div>
     </div>
-    <div id="drawer-body" class="article-content">
-      <p>Select a marker or territory on the map to explore world lore.</p>
+    <div id="drawer">
+      <div class="drawer-header">
+        <h2 class="drawer-title" id="drawer-title">${escapeHtml(targetWorld.name)} Atlas</h2>
+        <p class="drawer-subtitle" id="drawer-subtitle">Offline Interactive Map</p>
+      </div>
+      <div id="drawer-body" class="article-content">
+        <p>Select a marker, territory boundary, or expedition route to explore world lore.</p>
+      </div>
     </div>
   </div>
 
@@ -4822,14 +4884,51 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
     const pins = ${JSON.stringify(pins || [])};
     const layers = ${JSON.stringify(layers || [])};
     const territories = ${JSON.stringify(territories || [])};
+    const routes = ${JSON.stringify(routes || [])};
     const articles = ${JSON.stringify(sanitizedArticles)};
 
     (function() {
       let mapInstance = null;
-      let activeMap = maps[0] || { width: 1920, height: 1080, image_path: '' };
+      let activeMap = maps[0] || { id: 'default', width: 1920, height: 1080, image_path: '' };
       const hiddenLayerIds = new Set();
+      let breadcrumbStack = [activeMap];
+      let pinSearchQuery = '';
+      let selectedCategory = 'all';
+      let isRulerActive = false;
+      let rulerPoints = [];
+      let rulerPolyline = null;
+      let rulerMarkers = [];
+      let routePolylines = [];
+      let pinMarkers = [];
+      let territoryPolygons = [];
 
-      function initMap() {
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function loadMap(mapId) {
+        const foundMap = maps.find(m => m.id === mapId);
+        if (foundMap) activeMap = foundMap;
+
+        breadcrumbStack = [];
+        let curr = activeMap;
+        const visited = new Set();
+        while (curr && !visited.has(curr.id)) {
+          visited.add(curr.id);
+          breadcrumbStack.unshift(curr);
+          curr = maps.find(m => m.id === curr.parent_map_id);
+        }
+        renderBreadcrumbs();
+
+        const sel = document.getElementById('standalone-map-select');
+        if (sel && sel.value !== activeMap.id) sel.value = activeMap.id;
+
+        if (mapInstance) {
+          mapInstance.remove();
+          mapInstance = null;
+        }
+
         const w = activeMap.width || 1920;
         const h = activeMap.height || 1080;
         const bounds = [[0, 0], [h, w]];
@@ -4846,36 +4945,51 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         }
         mapInstance.fitBounds(bounds);
 
-        const svg = document.querySelector('.leaflet-container svg');
-        if (svg && !svg.querySelector('#pattern-stripe')) {
-          let defs = svg.querySelector('defs');
-          if (!defs) {
-            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            svg.insertBefore(defs, svg.firstChild);
+        mapInstance.on('click', (e) => {
+          if (isRulerActive) {
+            addRulerPoint(e.latlng.lng, e.latlng.lat);
           }
-          const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-          pattern.setAttribute('id', 'pattern-stripe');
-          pattern.setAttribute('width', '12');
-          pattern.setAttribute('height', '12');
-          pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-          pattern.setAttribute('patternTransform', 'rotate(45)');
-          pattern.innerHTML = '<line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" /><line x1="6" y1="0" x2="6" y2="12" stroke="#f59e0b" stroke-width="4" opacity="0.6" />';
-          defs.appendChild(pattern);
-        }
+        });
 
         renderLayersList();
         renderTerritories();
+        renderRoutes();
         renderPins();
+      }
+
+      function renderBreadcrumbs() {
+        const bc = document.getElementById('standalone-breadcrumbs');
+        if (!bc) return;
+        if (breadcrumbStack.length <= 1) {
+          bc.style.display = 'none';
+          return;
+        }
+        bc.style.display = 'flex';
+        bc.innerHTML = breadcrumbStack.map((m, idx) => {
+          const isLast = idx === breadcrumbStack.length - 1;
+          const sep = idx > 0 ? ' <span style="color:var(--text-muted);">&gt;</span> ' : '';
+          return isLast
+            ? \`\${sep}<span class="breadcrumb-item active">\${escapeHtml(m.title)}</span>\`
+            : \`\${sep}<span class="breadcrumb-item" data-map-id="\${m.id}">\${escapeHtml(m.title)}</span>\`;
+        }).join('');
+
+        bc.querySelectorAll('.breadcrumb-item[data-map-id]').forEach(el => {
+          el.addEventListener('click', () => {
+            const mid = el.getAttribute('data-map-id');
+            if (mid) loadMap(mid);
+          });
+        });
       }
 
       function renderLayersList() {
         const listEl = document.getElementById('layers-list');
         if (!listEl) return;
-        if (!layers || layers.length === 0) {
+        const mapLayers = (layers || []).filter(l => l.map_id === activeMap.id);
+        if (!mapLayers || mapLayers.length === 0) {
           listEl.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted);">No layers defined</div>';
           return;
         }
-        listEl.innerHTML = layers.map(l => \`
+        listEl.innerHTML = mapLayers.map(l => \`
           <label class="layer-item">
             <input type="checkbox" \${hiddenLayerIds.has(l.id) ? '' : 'checked'} data-layer-id="\${l.id}">
             <span class="layer-badge" style="background:\${l.color_badge || '#38bdf8'};"></span>
@@ -4892,12 +5006,12 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
               hiddenLayerIds.add(lid);
             }
             renderTerritories();
+            renderRoutes();
             renderPins();
           });
         });
       }
 
-      let territoryPolygons = [];
       function renderTerritories() {
         territoryPolygons.forEach(p => p.remove());
         territoryPolygons = [];
@@ -4905,7 +5019,8 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         const w = activeMap.width || 1920;
         const h = activeMap.height || 1080;
 
-        (territories || []).forEach(t => {
+        const mapTerritories = (territories || []).filter(t => t.map_id === activeMap.id);
+        mapTerritories.forEach(t => {
           if (t.layer_id && hiddenLayerIds.has(t.layer_id)) return;
 
           let points = [];
@@ -4930,12 +5045,7 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
             fillOpacity: t.fill_opacity !== undefined ? t.fill_opacity : 0.25
           }).addTo(mapInstance);
 
-          if (isContested && poly._path) {
-            poly._path.setAttribute('fill', 'url(#pattern-stripe)');
-          }
-
           poly.bindTooltip(t.title, { permanent: false, direction: 'center' });
-
           poly.on('click', () => {
             openTerritoryDetails(t);
           });
@@ -4944,26 +5054,98 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         });
       }
 
-      let pinMarkers = [];
+      function renderRoutes() {
+        routePolylines.forEach(p => p.remove());
+        routePolylines = [];
+        const w = activeMap.width || 1920;
+        const h = activeMap.height || 1080;
+        const unit = activeMap.scale_unit || 'miles';
+
+        const mapRoutes = (routes || []).filter(r => r.map_id === activeMap.id);
+        mapRoutes.forEach(r => {
+          if (r.layer_id && hiddenLayerIds.has(r.layer_id)) return;
+          let points = [];
+          try {
+            points = typeof r.points_json === 'string' ? JSON.parse(r.points_json) : (r.points_json || []);
+          } catch(e) { points = []; }
+          if (!Array.isArray(points) || points.length < 2) return;
+
+          const latlngs = points.map(pt => [pt[1] * h, pt[0] * w]);
+          let dashArray = null;
+          if (r.stroke_style === 'dashed') dashArray = '6, 6';
+          if (r.stroke_style === 'dotted') dashArray = '2, 4';
+          const distVal = r.calculated_distance ? parseFloat(r.calculated_distance).toFixed(1) : '0.0';
+
+          const poly = L.polyline(latlngs, {
+            color: r.stroke_color || '#f59e0b',
+            weight: r.stroke_width || 3,
+            dashArray: dashArray
+          }).addTo(mapInstance);
+
+          poly.bindTooltip(\`⛺ \${r.title} (\${distVal} \${unit})\`, { permanent: false, direction: 'top' });
+          poly.on('click', () => {
+            openRouteDetails(r);
+          });
+          routePolylines.push(poly);
+        });
+      }
+
+      function openRouteDetails(r) {
+        const titleEl = document.getElementById('drawer-title');
+        const subtitleEl = document.getElementById('drawer-subtitle');
+        const bodyEl = document.getElementById('drawer-body');
+        const unit = activeMap.scale_unit || 'miles';
+        const dist = parseFloat(r.calculated_distance) || 0;
+        const foot = (dist / 30).toFixed(1);
+        const horse = (dist / 60).toFixed(1);
+        const sail = (dist / 100).toFixed(1);
+
+        if (titleEl) titleEl.innerText = r.title;
+        if (subtitleEl) subtitleEl.innerText = 'Expedition Route';
+        if (bodyEl) {
+          bodyEl.innerHTML = \`
+            <div class="tag-badge" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3);">Expedition Route</div>
+            <h4>Route Distance & Travel Estimates:</h4>
+            <div style="font-size:1.4rem; font-weight:bold; color:#f59e0b; margin:8px 0;">\${dist.toFixed(1)} \${unit}</div>
+            <ul style="padding-left:18px; line-height:1.8;">
+              <li>🚶 Foot: <strong>\${foot} days</strong> (~30 \${unit}/day)</li>
+              <li>🐎 Horse: <strong>\${horse} days</strong> (~60 \${unit}/day)</li>
+              <li>⛵ Sail: <strong>\${sail} days</strong> (~100 \${unit}/day)</li>
+            </ul>
+          \`;
+        }
+      }
+
       function renderPins() {
         pinMarkers.forEach(m => m.remove());
         pinMarkers = [];
-
         const w = activeMap.width || 1920;
         const h = activeMap.height || 1080;
 
-        (pins || []).forEach(p => {
+        const mapPins = (pins || []).filter(p => p.map_id === activeMap.id);
+        mapPins.forEach(p => {
           if (p.layer_id && hiddenLayerIds.has(p.layer_id)) return;
+
+          if (selectedCategory !== 'all') {
+            const pCat = (p.category || '').toLowerCase();
+            if (pCat !== selectedCategory.toLowerCase()) return;
+          }
+
+          if (pinSearchQuery.trim() !== '') {
+            const q = pinSearchQuery.toLowerCase();
+            const titleMatch = (p.title || '').toLowerCase().includes(q);
+            const descMatch = (p.description || '').toLowerCase().includes(q);
+            if (!titleMatch && !descMatch) return;
+          }
 
           const lat = p.y_pct * h;
           const lng = p.x_pct * w;
 
           const marker = L.marker([lat, lng]).addTo(mapInstance);
-          marker.bindTooltip(p.title, { permanent: false, direction: 'top' });
+          marker.bindTooltip(p.title + (p.target_sub_map_id ? ' 🔍' : ''), { permanent: false, direction: 'top' });
           marker.on('click', () => {
             openPinDetails(p);
           });
-
           pinMarkers.push(marker);
         });
       }
@@ -4977,10 +5159,20 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         if (titleEl) titleEl.innerText = pin.title;
         if (subtitleEl) subtitleEl.innerText = pin.category || 'Map Pin';
 
+        let subMapBtnHtml = '';
+        if (pin.target_sub_map_id) {
+          subMapBtnHtml = \`<div style="margin-top:12px;"><button id="drilldown-submap-btn" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid #38bdf8; padding:6px 12px; border-radius:6px; cursor:pointer; width:100%;">🔍 Drill Down into Sub-Map</button></div>\`;
+        }
+
         if (article) {
-          if (bodyEl) bodyEl.innerHTML = \`<div class="tag-badge">\${escapeHtml(article.category || '')}</div><div>\${article.content || article.summary || ''}</div>\`;
+          if (bodyEl) bodyEl.innerHTML = \`<div class="tag-badge">\${escapeHtml(article.category || '')}</div><div>\${article.content || article.summary || ''}</div>\${subMapBtnHtml}\`;
         } else {
-          if (bodyEl) bodyEl.innerHTML = \`<p>\${escapeHtml(pin.description || 'No detailed article linked.')}</p>\`;
+          if (bodyEl) bodyEl.innerHTML = \`<p>\${escapeHtml(pin.description || 'No detailed article linked.')}</p>\${subMapBtnHtml}\`;
+        }
+
+        if (pin.target_sub_map_id) {
+          const btn = document.getElementById('drilldown-submap-btn');
+          if (btn) btn.addEventListener('click', () => loadMap(pin.target_sub_map_id));
         }
       }
 
@@ -5013,12 +5205,86 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         if (bodyEl) bodyEl.innerHTML = html;
       }
 
-      function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      function toggleRuler() {
+        isRulerActive = !isRulerActive;
+        const toast = document.getElementById('standalone-ruler-toast');
+        if (toast) toast.style.display = isRulerActive ? 'block' : 'none';
+        if (!isRulerActive) clearRuler();
       }
 
-      window.addEventListener('DOMContentLoaded', initMap);
+      function addRulerPoint(x_px, y_px) {
+        rulerPoints.push([x_px, y_px]);
+        const latlngs = rulerPoints.map(pt => [pt[1], pt[0]]);
+        if (!rulerPolyline) {
+          rulerPolyline = L.polyline(latlngs, { color: '#06b6d4', weight: 4, dashArray: '8, 8' }).addTo(mapInstance);
+        } else {
+          rulerPolyline.setLatLngs(latlngs);
+        }
+        const m = L.marker([y_px, x_px]).addTo(mapInstance);
+        rulerMarkers.push(m);
+        updateRulerToast();
+      }
+
+      function updateRulerToast() {
+        if (rulerPoints.length < 2) return;
+        let totalPx = 0;
+        for (let i = 0; i < rulerPoints.length - 1; i++) {
+          const dx = rulerPoints[i+1][0] - rulerPoints[i][0];
+          const dy = rulerPoints[i+1][1] - rulerPoints[i][1];
+          totalPx += Math.sqrt(dx * dx + dy * dy);
+        }
+        const sPx = activeMap.scale_pixels || 100;
+        const sDist = activeMap.scale_distance || 10;
+        const unit = activeMap.scale_unit || 'miles';
+        const dist = (totalPx / sPx) * sDist;
+
+        document.getElementById('ruler-dist-val').innerText = dist.toFixed(1);
+        document.getElementById('ruler-dist-unit').innerText = unit;
+        document.getElementById('ruler-foot-val').innerText = (dist / 30).toFixed(1) + ' days';
+        document.getElementById('ruler-horse-val').innerText = (dist / 60).toFixed(1) + ' days';
+        document.getElementById('ruler-sail-val').innerText = (dist / 100).toFixed(1) + ' days';
+      }
+
+      function clearRuler() {
+        rulerPoints = [];
+        if (rulerPolyline) { rulerPolyline.remove(); rulerPolyline = null; }
+        rulerMarkers.forEach(m => m.remove());
+        rulerMarkers = [];
+        document.getElementById('ruler-dist-val').innerText = '0.0';
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        loadMap(activeMap.id);
+
+        const mapSel = document.getElementById('standalone-map-select');
+        if (mapSel) mapSel.addEventListener('change', e => loadMap(e.target.value));
+
+        const rulerBtn = document.getElementById('standalone-ruler-btn');
+        if (rulerBtn) rulerBtn.addEventListener('click', toggleRuler);
+
+        const rulerClearBtn = document.getElementById('standalone-ruler-clear-btn');
+        if (rulerClearBtn) rulerClearBtn.addEventListener('click', clearRuler);
+
+        const searchInput = document.getElementById('standalone-pin-search');
+        if (searchInput) {
+          searchInput.addEventListener('input', e => {
+            pinSearchQuery = e.target.value;
+            renderPins();
+          });
+        }
+
+        const catChips = document.getElementById('standalone-category-bar');
+        if (catChips) {
+          catChips.querySelectorAll('.atlas-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              catChips.querySelectorAll('.atlas-chip').forEach(c => c.classList.remove('active'));
+              chip.classList.add('active');
+              selectedCategory = chip.getAttribute('data-category') || 'all';
+              renderPins();
+            });
+          });
+        }
+      });
     })();
   </script>
 </body>

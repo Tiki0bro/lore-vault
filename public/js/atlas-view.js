@@ -33,6 +33,14 @@ class AtlasView {
     this.rulerMarkers = [];
     this.pinSearchQuery = '';
     this.selectedPinCategory = 'all';
+    this.routes = [];
+    this.routePolylines = [];
+    this.isRouteDrawingActive = false;
+    this.activeRouteVertices = [];
+    this.activeRoutePolyline = null;
+    this.activeRouteVertexMarkers = [];
+    this.selectedRoute = null;
+    this.editingRouteId = null;
   }
 
   async init() {
@@ -84,8 +92,10 @@ class AtlasView {
           <button id="atlas-ruler-mode-btn" class="tool-btn"><i class="fa-solid fa-ruler-combined"></i> 📏 Ruler & Scale</button>
           <button id="atlas-pin-mode-btn" class="tool-btn"><i class="fa-solid fa-location-crosshairs"></i> Drop Pin</button>
           <button id="atlas-territory-mode-btn" class="tool-btn"><i class="fa-solid fa-draw-polygon"></i> 🗺️ Draw Boundary</button>
+          <button id="atlas-route-mode-btn" class="tool-btn"><i class="fa-solid fa-route"></i> ⛺ Draw Route</button>
           <span id="atlas-reticle-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-crosshairs"></i> Click on map to place pin... <button id="atlas-cancel-pin-btn" class="btn-text">Cancel</button></span>
           <span id="atlas-territory-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-draw-polygon"></i> Click on map to add vertices... <button id="atlas-complete-territory-btn" class="tool-btn primary btn-sm" style="margin-left:8px; padding:2px 8px; font-size:0.8rem;">[✓ Complete Boundary]</button> <button id="atlas-cancel-territory-btn" class="btn-text" style="margin-left:6px;">[✕ Cancel]</button></span>
+          <span id="atlas-route-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-route"></i> Click on map to add route points... <span id="route-toast-dist" style="margin-left:8px; font-weight:bold;">0.0 miles</span> <button id="atlas-complete-route-btn" class="tool-btn primary btn-sm" style="margin-left:8px; padding:2px 8px; font-size:0.8rem;">[✓ Complete Route]</button> <button id="atlas-cancel-route-btn" class="btn-text" style="margin-left:6px;">[✕ Cancel]</button></span>
         </div>
         <div class="atlas-toolbar-right">
           <div class="atlas-search-wrapper" style="display:inline-flex; align-items:center; gap:6px;">
@@ -388,6 +398,71 @@ class AtlasView {
           </div>
         </div>
       </div>
+
+      <!-- Add/Edit Expedition Route Modal -->
+      <div id="atlas-route-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card" style="max-width: 520px; width: 100%;">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-route"></i> Expedition Route Properties</h3>
+            <button id="close-route-modal-btn" class="drawer-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Route Title *</label>
+              <input type="text" id="route-title-input" class="form-control" placeholder="e.g. The King's Highway Expedition">
+            </div>
+            <div class="form-row" style="display:flex; gap:12px;">
+              <div class="form-group" style="flex:1;">
+                <label>Stroke Color</label>
+                <input type="color" id="route-color-input" class="form-control" value="#f59e0b" style="height:38px; padding:2px;">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Stroke Width (px)</label>
+                <input type="number" id="route-width-input" class="form-control" min="1" max="10" value="3">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Stroke Style</label>
+                <select id="route-style-select" class="form-control">
+                  <option value="dashed">Dashed</option>
+                  <option value="solid">Solid</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Assigned Map Layer</label>
+              <select id="route-layer-select" class="form-control">
+                <option value="">None (Base Map)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <div class="ruler-travel-times" style="margin-top:8px; padding:10px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid var(--border-color, rgba(255,255,255,0.1));">
+                <div style="font-weight:600; font-size:0.85rem; margin-bottom:6px; color:var(--accent-primary, #38bdf8);">Calculated Distance & Travel Estimates:</div>
+                <div style="font-size:1.1rem; font-weight:bold; color:#f59e0b; margin-bottom:6px;" id="route-modal-distance">0.0 miles</div>
+                <div style="display:flex; gap:12px; font-size:0.8rem;">
+                  <span>🚶 Foot: <strong id="route-modal-foot">0 days</strong></span>
+                  <span>🐎 Horse: <strong id="route-modal-horse">0 days</strong></span>
+                  <span>⛵ Sail: <strong id="route-modal-sail">0 days</strong></span>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label class="checkbox-label" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="route-secret-checkbox">
+                <span>🔒 DM Secret Route (Hidden from Public Player view)</span>
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+            <button id="delete-route-modal-btn" class="tool-btn danger" style="display:none;"><i class="fa-solid fa-trash"></i> Delete Route</button>
+            <div style="display:flex; gap:10px; margin-left:auto;">
+              <button id="cancel-route-modal-btn" class="tool-btn">Cancel</button>
+              <button id="save-route-modal-btn" class="tool-btn primary">Save Route</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     `;
 
     this.bindEvents();
@@ -583,7 +658,41 @@ class AtlasView {
 
     const saveScaleModalBtn = document.getElementById('save-scale-modal-btn');
     if (saveScaleModalBtn) {
-      saveScaleModalBtn.addEventListener('click', () => this.saveMapScale());
+      saveScaleModalBtn.addEventListener('click', () => this.saveScaleModal());
+    }
+
+    // Route drawing mode triggers
+    const routeModeBtn = document.getElementById('atlas-route-mode-btn');
+    if (routeModeBtn) {
+      routeModeBtn.addEventListener('click', () => this.toggleRouteDrawingMode());
+    }
+
+    const completeRouteBtn = document.getElementById('atlas-complete-route-btn');
+    if (completeRouteBtn) {
+      completeRouteBtn.addEventListener('click', () => this.openCreateRouteModal());
+    }
+
+    const cancelRouteBtn = document.getElementById('atlas-cancel-route-btn');
+    if (cancelRouteBtn) {
+      cancelRouteBtn.addEventListener('click', () => this.toggleRouteDrawingMode(false));
+    }
+
+    // Route modal triggers
+    const closeRouteModalBtn = document.getElementById('close-route-modal-btn');
+    const cancelRouteModalBtn = document.getElementById('cancel-route-modal-btn');
+    if (closeRouteModalBtn) closeRouteModalBtn.addEventListener('click', () => document.getElementById('atlas-route-modal').style.display = 'none');
+    if (cancelRouteModalBtn) cancelRouteModalBtn.addEventListener('click', () => document.getElementById('atlas-route-modal').style.display = 'none');
+
+    const saveRouteModalBtn = document.getElementById('save-route-modal-btn');
+    if (saveRouteModalBtn) {
+      saveRouteModalBtn.addEventListener('click', () => this.saveRoute());
+    }
+
+    const deleteRouteModalBtn = document.getElementById('delete-route-modal-btn');
+    if (deleteRouteModalBtn) {
+      deleteRouteModalBtn.addEventListener('click', () => {
+        if (this.editingRouteId) this.deleteRoute(this.editingRouteId);
+      });
     }
 
     const scaleUseRulerBtn = document.getElementById('scale-use-ruler-btn');
@@ -717,16 +826,16 @@ class AtlasView {
       this.renderLayersDrawer();
       await this.loadMapPins(this.currentMap.id);
       await this.loadMapTerritories(this.currentMap.id);
+      await this.loadMapRoutes(this.currentMap.id);
     }
   }
 
   togglePinPlacementMode(forceState) {
     this.isPinPlacementActive = forceState !== undefined ? forceState : !this.isPinPlacementActive;
-    if (this.isPinPlacementActive && this.isTerritoryDrawingActive) {
-      this.toggleTerritoryDrawingMode(false);
-    }
-    if (this.isPinPlacementActive && this.isRulerActive) {
-      this.toggleRulerMode(false);
+    if (this.isPinPlacementActive) {
+      if (this.isTerritoryDrawingActive) this.toggleTerritoryDrawingMode(false);
+      if (this.isRulerActive) this.toggleRulerMode(false);
+      if (this.isRouteDrawingActive) this.toggleRouteDrawingMode(false);
     }
     const btn = document.getElementById('atlas-pin-mode-btn');
     const toast = document.getElementById('atlas-reticle-toast');
@@ -738,11 +847,10 @@ class AtlasView {
 
   toggleTerritoryDrawingMode(forceState) {
     this.isTerritoryDrawingActive = forceState !== undefined ? forceState : !this.isTerritoryDrawingActive;
-    if (this.isTerritoryDrawingActive && this.isPinPlacementActive) {
-      this.togglePinPlacementMode(false);
-    }
-    if (this.isTerritoryDrawingActive && this.isRulerActive) {
-      this.toggleRulerMode(false);
+    if (this.isTerritoryDrawingActive) {
+      if (this.isPinPlacementActive) this.togglePinPlacementMode(false);
+      if (this.isRulerActive) this.toggleRulerMode(false);
+      if (this.isRouteDrawingActive) this.toggleRouteDrawingMode(false);
     }
 
     const btn = document.getElementById('atlas-territory-mode-btn');
@@ -774,6 +882,7 @@ class AtlasView {
     if (this.isRulerActive) {
       if (this.isPinPlacementActive) this.togglePinPlacementMode(false);
       if (this.isTerritoryDrawingActive) this.toggleTerritoryDrawingMode(false);
+      if (this.isRouteDrawingActive) this.toggleRouteDrawingMode(false);
     }
     const btn = document.getElementById('atlas-ruler-mode-btn');
     const toast = document.getElementById('atlas-ruler-toast');
@@ -785,6 +894,47 @@ class AtlasView {
     if (!this.isRulerActive) {
       this.clearRulerTape();
     }
+  }
+
+  toggleRouteDrawingMode(forceState) {
+    this.isRouteDrawingActive = forceState !== undefined ? forceState : !this.isRouteDrawingActive;
+    if (this.isRouteDrawingActive) {
+      if (this.isPinPlacementActive) this.togglePinPlacementMode(false);
+      if (this.isTerritoryDrawingActive) this.toggleTerritoryDrawingMode(false);
+      if (this.isRulerActive) this.toggleRulerMode(false);
+    }
+    const btn = document.getElementById('atlas-route-mode-btn');
+    const toast = document.getElementById('atlas-route-toast');
+    const canvas = document.getElementById('atlas-canvas-container');
+    if (btn) btn.classList.toggle('active', this.isRouteDrawingActive);
+    if (toast) toast.style.display = this.isRouteDrawingActive ? 'inline-flex' : 'none';
+    if (canvas) canvas.style.cursor = this.isRouteDrawingActive ? 'crosshair' : 'grab';
+
+    if (this.isRouteDrawingActive) {
+      this.activeRouteVertices = [];
+      if (this.activeRoutePolyline) {
+        this.activeRoutePolyline.remove();
+        this.activeRoutePolyline = null;
+      }
+      this.clearRouteVertexMarkers();
+      this.updateRouteToast();
+    } else {
+      if (this.activeRoutePolyline) {
+        this.activeRoutePolyline.remove();
+        this.activeRoutePolyline = null;
+      }
+      this.clearRouteVertexMarkers();
+      this.activeRouteVertices = [];
+    }
+  }
+
+  clearRouteVertexMarkers() {
+    if (Array.isArray(this.activeRouteVertexMarkers)) {
+      this.activeRouteVertexMarkers.forEach(m => {
+        if (m && typeof m.remove === 'function') m.remove();
+      });
+    }
+    this.activeRouteVertexMarkers = [];
   }
 
   clearRulerTape() {
@@ -1087,6 +1237,10 @@ class AtlasView {
         const x_pct = Math.max(0, Math.min(1, e.latlng.lng / w));
         const y_pct = Math.max(0, Math.min(1, e.latlng.lat / h));
         this.addTerritoryDrawingVertex(x_pct, y_pct);
+      } else if (this.isRouteDrawingActive) {
+        const x_pct = Math.max(0, Math.min(1, e.latlng.lng / w));
+        const y_pct = Math.max(0, Math.min(1, e.latlng.lat / h));
+        this.addRouteDrawingVertex(x_pct, y_pct);
       } else {
         this.clearVertexHandles();
         this.selectedTerritory = null;
@@ -1097,6 +1251,7 @@ class AtlasView {
     this.renderLayersDrawer();
     await this.loadMapPins(mapId);
     await this.loadMapTerritories(mapId);
+    await this.loadMapRoutes(mapId);
   }
 
   addTerritoryDrawingVertex(x_pct, y_pct) {
@@ -2403,6 +2558,327 @@ class AtlasView {
     alert(`Successfully imported ${importedCount} territory boundaries!`);
     this.closeAiCandidatesDrawer();
     await this.loadMapTerritories(this.currentMap.id);
+  }
+
+  addRouteDrawingVertex(x_pct, y_pct) {
+    this.activeRouteVertices.push([x_pct, y_pct]);
+    if (!this.currentMap || !this.mapInstance || typeof L === 'undefined') return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const latlngs = this.activeRouteVertices.map(v => [v[1] * h, v[0] * w]);
+
+    if (!this.activeRoutePolyline) {
+      this.activeRoutePolyline = L.polyline(latlngs, {
+        color: '#f59e0b',
+        weight: 3,
+        dashArray: '6, 6'
+      }).addTo(this.mapInstance);
+    } else {
+      this.activeRoutePolyline.setLatLngs(latlngs);
+    }
+
+    const marker = L.marker([y_pct * h, x_pct * w], {
+      icon: L.divIcon({
+        className: 'route-point-handle',
+        html: `<div class="route-node" title="Route Vertex ${this.activeRouteVertices.length}"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      })
+    }).addTo(this.mapInstance);
+
+    this.activeRouteVertexMarkers.push(marker);
+    this.updateRouteToast();
+  }
+
+  calculateRouteDistance(vertices) {
+    if (!this.currentMap || !Array.isArray(vertices) || vertices.length < 2) return 0;
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const pointsPx = vertices.map(v => [v[0] * w, v[1] * h]);
+    const pxDist = this.calculatePixelDistance(pointsPx);
+    return this.calculateRealDistance(pxDist, this.currentMap.scale_pixels, this.currentMap.scale_distance);
+  }
+
+  updateRouteToast() {
+    const distEl = document.getElementById('route-toast-dist');
+    if (!distEl) return;
+    const dist = this.calculateRouteDistance(this.activeRouteVertices);
+    const unit = (this.currentMap && this.currentMap.scale_unit) || 'miles';
+    distEl.innerText = `${dist.toFixed(1)} ${unit}`;
+  }
+
+  openCreateRouteModal() {
+    if (!Array.isArray(this.activeRouteVertices) || this.activeRouteVertices.length < 2) {
+      alert('Please click at least 2 points on the map to draw a route.');
+      return;
+    }
+    this.editingRouteId = null;
+    const dist = this.calculateRouteDistance(this.activeRouteVertices);
+    const unit = (this.currentMap && this.currentMap.scale_unit) || 'miles';
+    const travel = this.calculateTravelTimes(dist);
+
+    const titleInput = document.getElementById('route-title-input');
+    const distModal = document.getElementById('route-modal-distance');
+    const footModal = document.getElementById('route-modal-foot');
+    const horseModal = document.getElementById('route-modal-horse');
+    const sailModal = document.getElementById('route-modal-sail');
+    const colorInput = document.getElementById('route-color-input');
+    const widthInput = document.getElementById('route-width-input');
+    const styleSelect = document.getElementById('route-style-select');
+    const layerSelect = document.getElementById('route-layer-select');
+    const secretChk = document.getElementById('route-secret-checkbox');
+    const deleteBtn = document.getElementById('delete-route-modal-btn');
+
+    if (titleInput) titleInput.value = `Expedition Route ${this.routes.length + 1}`;
+    if (distModal) distModal.innerText = `${dist.toFixed(1)} ${unit}`;
+    if (footModal) footModal.innerText = this.formatTravelTime(travel.footDays);
+    if (horseModal) horseModal.innerText = this.formatTravelTime(travel.horseDays);
+    if (sailModal) sailModal.innerText = this.formatTravelTime(travel.sailDays);
+    if (colorInput) colorInput.value = '#f59e0b';
+    if (widthInput) widthInput.value = 3;
+    if (styleSelect) styleSelect.value = 'dashed';
+    if (secretChk) secretChk.checked = false;
+    if (deleteBtn) deleteBtn.style.display = 'none';
+
+    if (layerSelect) {
+      layerSelect.innerHTML = '<option value="">None (Base Map)</option>' +
+        (this.layers || []).map(l => `<option value="${l.id}">${this.escapeHtml(l.name)}</option>`).join('');
+    }
+
+    const modal = document.getElementById('atlas-route-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  openEditRouteModal(r) {
+    this.editingRouteId = r.id;
+    let vertices = [];
+    try {
+      vertices = typeof r.points_json === 'string' ? JSON.parse(r.points_json) : (r.points_json || []);
+    } catch (e) { vertices = []; }
+
+    const dist = r.calculated_distance ? parseFloat(r.calculated_distance) : this.calculateRouteDistance(vertices);
+    const unit = (this.currentMap && this.currentMap.scale_unit) || 'miles';
+    const travel = this.calculateTravelTimes(dist);
+
+    const titleInput = document.getElementById('route-title-input');
+    const distModal = document.getElementById('route-modal-distance');
+    const footModal = document.getElementById('route-modal-foot');
+    const horseModal = document.getElementById('route-modal-horse');
+    const sailModal = document.getElementById('route-modal-sail');
+    const colorInput = document.getElementById('route-color-input');
+    const widthInput = document.getElementById('route-width-input');
+    const styleSelect = document.getElementById('route-style-select');
+    const layerSelect = document.getElementById('route-layer-select');
+    const secretChk = document.getElementById('route-secret-checkbox');
+    const deleteBtn = document.getElementById('delete-route-modal-btn');
+
+    if (titleInput) titleInput.value = r.title || '';
+    if (distModal) distModal.innerText = `${dist.toFixed(1)} ${unit}`;
+    if (footModal) footModal.innerText = this.formatTravelTime(travel.footDays);
+    if (horseModal) horseModal.innerText = this.formatTravelTime(travel.horseDays);
+    if (sailModal) sailModal.innerText = this.formatTravelTime(travel.sailDays);
+    if (colorInput) colorInput.value = r.stroke_color || '#f59e0b';
+    if (widthInput) widthInput.value = r.stroke_width || 3;
+    if (styleSelect) styleSelect.value = r.stroke_style || 'dashed';
+    if (secretChk) secretChk.checked = !!r.is_secret;
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+
+    if (layerSelect) {
+      layerSelect.innerHTML = '<option value="">None (Base Map)</option>' +
+        (this.layers || []).map(l => `<option value="${l.id}" ${l.id === r.layer_id ? 'selected' : ''}>${this.escapeHtml(l.name)}</option>`).join('');
+    }
+
+    const modal = document.getElementById('atlas-route-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  async saveRoute() {
+    if (!this.currentMap) return;
+    const title = document.getElementById('route-title-input').value.trim() || 'Expedition Route';
+    const stroke_color = document.getElementById('route-color-input').value || '#f59e0b';
+    const stroke_width = parseInt(document.getElementById('route-width-input').value, 10) || 3;
+    const stroke_style = document.getElementById('route-style-select').value || 'dashed';
+    const layer_id = document.getElementById('route-layer-select').value || null;
+    const is_secret = document.getElementById('route-secret-checkbox').checked ? 1 : 0;
+
+    let points_json = null;
+    let calculated_distance = 0;
+
+    if (this.editingRouteId) {
+      const existing = this.routes.find(r => r.id === this.editingRouteId);
+      points_json = existing ? existing.points_json : JSON.stringify(this.activeRouteVertices);
+      calculated_distance = existing ? existing.calculated_distance : this.calculateRouteDistance(this.activeRouteVertices);
+    } else {
+      points_json = JSON.stringify(this.activeRouteVertices);
+      calculated_distance = this.calculateRouteDistance(this.activeRouteVertices);
+    }
+
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/routes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: this.editingRouteId || undefined,
+          title,
+          points_json,
+          stroke_color,
+          stroke_width,
+          stroke_style,
+          calculated_distance,
+          is_secret,
+          layer_id
+        })
+      });
+      if (!res.ok) throw new Error('Failed to save route');
+      document.getElementById('atlas-route-modal').style.display = 'none';
+      this.toggleRouteDrawingMode(false);
+      await this.loadMapRoutes(this.currentMap.id);
+    } catch (e) {
+      console.error('Error saving route:', e);
+      alert('Failed to save route: ' + e.message);
+    }
+  }
+
+  async deleteRoute(routeId) {
+    if (!this.currentMap || !routeId) return;
+    if (!confirm('Are you sure you want to delete this route?')) return;
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/routes/${routeId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Failed to delete route');
+      document.getElementById('atlas-route-modal').style.display = 'none';
+      document.getElementById('atlas-reader-drawer').style.display = 'none';
+      await this.loadMapRoutes(this.currentMap.id);
+    } catch (e) {
+      console.error('Error deleting route:', e);
+      alert('Failed to delete route.');
+    }
+  }
+
+  async loadMapRoutes(mapId) {
+    try {
+      const res = await fetch(`/api/maps/${mapId}/routes?mode=${this.viewMode}`);
+      const data = await res.json();
+      this.routes = data.routes || [];
+      this.renderRoutes();
+    } catch (e) {
+      console.error('Failed to load map routes:', e);
+      this.routes = [];
+      this.renderRoutes();
+    }
+  }
+
+  renderRoutes() {
+    if (Array.isArray(this.routePolylines)) {
+      this.routePolylines.forEach(p => p.remove());
+    }
+    this.routePolylines = [];
+    if (!this.mapInstance || !this.currentMap || typeof L === 'undefined') return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const unit = this.currentMap.scale_unit || 'miles';
+
+    (this.routes || []).forEach(r => {
+      if (r.layer_id && Array.isArray(this.layers)) {
+        const lObj = this.layers.find(l => l.id === r.layer_id);
+        if (lObj && !lObj.is_visible) return;
+      }
+
+      let points = [];
+      try {
+        points = typeof r.points_json === 'string' ? JSON.parse(r.points_json) : (r.points_json || []);
+      } catch (e) { points = []; }
+
+      if (!Array.isArray(points) || points.length < 2) return;
+
+      const latlngs = points.map(pt => [pt[1] * h, pt[0] * w]);
+      let dashArray = null;
+      if (r.stroke_style === 'dashed') dashArray = '6, 6';
+      if (r.stroke_style === 'dotted') dashArray = '2, 4';
+
+      const distVal = r.calculated_distance ? parseFloat(r.calculated_distance).toFixed(1) : '0.0';
+
+      const poly = L.polyline(latlngs, {
+        color: r.stroke_color || '#f59e0b',
+        weight: r.stroke_width || 3,
+        dashArray: dashArray
+      }).addTo(this.mapInstance);
+
+      poly.bindTooltip(`⛺ ${r.title} (${distVal} ${unit})`, { permanent: false, direction: 'top' });
+
+      poly.on('click', () => {
+        this.openRouteDetails(r);
+      });
+
+      this.routePolylines.push(poly);
+    });
+  }
+
+  openRouteDetails(r) {
+    this.selectedRoute = r;
+    const drawer = document.getElementById('atlas-reader-drawer');
+    const content = document.getElementById('atlas-drawer-content');
+    if (!drawer || !content) return;
+
+    const unit = (this.currentMap && this.currentMap.scale_unit) || 'miles';
+    const dist = parseFloat(r.calculated_distance) || 0;
+    const travel = this.calculateTravelTimes(dist);
+
+    let layerName = 'Base Map';
+    if (r.layer_id && Array.isArray(this.layers)) {
+      const lObj = this.layers.find(l => l.id === r.layer_id);
+      if (lObj) layerName = lObj.name;
+    }
+
+    let html = `
+      <div class="drawer-header-row" style="margin-bottom:12px;">
+        <span class="tag-badge" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3);">Expedition Route</span>
+        ${r.is_secret ? '<span class="tag-badge" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); margin-left:6px;"><i class="fa-solid fa-lock"></i> DM Secret</span>' : ''}
+      </div>
+      <h2 style="margin:0 0 8px 0; color:var(--accent-primary, #38bdf8);">${this.escapeHtml(r.title)}</h2>
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+        Layer: <strong>${this.escapeHtml(layerName)}</strong>
+      </div>
+      <div class="ruler-travel-times" style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border-color); margin-bottom:16px;">
+        <div style="font-weight:600; font-size:0.85rem; margin-bottom:6px; color:var(--accent-primary, #38bdf8);">Route Distance:</div>
+        <div style="font-size:1.4rem; font-weight:bold; color:#f59e0b; margin-bottom:8px;">${dist.toFixed(1)} ${unit}</div>
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:0.85rem;">
+          <div>🚶 Foot Travel: <strong>${this.formatTravelTime(travel.footDays)}</strong> (~30 ${unit}/day)</div>
+          <div>🐎 Horseback: <strong>${this.formatTravelTime(travel.horseDays)}</strong> (~60 ${unit}/day)</div>
+          <div>⛵ Sailing: <strong>${this.formatTravelTime(travel.sailDays)}</strong> (~100 ${unit}/day)</div>
+        </div>
+      </div>
+    `;
+
+    if (this.viewMode === 'dm') {
+      html += `
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button id="atlas-edit-route-btn" class="tool-btn" style="flex:1;"><i class="fa-solid fa-pen-to-square"></i> Edit Route</button>
+          <button id="atlas-delete-route-btn" class="tool-btn danger"><i class="fa-solid fa-trash"></i> Delete</button>
+        </div>
+      `;
+    }
+
+    content.innerHTML = html;
+    drawer.style.display = 'block';
+
+    if (this.viewMode === 'dm') {
+      const editBtn = document.getElementById('atlas-edit-route-btn');
+      const deleteBtn = document.getElementById('atlas-delete-route-btn');
+      if (editBtn) {
+        editBtn.addEventListener('click', () => {
+          this.openEditRouteModal(r);
+        });
+      }
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          this.deleteRoute(r.id);
+        });
+      }
+    }
   }
 
   async exportStandaloneHtml() {
