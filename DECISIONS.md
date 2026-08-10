@@ -8,6 +8,8 @@ This file records all major technical, architectural, and design decisions made 
 - **Architecture**: Local-first single-page web app with Node.js/Express server and Vanilla JS/HTML/CSS frontend.
 - **Storage Strategy**: Dual SQLite (`lore.db`) for relational metadata and local Markdown files (`/data/` or `/storage/`) for content preservation.
 - **Map Layers & Territory Boundaries Schema**: Added `map_layers` and `map_territories` SQLite relational tables and CRUD REST endpoints in `server.js`, storing polygons as normalized percentage coordinate arrays (`[x_pct, y_pct]`) with DM secret filtering (`?mode=player`).
+- **Gemini Multimodal Vision Territory Auto-Detection**: Added `POST /api/maps/:mapId/ai-auto-boundaries` multimodal vision endpoint with Gemini candidate model retries, image/lore context prompt, smart fallback polygons, ghost overlay canvas rendering, and candidate approval drawer in `public/js/atlas-view.js`.
+
 
 
 ---

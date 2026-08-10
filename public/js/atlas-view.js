@@ -25,6 +25,8 @@ class AtlasView {
     this.tempCoords = null;
     this.isLayersDrawerOpen = false;
     this.contestedPairs = [];
+    this.aiGhostPolygons = [];
+    this.aiCandidates = [];
   }
 
   async init() {
@@ -72,6 +74,7 @@ class AtlasView {
           <button id="atlas-auto-gen-btn" class="tool-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Map</button>
           <button id="atlas-auto-pin-btn" class="tool-btn"><i class="fa-solid fa-map-pin"></i> Auto-Place Pins</button>
           <button id="atlas-layers-btn" class="tool-btn"><i class="fa-solid fa-layer-group"></i> 🥞 Layers</button>
+          <button id="atlas-ai-detect-btn" class="tool-btn"><i class="fa-solid fa-robot"></i> 🤖 Auto-Detect Borders</button>
           <button id="atlas-pin-mode-btn" class="tool-btn"><i class="fa-solid fa-location-crosshairs"></i> Drop Pin</button>
           <button id="atlas-territory-mode-btn" class="tool-btn"><i class="fa-solid fa-draw-polygon"></i> 🗺️ Draw Boundary</button>
           <span id="atlas-reticle-toast" class="atlas-toast" style="display:none;"><i class="fa-solid fa-crosshairs"></i> Click on map to place pin... <button id="atlas-cancel-pin-btn" class="btn-text">Cancel</button></span>
@@ -99,6 +102,20 @@ class AtlasView {
           <div class="layers-drawer-footer">
             <button id="atlas-add-layer-btn" class="tool-btn primary full-width">
               <i class="fa-solid fa-plus"></i> Add Custom Layer
+            </button>
+          </div>
+        </div>
+        <div id="atlas-ai-candidates-drawer" class="atlas-ai-candidates-drawer" style="display:none;">
+          <div class="ai-drawer-header">
+            <h4><i class="fa-solid fa-robot"></i> AI Detected Boundary Candidates</h4>
+            <button id="atlas-close-ai-drawer-btn" class="drawer-close-btn">&times;</button>
+          </div>
+          <div class="ai-drawer-body">
+            <div id="ai-candidates-list" class="ai-candidates-list"></div>
+          </div>
+          <div class="ai-drawer-footer">
+            <button id="atlas-approve-candidates-btn" class="tool-btn primary full-width">
+              <i class="fa-solid fa-check-double"></i> Approve & Import Selected Boundaries
             </button>
           </div>
         </div>
@@ -373,6 +390,21 @@ class AtlasView {
       layersBtn.addEventListener('click', () => this.toggleLayersDrawer());
     }
 
+    const aiDetectBtn = document.getElementById('atlas-ai-detect-btn');
+    if (aiDetectBtn) {
+      aiDetectBtn.addEventListener('click', () => this.triggerAiBorderDetection());
+    }
+
+    const closeAiDrawerBtn = document.getElementById('atlas-close-ai-drawer-btn');
+    if (closeAiDrawerBtn) {
+      closeAiDrawerBtn.addEventListener('click', () => this.closeAiCandidatesDrawer());
+    }
+
+    const approveCandidatesBtn = document.getElementById('atlas-approve-candidates-btn');
+    if (approveCandidatesBtn) {
+      approveCandidatesBtn.addEventListener('click', () => this.approveSelectedAiCandidates());
+    }
+
     const closeLayersBtn = document.getElementById('atlas-close-layers-btn');
     if (closeLayersBtn) {
       closeLayersBtn.addEventListener('click', () => this.toggleLayersDrawer(false));
@@ -542,6 +574,9 @@ class AtlasView {
   async loadMap(mapId) {
     this.currentMap = this.maps.find(m => m.id === mapId) || null;
     if (!this.currentMap) return;
+
+    this.clearAiGhostPolygons();
+    this.closeAiCandidatesDrawer();
 
     if (this.mapInstance) {
       this.mapInstance.remove();
@@ -1611,6 +1646,169 @@ class AtlasView {
     } catch (e) {
       content.innerHTML = `<h3>${label}</h3><p>Error loading article content.</p>`;
     }
+  }
+
+  async triggerAiBorderDetection() {
+    if (!this.currentMap) {
+      alert('Please select or upload a map first.');
+      return;
+    }
+
+    let toast = document.getElementById('atlas-ai-detect-toast');
+    if (!toast) {
+      toast = document.createElement('span');
+      toast.id = 'atlas-ai-detect-toast';
+      toast.className = 'atlas-toast';
+      const toolbarLeft = document.querySelector('.atlas-toolbar-left');
+      if (toolbarLeft) toolbarLeft.appendChild(toast);
+    }
+    toast.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 🤖 Gemini Vision analyzing map artwork & lore context...';
+    toast.style.display = 'inline-flex';
+
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}/ai-auto-boundaries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: this.worldId })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      this.aiCandidates = data.candidates || [];
+
+      toast.style.display = 'none';
+
+      if (this.aiCandidates.length === 0) {
+        alert('No boundary candidates were detected.');
+        return;
+      }
+
+      this.renderAiGhostPolygons(this.aiCandidates);
+      this.openAiCandidatesDrawer(this.aiCandidates);
+
+    } catch (err) {
+      toast.style.display = 'none';
+      console.error('AI Border Detection failed:', err);
+      alert(`AI Border Detection failed: ${err.message}`);
+    }
+  }
+
+  renderAiGhostPolygons(candidates) {
+    this.clearAiGhostPolygons();
+    if (!this.currentMap || !this.mapInstance || typeof L === 'undefined') return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+
+    (candidates || []).forEach(c => {
+      if (!Array.isArray(c.points) || c.points.length < 3) return;
+      const latlngs = c.points.map(pt => [pt[1] * h, pt[0] * w]);
+
+      const poly = L.polygon(latlngs, {
+        color: c.stroke_color || '#38bdf8',
+        weight: 3,
+        dashArray: '8, 8',
+        fillColor: c.fill_color || '#38bdf8',
+        fillOpacity: 0.35,
+        className: 'ai-ghost-polygon'
+      }).addTo(this.mapInstance);
+
+      poly.bindTooltip(`🤖 AI Candidate: ${c.title}`, { permanent: false, direction: 'center' });
+      poly._candidateId = c.id;
+      this.aiGhostPolygons.push(poly);
+    });
+  }
+
+  clearAiGhostPolygons() {
+    if (Array.isArray(this.aiGhostPolygons)) {
+      this.aiGhostPolygons.forEach(p => {
+        if (p && typeof p.remove === 'function') p.remove();
+      });
+    }
+    this.aiGhostPolygons = [];
+  }
+
+  openAiCandidatesDrawer(candidates) {
+    const drawer = document.getElementById('atlas-ai-candidates-drawer');
+    const listEl = document.getElementById('ai-candidates-list');
+    if (!drawer || !listEl) return;
+
+    listEl.innerHTML = (candidates || []).map(c => {
+      const linkedArt = this.articles.find(a => a.id === c.article_id);
+      const artLabel = linkedArt ? `Linked: ${linkedArt.title}` : 'Unlinked';
+      return `
+        <div class="ai-candidate-card" data-id="${c.id}">
+          <label class="candidate-card-checkbox">
+            <input type="checkbox" class="ai-candidate-checkbox" value="${c.id}" checked>
+            <span class="candidate-color-swatch" style="background-color: ${c.stroke_color || '#38bdf8'};"></span>
+          </label>
+          <div class="candidate-card-info">
+            <div class="candidate-card-title">${c.title}</div>
+            <div class="candidate-card-meta">
+              <span class="meta-article"><i class="fa-solid fa-link"></i> ${artLabel}</span> &bull; 
+              <span class="meta-points">${(c.points || []).length} vertices</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    drawer.style.display = 'flex';
+  }
+
+  closeAiCandidatesDrawer() {
+    const drawer = document.getElementById('atlas-ai-candidates-drawer');
+    if (drawer) drawer.style.display = 'none';
+    this.clearAiGhostPolygons();
+  }
+
+  async approveSelectedAiCandidates() {
+    const checkboxes = document.querySelectorAll('#ai-candidates-list .ai-candidate-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+      alert('Please select at least one candidate boundary to import.');
+      return;
+    }
+
+    const selectedCandidates = (this.aiCandidates || []).filter(c => selectedIds.includes(c.id));
+    let importedCount = 0;
+
+    for (const c of selectedCandidates) {
+      try {
+        const payload = {
+          title: c.title,
+          article_id: c.article_id || null,
+          points_json: JSON.stringify(c.points),
+          stroke_color: c.stroke_color || '#38bdf8',
+          stroke_width: 3,
+          stroke_style: 'solid',
+          fill_color: c.fill_color || '#38bdf8',
+          fill_opacity: 0.25,
+          is_secret: 0
+        };
+
+        const res = await fetch(`/api/maps/${this.currentMap.id}/territories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          importedCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to import candidate ${c.title}:`, err);
+      }
+    }
+
+    alert(`Successfully imported ${importedCount} territory boundaries!`);
+    this.closeAiCandidatesDrawer();
+    await this.loadMapTerritories(this.currentMap.id);
   }
 
   async exportStandaloneHtml() {

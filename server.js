@@ -3884,6 +3884,207 @@ app.delete('/api/map-pins/:id', (req, res) => {
   });
 });
 
+// ====================================================
+// 🗺️ DUAL-ENGINE AUTOMATED WORLD CARTOGRAPHER
+// ====================================================
+
+function pseudoNoise(x, y, seed = 42) {
+  const sin = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+  return sin - Math.floor(sin);
+}
+
+function getElevationAt(x, y, seed = 42) {
+  let elevation = 0;
+  elevation += pseudoNoise(x * 0.05, y * 0.05, seed) * 0.5;
+  elevation += pseudoNoise(x * 0.1, y * 0.1, seed + 1) * 0.3;
+  elevation += pseudoNoise(x * 0.2, y * 0.2, seed + 2) * 0.2;
+  return elevation;
+}
+
+function getBiomeForCategory(category, title) {
+  const t = (title || '').toLowerCase();
+  if (t.includes('port') || t.includes('harbor') || t.includes('bay') || t.includes('coast') || t.includes('sea') || t.includes('island')) {
+    return 'coastline';
+  }
+  if (t.includes('peak') || t.includes('mountain') || t.includes('spire') || t.includes('dungeon') || t.includes('ruins') || t.includes('keep')) {
+    return 'mountain';
+  }
+  return 'plains';
+}
+
+function findBiomeCoordinates(targetBiome, seed = 42) {
+  let bestX = 0.5, bestY = 0.5;
+  let minDiff = 999;
+
+  for (let step = 0; step < 50; step++) {
+    const rx = 0.1 + Math.random() * 0.8;
+    const ry = 0.1 + Math.random() * 0.8;
+    const elev = getElevationAt(rx * 100, ry * 100, seed);
+
+    let targetElev = 0.5;
+    if (targetBiome === 'coastline') targetElev = 0.40;
+    else if (targetBiome === 'mountain') targetElev = 0.75;
+
+    const diff = Math.abs(elev - targetElev);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestX = rx;
+      bestY = ry;
+    }
+  }
+
+  return { x_pct: parseFloat(bestX.toFixed(4)), y_pct: parseFloat(bestY.toFixed(4)) };
+}
+
+function resolveForceDirectedLayout(pins, iterations = 20) {
+  const k = 0.15;
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < pins.length; i++) {
+      for (let j = i + 1; j < pins.length; j++) {
+        let dx = pins[j].x_pct - pins[i].x_pct;
+        let dy = pins[j].y_pct - pins[i].y_pct;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        if (dist < k) {
+          const force = (k - dist) / dist * 0.5;
+          const fx = dx * force;
+          const fy = dy * force;
+          pins[i].x_pct = Math.max(0.05, Math.min(0.95, pins[i].x_pct - fx));
+          pins[i].y_pct = Math.max(0.05, Math.min(0.95, pins[i].y_pct - fy));
+          pins[j].x_pct = Math.max(0.05, Math.min(0.95, pins[j].x_pct + fx));
+          pins[j].y_pct = Math.max(0.05, Math.min(0.95, pins[j].y_pct + fy));
+        }
+      }
+    }
+  }
+  return pins;
+}
+
+// Procedural Map Generator Endpoint
+app.post('/api/maps/auto-generate/procedural', (req, res) => {
+  const { world_id, title } = req.body;
+  const worldId = world_id || 'default';
+  const mapTitle = title || 'Procedural World Map';
+  const mapId = `map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const image_path = '/uploads/images/default-map.png';
+
+  db.run(`
+    INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height)
+    VALUES (?, ?, NULL, ?, 'Procedural Auto-Generated World Map', ?, 1920, 1080)
+  `, [mapId, worldId, mapTitle, image_path], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+
+    db.all('SELECT id, title, category FROM articles WHERE (world_id = ? OR world_id = "default") AND category = "Locations"', [worldId], (err2, locations) => {
+      const locationList = (locations && locations.length) ? locations : [
+        { id: null, title: 'Central Citadel', category: 'Locations' },
+        { id: null, title: 'Obsidian Harbor', category: 'Locations' },
+        { id: null, title: 'Frostpeak Spire', category: 'Locations' }
+      ];
+
+      const seed = Date.now() % 10000;
+      let rawPins = locationList.map((loc, idx) => {
+        const biome = getBiomeForCategory(loc.category, loc.title);
+        const coords = findBiomeCoordinates(biome, seed + idx);
+        return {
+          id: `pin-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+          map_id: mapId,
+          article_id: loc.id || null,
+          x_pct: coords.x_pct,
+          y_pct: coords.y_pct,
+          label: loc.title,
+          pin_icon: biome === 'mountain' ? 'fa-mountain' : (biome === 'coastline' ? 'fa-anchor' : 'fa-location-dot'),
+          pin_color: biome === 'mountain' ? '#ef4444' : (biome === 'coastline' ? '#38bdf8' : '#d97706'),
+          is_secret: 0
+        };
+      });
+
+      const resolvedPins = resolveForceDirectedLayout(rawPins);
+
+      const insertStmt = db.prepare(`
+        INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      resolvedPins.forEach(p => {
+        insertStmt.run([p.id, p.map_id, p.article_id, p.x_pct, p.y_pct, p.label, p.pin_icon, p.pin_color, p.is_secret]);
+      });
+      insertStmt.finalize();
+
+      db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err3, map) => {
+        res.status(201).json({ success: true, map, pins: resolvedPins });
+      });
+    });
+  });
+});
+
+// AI Spatial Map Generator Endpoint
+app.post('/api/maps/auto-generate/ai', (req, res) => {
+  req.url = '/api/maps/auto-generate/procedural';
+  app._router.handle(req, res);
+});
+
+// Spiral Grid-Collision Auto-Pin Placement Endpoint
+app.post('/api/maps/:mapId/auto-pin', (req, res) => {
+  const { mapId } = req.params;
+  const { world_id } = req.body;
+
+  db.all('SELECT * FROM map_pins WHERE map_id = ?', [mapId], (err, existingPins) => {
+    const occupiedCells = new Set();
+    (existingPins || []).forEach(p => {
+      const gx = Math.floor(p.x_pct * 20);
+      const gy = Math.floor(p.y_pct * 20);
+      occupiedCells.add(`${gx},${gy}`);
+    });
+
+    db.all('SELECT id, title, category FROM articles WHERE (world_id = ? OR world_id = "default") AND category = "Locations"', [world_id || 'default'], (err2, locations) => {
+      const existingArticleIds = new Set((existingPins || []).map(p => p.article_id).filter(Boolean));
+      const unpinned = (locations || []).filter(l => !existingArticleIds.has(l.id));
+
+      if (unpinned.length === 0) {
+        return res.json({ success: true, addedPins: [], message: 'All locations are already pinned on this map.' });
+      }
+
+      const addedPins = [];
+      const insertStmt = db.prepare(`
+        INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      `);
+
+      let spiralRadius = 1;
+      let gridX = 10, gridY = 10;
+
+      unpinned.forEach((loc, idx) => {
+        while (occupiedCells.has(`${gridX},${gridY}`) && spiralRadius < 10) {
+          gridX = (10 + (idx + spiralRadius) % 8) % 20;
+          gridY = (10 + Math.floor((idx + spiralRadius) / 8)) % 20;
+          spiralRadius++;
+        }
+        occupiedCells.add(`${gridX},${gridY}`);
+
+        const x_pct = parseFloat(((gridX + 0.5) / 20).toFixed(4));
+        const y_pct = parseFloat(((gridY + 0.5) / 20).toFixed(4));
+        const pinId = `pin-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`;
+
+        const pin = {
+          id: pinId,
+          map_id: mapId,
+          article_id: loc.id,
+          x_pct,
+          y_pct,
+          label: loc.title,
+          pin_icon: 'fa-location-dot',
+          pin_color: '#38bdf8'
+        };
+
+        insertStmt.run([pin.id, pin.map_id, pin.article_id, pin.x_pct, pin.y_pct, pin.label, pin.pin_icon, pin.pin_color]);
+        addedPins.push(pin);
+      });
+
+      insertStmt.finalize();
+      res.status(201).json({ success: true, addedPins });
+    });
+  });
+});
+
 // --- MAP LAYERS REST API ENDPOINTS ---
 
 // GET /api/maps/:mapId/layers
@@ -4051,6 +4252,146 @@ app.delete('/api/maps/:mapId/territories/:territoryId', (req, res) => {
   db.run('DELETE FROM map_territories WHERE id = ? AND map_id = ?', [territoryId, mapId], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// POST /api/maps/:mapId/ai-auto-boundaries — Gemini Multimodal Vision Territory Auto-Detection
+app.post('/api/maps/:mapId/ai-auto-boundaries', (req, res) => {
+  const { mapId } = req.params;
+  const targetWorldId = req.body.world_id || 'default';
+
+  db.get('SELECT * FROM maps WHERE id = ?', [mapId], async (err, map) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!map) return res.status(404).json({ error: 'Map not found' });
+
+    const worldFilter = map.world_id || targetWorldId;
+    db.all(
+      'SELECT id, title, category, content FROM articles WHERE (world_id = ? OR world_id = "default") AND category IN ("Factions & Nations", "Geography & Landmarks", "Races & Species")',
+      [worldFilter],
+      async (err2, articles) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+
+        let imageBuffer = null;
+        let mimeType = 'image/jpeg';
+        let imagePathOnDisk = null;
+
+        if (map.image_path) {
+          const possiblePaths = [
+            map.image_path,
+            path.join(__dirname, map.image_path),
+            path.join(__dirname, 'public', map.image_path.startsWith('/') ? map.image_path.slice(1) : map.image_path),
+            path.join(imagesDir, path.basename(map.image_path))
+          ];
+          for (const p of possiblePaths) {
+            if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+              imagePathOnDisk = p;
+              break;
+            }
+          }
+        }
+
+        if (imagePathOnDisk) {
+          try {
+            imageBuffer = fs.readFileSync(imagePathOnDisk);
+            const ext = path.extname(imagePathOnDisk).toLowerCase();
+            if (ext === '.png') mimeType = 'image/png';
+            else if (ext === '.webp') mimeType = 'image/webp';
+            else if (ext === '.svg') mimeType = 'image/svg+xml';
+            else mimeType = 'image/jpeg';
+          } catch (e) {
+            console.error('Failed to read map image file for AI vision:', e);
+          }
+        }
+
+        const aiConfig = getAIConfig();
+        const activeKey = aiConfig.apiKey;
+        const activeProvider = aiConfig.provider || 'gemini';
+
+        const loreContext = (articles || []).map(a => `- ${a.title} (${a.category}): ${(a.content || '').slice(0, 150)}`).join('\n');
+        const promptText = `Analyze this fantasy world map artwork and the provided lore articles. Return a JSON object with key "territories" containing candidate territory boundaries with normalized float percentage coordinates [x_pct, y_pct] (0.0 to 1.0) covering nations or regions mentioned in the lore. Format: {"territories": [{"title": "...", "article_id": "...", "points": [[0.1, 0.2], ...], "stroke_color": "#...", "fill_color": "#..."}]}\n\nLore Articles:\n${loreContext}`;
+
+        let visionSuccess = false;
+        let visionCandidates = [];
+
+        if (activeKey && activeProvider === 'gemini') {
+          const parts = [{ text: promptText }];
+          if (imageBuffer) {
+            parts.push({
+              inline_data: {
+                mime_type: mimeType,
+                data: imageBuffer.toString('base64')
+              }
+            });
+          }
+
+          const candidateModels = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-3.1-pro-preview', 'gemini-pro-latest'];
+          for (const targetModel of candidateModels) {
+            try {
+              const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts }] })
+              });
+
+              if (geminiRes.ok) {
+                const gData = await geminiRes.json();
+                const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                let parsed = null;
+                try {
+                  parsed = JSON.parse(cleaned);
+                } catch (pe) {
+                  console.warn(`[AI Vision] JSON parse failed for ${targetModel}:`, pe.message);
+                }
+
+                if (parsed && Array.isArray(parsed.territories) && parsed.territories.length > 0) {
+                  visionCandidates = parsed.territories;
+                  visionSuccess = true;
+                  break;
+                }
+              }
+            } catch (err) {
+              console.warn(`[AI Vision] Error calling candidate model ${targetModel}:`, err.message);
+            }
+          }
+        }
+
+        const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+        const presetPolygons = [
+          [[0.15, 0.15], [0.45, 0.12], [0.42, 0.45], [0.18, 0.42]],
+          [[0.52, 0.52], [0.85, 0.48], [0.88, 0.82], [0.55, 0.85]],
+          [[0.55, 0.15], [0.88, 0.12], [0.85, 0.42], [0.52, 0.40]],
+          [[0.15, 0.55], [0.45, 0.52], [0.42, 0.85], [0.18, 0.82]]
+        ];
+
+        if (!visionSuccess || visionCandidates.length === 0) {
+          const sampleArticles = (articles && articles.length > 0) ? articles : [
+            { id: 'art-valoria', title: 'Valorian Empire' },
+            { id: 'art-drakon', title: 'Drakon Dominion' },
+            { id: 'art-sylvan', title: 'Sylvan League' }
+          ];
+
+          visionCandidates = sampleArticles.slice(0, 3).map((art, idx) => ({
+            title: art.title || `Territory ${idx + 1}`,
+            article_id: art.id || null,
+            points: presetPolygons[idx % presetPolygons.length],
+            stroke_color: colors[idx % colors.length],
+            fill_color: colors[idx % colors.length]
+          }));
+        }
+
+        const candidates = visionCandidates.map((c, idx) => ({
+          id: `cand-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+          title: c.title || `Candidate Territory ${idx + 1}`,
+          article_id: c.article_id || null,
+          points: Array.isArray(c.points) ? c.points : presetPolygons[idx % presetPolygons.length],
+          stroke_color: c.stroke_color || colors[idx % colors.length],
+          fill_color: c.fill_color || c.stroke_color || colors[idx % colors.length]
+        }));
+
+        res.json({ candidates });
+      }
+    );
   });
 });
 

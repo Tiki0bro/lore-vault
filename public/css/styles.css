@@ -5644,3 +5644,162 @@ body[data-mode="light"] .add-to-slate-btn.added,
   background: rgba(0, 0, 0, 0.03) !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
+
+/* AI Multimodal Vision Boundary Candidates Drawer */
+.atlas-ai-candidates-drawer {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 340px;
+  max-height: calc(100% - 32px);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  z-index: 1005;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #e2e8f0);
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ai-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-drawer-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-primary, #38bdf8);
+}
+
+.ai-drawer-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 420px;
+}
+
+.ai-candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-candidate-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-candidate-card:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.candidate-card-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.candidate-color-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.candidate-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.candidate-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #f8fafc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.candidate-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+.ai-drawer-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* Light Mode Overrides */
+[data-mode="light"] .atlas-ai-candidates-drawer {
+  background: rgba(250, 246, 237, 0.92);
+  border-color: rgba(214, 197, 163, 0.6);
+  box-shadow: 0 8px 32px rgba(44, 34, 30, 0.15);
+  color: #2c221e;
+}
+
+[data-mode="light"] .ai-drawer-header {
+  border-bottom-color: rgba(214, 197, 163, 0.4);
+}
+
+[data-mode="light"] .ai-drawer-header h4 {
+  color: #8b5cf6;
+}
+
+[data-mode="light"] .ai-candidate-card {
+  background: rgba(243, 235, 220, 0.8);
+  border-color: rgba(214, 197, 163, 0.5);
+}
+
+[data-mode="light"] .ai-candidate-card:hover {
+  background: rgba(235, 224, 204, 0.95);
+  border-color: #8b5cf6;
+}
+
+[data-mode="light"] .candidate-card-title {
+  color: #2c221e;
+}
+
+[data-mode="light"] .candidate-card-meta {
+  color: #6b5b52;
+}
+
+[data-mode="light"] .ai-drawer-footer {
+  border-top-color: rgba(214, 197, 163, 0.4);
+  background: rgba(250, 246, 237, 0.95);
+}
+
+.ai-ghost-polygon {
+  stroke-dasharray: 8, 8;
+  animation: ghostPolygonPulse 2s infinite ease-in-out;
+}
+
+@keyframes ghostPolygonPulse {
+  0% { stroke-opacity: 0.6; fill-opacity: 0.2; }
+  50% { stroke-opacity: 1.0; fill-opacity: 0.4; }
+  100% { stroke-opacity: 0.6; fill-opacity: 0.2; }
+}
