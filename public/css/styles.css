@@ -5577,15 +5577,70 @@ body[data-mode="light"] .add-to-slate-btn.added,
 }
 
 /* Light Mode Overrides for Frontpage */
-[data-mode="light"] #view-frontpage {
-  background: #faf6ed;
+
+/* ==========================================
+ * ⚔️ CONTESTED TERRITORY OVERLAP & CONFLICT DRAWER
+ * ========================================== */
+.contested-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
 }
 
-[data-mode="light"] .spotlight-card,
-[data-mode="light"] .metric-chip {
-  background: #faf6ed;
-  border-color: #d6c5a3;
-  color: #2c221e;
+.conflict-faction-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
+.conflict-faction-card .faction-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent-primary, #38bdf8);
+}
 
+.conflict-faction-card .faction-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.ai-draft-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  transition: all 0.2s ease;
+}
+
+.ai-draft-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+}
+
+[data-mode="light"] .contested-badge {
+  background: rgba(220, 38, 38, 0.12) !important;
+  border-color: rgba(220, 38, 38, 0.4) !important;
+  color: #dc2626 !important;
+}
+
+[data-mode="light"] .conflict-faction-card {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}

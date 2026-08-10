@@ -24,6 +24,7 @@ class AtlasView {
     this.markers = [];
     this.tempCoords = null;
     this.isLayersDrawerOpen = false;
+    this.contestedPairs = [];
   }
 
   async init() {
@@ -804,7 +805,9 @@ class AtlasView {
 
       poly.on('click', (e) => {
         if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e);
-        if (this.viewMode === 'dm') {
+        if (t.is_contested) {
+          this.openContestedConflictDrawer(t);
+        } else if (this.viewMode === 'dm') {
           this.selectTerritoryForEditing(t);
         } else {
           this.openArticleDrawer(t.article_id, t.title);
@@ -813,6 +816,316 @@ class AtlasView {
 
       this.territoryPolygons.push(poly);
     });
+
+    this.injectSvgPatterns();
+    this.checkTerritoryIntersections();
+  }
+
+  injectSvgPatterns() {
+    if (!this.mapInstance) return;
+    const container = document.getElementById(this.containerId);
+    const svg = container ? container.querySelector('svg') : document.querySelector('.leaflet-container svg');
+    if (!svg) return;
+
+    let defs = svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    if (!defs.querySelector('#pattern-stripe')) {
+      const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+      pattern.setAttribute('id', 'pattern-stripe');
+      pattern.setAttribute('width', '12');
+      pattern.setAttribute('height', '12');
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+      pattern.setAttribute('patternTransform', 'rotate(45)');
+      pattern.innerHTML = `
+        <line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" />
+        <line x1="6" y1="0" x2="6" y2="12" stroke="#f59e0b" stroke-width="4" opacity="0.6" />
+      `;
+      defs.appendChild(pattern);
+    }
+  }
+
+  checkTerritoryIntersections() {
+    this.contestedPairs = [];
+
+    const getBBox = (pts) => {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      pts.forEach(p => {
+        if (p[0] < minX) minX = p[0];
+        if (p[0] > maxX) maxX = p[0];
+        if (p[1] < minY) minY = p[1];
+        if (p[1] > maxY) maxY = p[1];
+      });
+      return { minX, maxX, minY, maxY };
+    };
+
+    const segmentsIntersect = (p1, q1, p2, q2) => {
+      const ccw = (a, b, c) => (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0]);
+      return (ccw(p1, p2, q2) !== ccw(q1, p2, q2)) && (ccw(p1, q1, p2) !== ccw(p1, q1, q2));
+    };
+
+    const pointInPoly = (point, pts) => {
+      const x = point[0], y = point[1];
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i][0], yi = pts[i][1];
+        const xj = pts[j][0], yj = pts[j][1];
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const doPolysIntersect = (pts1, pts2) => {
+      const b1 = getBBox(pts1);
+      const b2 = getBBox(pts2);
+      if (b1.maxX < b2.minX || b1.minX > b2.maxX || b1.maxY < b2.minY || b1.minY > b2.maxY) {
+        return false;
+      }
+      for (let i = 0; i < pts1.length; i++) {
+        const p1 = pts1[i];
+        const q1 = pts1[(i + 1) % pts1.length];
+        for (let j = 0; j < pts2.length; j++) {
+          const p2 = pts2[j];
+          const q2 = pts2[(j + 1) % pts2.length];
+          if (segmentsIntersect(p1, q1, p2, q2)) return true;
+        }
+      }
+      if (pts1.some(pt => pointInPoly(pt, pts2))) return true;
+      if (pts2.some(pt => pointInPoly(pt, pts1))) return true;
+      return false;
+    };
+
+    const hiddenLayerIds = new Set(this.layers.filter(l => !l.is_visible).map(l => l.id));
+    const visibleTerritories = this.territories.filter(t => !t.layer_id || !hiddenLayerIds.has(t.layer_id));
+
+    visibleTerritories.forEach(t => { t.is_contested = false; });
+
+    for (let i = 0; i < visibleTerritories.length; i++) {
+      for (let j = i + 1; j < visibleTerritories.length; j++) {
+        const t1 = visibleTerritories[i];
+        const t2 = visibleTerritories[j];
+
+        let pts1 = [], pts2 = [];
+        try {
+          pts1 = typeof t1.points_json === 'string' ? JSON.parse(t1.points_json) : (t1.points_json || []);
+          pts2 = typeof t2.points_json === 'string' ? JSON.parse(t2.points_json) : (t2.points_json || []);
+        } catch (e) {}
+
+        if (pts1.length >= 3 && pts2.length >= 3) {
+          if (doPolysIntersect(pts1, pts2)) {
+            t1.is_contested = true;
+            t2.is_contested = true;
+            this.contestedPairs.push({ t1, t2 });
+          }
+        }
+      }
+    }
+
+    this.territoryPolygons.forEach(poly => {
+      const terr = visibleTerritories.find(t => t.id === poly._territoryId);
+      if (terr && terr.is_contested) {
+        poly.setStyle({
+          fillColor: 'url(#pattern-stripe)',
+          fillOpacity: Math.max(terr.fill_opacity !== undefined ? terr.fill_opacity : 0.25, 0.45)
+        });
+        if (poly._path && typeof poly._path.setAttribute === 'function') {
+          poly._path.setAttribute('fill', 'url(#pattern-stripe)');
+        }
+      }
+    });
+  }
+
+  getOverlappingTerritories(territory) {
+    const overlapping = [];
+    if (!this.contestedPairs) return overlapping;
+    this.contestedPairs.forEach(pair => {
+      if (pair.t1.id === territory.id) overlapping.push(pair.t2);
+      else if (pair.t2.id === territory.id) overlapping.push(pair.t1);
+    });
+    return overlapping;
+  }
+
+  async openContestedConflictDrawer(territory) {
+    const drawer = document.getElementById('atlas-reader-drawer');
+    const content = document.getElementById('atlas-drawer-content');
+    if (!drawer || !content) return;
+
+    drawer.style.display = 'block';
+    const overlapping = this.getOverlappingTerritories(territory);
+
+    const mainArticle = this.articles.find(a => a.id === territory.article_id);
+
+    let cardsHtml = `
+      <div class="conflict-faction-card">
+        <div class="faction-title"><i class="fa-solid fa-flag"></i> ${territory.title}</div>
+        <div class="faction-meta">
+          ${mainArticle ? `<a href="#" class="conflict-article-link" data-article-id="${mainArticle.id}">📄 ${mainArticle.title}</a>` : '<em>No linked article</em>'}
+        </div>
+      </div>
+    `;
+
+    overlapping.forEach(ov => {
+      const ovArticle = this.articles.find(a => a.id === ov.article_id);
+      cardsHtml += `
+        <div class="conflict-faction-card">
+          <div class="faction-title"><i class="fa-solid fa-flag"></i> ${ov.title}</div>
+          <div class="faction-meta">
+            ${ovArticle ? `<a href="#" class="conflict-article-link" data-article-id="${ovArticle.id}">📄 ${ovArticle.title}</a>` : '<em>No linked article</em>'}
+          </div>
+        </div>
+      `;
+    });
+
+    content.innerHTML = `
+      <div class="contested-detail-drawer">
+        <div class="contested-badge">⚔️ Contested Territory Zone</div>
+        <h3 style="margin:4px 0 12px 0; font-family:var(--font-heading); color:#ef4444;">${territory.title} Overlap</h3>
+        
+        <div class="conflict-factions-container">
+          <label style="font-weight:600; font-size:0.85rem; color:var(--text-secondary); margin-bottom:6px; display:block;">Overlapping Factions & Realms:</label>
+          ${cardsHtml}
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label style="font-weight:600; font-size:0.85rem; color:var(--text-secondary);">Linked Border War / Conflict Article:</label>
+          <select id="contested-article-select" class="form-control" style="margin-top:4px;">
+            <option value="">-- None (Unlinked Conflict) --</option>
+            ${this.articles.map(a => `<option value="${a.id}" ${territory.contested_article_id === a.id ? 'selected' : ''}>${a.title} (${a.category || 'General'})</option>`).join('')}
+          </select>
+          <button id="save-contested-article-btn" class="tool-btn btn-sm" style="margin-top:8px; width:100%;"><i class="fa-solid fa-link"></i> Save Conflict Link</button>
+        </div>
+
+        <div class="ai-conflict-generator" style="margin-top:16px;">
+          <button id="ai-draft-conflict-btn" class="tool-btn primary ai-draft-btn full-width">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 🤖 AI Draft Border Conflict History
+          </button>
+          <div id="ai-draft-conflict-output" style="margin-top:12px; display:none; padding:12px; background:rgba(0,0,0,0.2); border:1px dashed var(--border-color); border-radius:6px; font-size:0.85rem; line-height:1.5;"></div>
+        </div>
+
+        ${territory.contested_article_id ? `
+          <div class="linked-conflict-preview" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
+            <button id="view-linked-conflict-article-btn" class="tool-btn full-width"><i class="fa-solid fa-book-open"></i> Read Linked Conflict Article</button>
+          </div>
+        ` : ''}
+
+        ${this.viewMode === 'dm' ? `
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
+            <button id="edit-contested-props-btn" class="tool-btn full-width"><i class="fa-solid fa-pen"></i> Edit Territory Properties</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    // Event listeners
+    content.querySelectorAll('.conflict-article-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const artId = link.getAttribute('data-article-id');
+        if (artId) this.openArticleDrawer(artId, 'Lore Article');
+      });
+    });
+
+    const saveConflictBtn = document.getElementById('save-contested-article-btn');
+    if (saveConflictBtn) {
+      saveConflictBtn.addEventListener('click', async () => {
+        const select = document.getElementById('contested-article-select');
+        const selectedArtId = select ? select.value : null;
+        try {
+          const res = await fetch(`/api/maps/${this.currentMap.id}/territories/${territory.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contested_article_id: selectedArtId || null })
+          });
+          const data = await res.json();
+          if (data.territory || data.success) {
+            territory.contested_article_id = selectedArtId || null;
+            alert('Linked conflict article saved!');
+          }
+        } catch (e) {
+          alert('Failed to save conflict link.');
+        }
+      });
+    }
+
+    const aiDraftBtn = document.getElementById('ai-draft-conflict-btn');
+    const aiOutput = document.getElementById('ai-draft-conflict-output');
+    if (aiDraftBtn && aiOutput) {
+      aiDraftBtn.addEventListener('click', async () => {
+        aiOutput.style.display = 'block';
+        aiOutput.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating 2-paragraph WorldAnvil border war history via Gemini AI...`;
+        
+        const otherTitle = overlapping.length ? overlapping[0].title : 'Neighboring Realm';
+        const draftTitle = `Border Conflict: ${territory.title} vs ${otherTitle}`;
+
+        try {
+          // 1. Call Gemini AI stub generator
+          const stubRes = await fetch('/api/audit/flesh-out-stub', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: draftTitle,
+              category: 'Military & History',
+              genre: 'High Fantasy'
+            })
+          });
+          const stubData = await stubRes.json();
+          const draftContent = stubData.content;
+
+          // 2. Save created conflict article
+          const artRes = await fetch('/api/articles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: draftTitle,
+              category: 'Military & History',
+              content: draftContent
+            })
+          });
+          const artData = await artRes.json();
+          const newArticleId = (artData.article && artData.article.id) || artData.id || stubData.id;
+
+          // 3. Link new article to territory
+          if (newArticleId && this.currentMap) {
+            await fetch(`/api/maps/${this.currentMap.id}/territories/${territory.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contested_article_id: newArticleId })
+            });
+            territory.contested_article_id = newArticleId;
+          }
+
+          // Refresh articles list
+          await this.fetchArticles();
+
+          // Render response in drawer
+          aiOutput.innerHTML = `
+            <div style="color:var(--accent-primary, #38bdf8); font-weight:bold; margin-bottom:8px;">✅ Border War Article Drafted & Linked!</div>
+            <div class="article-body-mini" style="white-space:pre-wrap;">${draftContent}</div>
+          `;
+        } catch (e) {
+          aiOutput.innerHTML = `<span style="color:#ef4444;">Failed to generate AI conflict history: ${e.message}</span>`;
+        }
+      });
+    }
+
+    const viewLinkedBtn = document.getElementById('view-linked-conflict-article-btn');
+    if (viewLinkedBtn) {
+      viewLinkedBtn.addEventListener('click', () => {
+        if (territory.contested_article_id) {
+          this.openArticleDrawer(territory.contested_article_id, 'Border Conflict Article');
+        }
+      });
+    }
+
+    const editPropsBtn = document.getElementById('edit-contested-props-btn');
+    if (editPropsBtn) {
+      editPropsBtn.addEventListener('click', () => {
+        this.openTerritoryModal(territory);
+      });
+    }
   }
 
   selectTerritoryForEditing(territory) {
