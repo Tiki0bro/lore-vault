@@ -41,6 +41,20 @@ class AtlasView {
     this.activeRouteVertexMarkers = [];
     this.selectedRoute = null;
     this.editingRouteId = null;
+    this.genPreset = 'pangaea';
+    this.genTheme = 'parchment';
+    this.genSeed = 12345;
+    this.cartographyEngine = null;
+  }
+
+  getCartographyEngine() {
+    if (!this.cartographyEngine) {
+      const EngineClass = (typeof window !== 'undefined' && window.PerlinCartographyEngine) || (typeof PerlinCartographyEngine !== 'undefined' ? PerlinCartographyEngine : null);
+      if (EngineClass) {
+        this.cartographyEngine = new EngineClass();
+      }
+    }
+    return this.cartographyEngine;
   }
 
   async init() {
@@ -463,6 +477,92 @@ class AtlasView {
         </div>
       </div>
 
+      <div id="atlas-generate-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card atlas-gen-modal-card">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Procedural Map</h3>
+            <button id="close-gen-modal-btn" class="drawer-close-btn">&times;</button>
+          </div>
+          <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+            <div class="form-group">
+              <label for="gen-map-title" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Title</label>
+              <input type="text" id="gen-map-title" class="form-control" value="Procedural Realm Map" placeholder="Enter map title...">
+            </div>
+
+            <div class="form-group">
+              <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Geography Preset</label>
+              <div class="gen-preset-grid">
+                <div class="gen-preset-card active" data-preset="pangaea">
+                  <div class="preset-icon">🌋</div>
+                  <div class="preset-details">
+                    <div class="preset-title">Pangaea</div>
+                    <div class="preset-desc">Single massive continent surrounded by ocean</div>
+                  </div>
+                </div>
+                <div class="gen-preset-card" data-preset="archipelago">
+                  <div class="preset-icon">🏝️</div>
+                  <div class="preset-details">
+                    <div class="preset-title">Archipelago</div>
+                    <div class="preset-desc">Scattered island chains & maritime passages</div>
+                  </div>
+                </div>
+                <div class="gen-preset-card" data-preset="inland_sea">
+                  <div class="preset-icon">🌊</div>
+                  <div class="preset-details">
+                    <div class="preset-title">Inland Sea</div>
+                    <div class="preset-desc">Ring of land surrounding a central sea</div>
+                  </div>
+                </div>
+                <div class="gen-preset-card" data-preset="mountain_fjords">
+                  <div class="preset-icon">🏔️</div>
+                  <div class="preset-details">
+                    <div class="preset-title">Mountain Fjords</div>
+                    <div class="preset-desc">Glacial valley coastlines & rugged peaks</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Cartography Aesthetic Theme</label>
+              <div class="gen-theme-chips">
+                <div class="gen-theme-chip active" data-theme="parchment">
+                  <span>📜 Vintage Parchment</span>
+                </div>
+                <div class="gen-theme-chip" data-theme="void">
+                  <span>🌌 Void Starlight</span>
+                </div>
+                <div class="gen-theme-chip" data-theme="emerald">
+                  <span>🌿 Emerald Realm</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label style="font-weight:600; font-size:0.9rem; margin:0;">Live Map Preview</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <label for="gen-seed-input" style="font-size:0.85rem; color:var(--text-muted);">Seed:</label>
+                  <input type="number" id="gen-seed-input" class="form-control" value="12345" style="width:100px; padding:4px 8px; font-size:0.85rem;">
+                  <button id="gen-reroll-seed-btn" class="tool-btn btn-sm"><i class="fa-solid fa-dice"></i> 🎲 Reroll Seed</button>
+                </div>
+              </div>
+              <div class="gen-preview-container" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:8px; display:flex; justify-content:center; align-items:center;">
+                <canvas id="gen-preview-canvas" width="400" height="225" style="width:100%; max-width:400px; height:auto; aspect-ratio:16/9; border-radius:4px; border:1px solid rgba(255,255,255,0.1);"></canvas>
+              </div>
+            </div>
+
+            <div id="gen-modal-status" style="display:none; color:var(--accent-gold); font-size:0.9rem; align-items:center; gap:8px;">
+              <i class="fa-solid fa-spinner fa-spin"></i> Generating 1920x1080 high-res cartography & uploading map...
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button id="cancel-gen-modal-btn" class="tool-btn">Cancel</button>
+            <button id="submit-gen-modal-btn" class="tool-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Map</button>
+          </div>
+        </div>
+      </div>
+
     `;
 
     this.bindEvents();
@@ -544,7 +644,62 @@ class AtlasView {
 
     const autoGenBtn = document.getElementById('atlas-auto-gen-btn');
     if (autoGenBtn) {
-      autoGenBtn.addEventListener('click', () => this.autoGenerateMap());
+      autoGenBtn.addEventListener('click', () => this.openGeneratorModal());
+    }
+
+    const modalGen = document.getElementById('atlas-generate-modal');
+    const closeGenModalBtn = document.getElementById('close-gen-modal-btn');
+    const cancelGenModalBtn = document.getElementById('cancel-gen-modal-btn');
+    if (closeGenModalBtn && modalGen) {
+      closeGenModalBtn.addEventListener('click', () => { modalGen.style.display = 'none'; });
+    }
+    if (cancelGenModalBtn && modalGen) {
+      cancelGenModalBtn.addEventListener('click', () => { modalGen.style.display = 'none'; });
+    }
+
+    const submitGenModalBtn = document.getElementById('submit-gen-modal-btn');
+    if (submitGenModalBtn) {
+      submitGenModalBtn.addEventListener('click', () => this.submitGeneratorModal());
+    }
+
+    const rerollSeedBtn = document.getElementById('gen-reroll-seed-btn');
+    if (rerollSeedBtn) {
+      rerollSeedBtn.addEventListener('click', () => {
+        this.genSeed = Math.floor(Math.random() * 900000) + 10000;
+        const seedInput = document.getElementById('gen-seed-input');
+        if (seedInput) seedInput.value = this.genSeed;
+        this.updateGeneratorPreview();
+      });
+    }
+
+    const seedInput = document.getElementById('gen-seed-input');
+    if (seedInput) {
+      seedInput.addEventListener('input', (e) => {
+        this.genSeed = parseInt(e.target.value, 10) || 12345;
+        this.updateGeneratorPreview();
+      });
+    }
+
+    if (modalGen) {
+      const presetCards = modalGen.querySelectorAll('.gen-preset-card');
+      presetCards.forEach(card => {
+        card.addEventListener('click', () => {
+          presetCards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          this.genPreset = card.getAttribute('data-preset') || 'pangaea';
+          this.updateGeneratorPreview();
+        });
+      });
+
+      const themeChips = modalGen.querySelectorAll('.gen-theme-chip');
+      themeChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          themeChips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          this.genTheme = chip.getAttribute('data-theme') || 'parchment';
+          this.updateGeneratorPreview();
+        });
+      });
     }
 
     const autoPinBtn = document.getElementById('atlas-auto-pin-btn');
@@ -769,26 +924,96 @@ class AtlasView {
     this.renderPinsOnCanvas();
   }
 
-  async autoGenerateMap() {
-    const title = prompt('Enter a title for the auto-generated map:', 'Procedural Realm Map');
-    if (!title) return;
+  openGeneratorModal() {
+    const modal = document.getElementById('atlas-generate-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      this.updateGeneratorPreview();
+    }
+  }
+
+  updateGeneratorPreview() {
+    const canvas = document.getElementById('gen-preview-canvas');
+    if (!canvas) return;
+    const engine = this.getCartographyEngine();
+    if (engine) {
+      engine.renderToCanvas(canvas, {
+        seed: this.genSeed,
+        preset: this.genPreset,
+        theme: this.genTheme
+      });
+    }
+  }
+
+  async submitGeneratorModal() {
+    const titleInput = document.getElementById('gen-map-title');
+    const title = titleInput ? titleInput.value.trim() : 'Procedural Realm Map';
+    const statusEl = document.getElementById('gen-modal-status');
+    const submitBtn = document.getElementById('submit-gen-modal-btn');
+    if (statusEl) statusEl.style.display = 'flex';
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const res = await fetch('/api/maps/auto-generate/procedural', {
+      const engine = this.getCartographyEngine();
+      let offscreenCanvas = null;
+      if (typeof document !== 'undefined' && document.createElement) {
+        offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = 1920;
+        offscreenCanvas.height = 1080;
+      }
+
+      if (engine && offscreenCanvas) {
+        engine.renderToCanvas(offscreenCanvas, {
+          seed: this.genSeed,
+          preset: this.genPreset,
+          theme: this.genTheme
+        });
+      }
+
+      let blob = null;
+      if (engine && offscreenCanvas) {
+        blob = await engine.exportToBlob(offscreenCanvas);
+      }
+      if (!blob) {
+        blob = new Blob(['mock-image-data'], { type: 'image/png' });
+      }
+
+      const formData = new FormData();
+      formData.append('world_id', this.worldId);
+      formData.append('title', title || 'Procedural Realm Map');
+      formData.append('preset', this.genPreset);
+      formData.append('theme', this.genTheme);
+      formData.append('seed', this.genSeed);
+      formData.append('image', blob, 'procedural-map.png');
+
+      const res = await fetch('/api/maps/generate/procedural', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ world_id: this.worldId, title })
+        body: formData
       });
+
       const data = await res.json();
-      if (data.success) {
-        alert(`Map "${data.map.title}" generated successfully with ${data.pins.length} location markers!`);
+      if (data.success && data.map) {
+        const modal = document.getElementById('atlas-generate-modal');
+        if (modal) modal.style.display = 'none';
         await this.fetchMaps();
         this.renderLayout();
-        this.loadMap(data.map.id);
+        if (data.map.id) {
+          await this.loadMap(data.map.id);
+        }
+      } else {
+        alert((data && data.error) ? data.error : 'Failed to generate map.');
       }
-    } catch (e) {
-      alert('Failed to auto-generate map.');
+    } catch (err) {
+      console.error('Error submitting generator modal:', err);
+      alert('Error generating map.');
+    } finally {
+      if (statusEl) statusEl.style.display = 'none';
+      if (submitBtn) submitBtn.disabled = false;
     }
+  }
+
+  autoGenerateMap() {
+    this.openGeneratorModal();
   }
 
   async autoPlacePins() {
