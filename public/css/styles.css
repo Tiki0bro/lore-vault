@@ -5129,22 +5129,37 @@ body[data-mode="light"] .add-to-slate-btn.added,
 
 #view-atlas.active {
   display: flex !important;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+#atlas-app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .atlas-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 16px;
   background: var(--surface-sidebar, #0f172a);
   border-bottom: 1px solid var(--border-color, #1e293b);
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .atlas-toolbar-left, .atlas-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .atlas-toast {
@@ -5162,7 +5177,8 @@ body[data-mode="light"] .add-to-slate-btn.added,
 #atlas-viewport {
   display: flex;
   flex: 1;
-  height: calc(100% - 52px);
+  height: 0;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }
@@ -6156,12 +6172,87 @@ a.breadcrumb-item:hover {
 @keyframes pinHighlightGlow {
   0% {
     filter: drop-shadow(0 0 4px #f59e0b) drop-shadow(0 0 10px #f59e0b);
-    transform: scale(1);
-  }
-  100% {
-    filter: drop-shadow(0 0 10px #f59e0b) drop-shadow(0 0 20px #f59e0b);
-    transform: scale(1.15);
-  }
+/* ==========================================
+ * ⏳ WORLD CHRONOLOGY TIMELINE ENGINE STYLING
+ * ========================================== */
+#view-timeline {
+  display: none;
+  width: 100%;
+  height: calc(100vh - 56px);
+  background: var(--bg-main, #0b0f19);
+  overflow-y: auto;
 }
+
+#view-timeline.active {
+  display: block !important;
+}
+
+.timeline-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border-color, #1e293b);
+  padding-bottom: 16px;
+}
+
+.timeline-track {
+  position: relative;
+  border-left: 2px solid var(--accent-amber, #f59e0b);
+  margin-left: 20px;
+  padding-left: 28px;
+}
+
+.timeline-card {
+  position: relative;
+  background: var(--surface-card, #0f172a);
+  border: 1px solid var(--border-color, #1e293b);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.timeline-card-node {
+  position: absolute;
+  left: -35px;
+  top: 24px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-amber, #f59e0b);
+  border: 3px solid var(--bg-main, #0b0f19);
+  box-shadow: 0 0 8px var(--accent-amber, #f59e0b);
+}
+
+.timeline-card-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.epoch-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber, #f59e0b);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.year-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-primary, #38bdf8);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
 
 

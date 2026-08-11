@@ -1,6 +1,7 @@
 /**
  * Interactive Lore Knowledge Graph Viewer
  * Visualizes cross-references between characters, locations, factions, species, and magic lore.
+ * Includes interactive category filter chips for node filtering.
  */
 
 class LoreGraph {
@@ -9,14 +10,18 @@ class LoreGraph {
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
     this.nodes = [];
+    this.allNodes = [];
     this.links = [];
+    this.allLinks = [];
     this.hoveredNode = null;
     this.selectedNode = null;
+    this.activeFilter = 'all';
 
     this.categoryColors = {
       'Characters': '#38bdf8',
       'Locations': '#4ade80',
       'Factions': '#f43f5e',
+      'Races & Species': '#a855f7',
       'Species': '#a855f7',
       'Magic & Tech': '#fbbf24',
       'History': '#ec4899',
@@ -24,7 +29,58 @@ class LoreGraph {
       'Default': '#94a3b8'
     };
 
+    this.categoryIcons = {
+      'Characters': '👤',
+      'Locations': '🏰',
+      'Factions': '🛡️',
+      'Races & Species': '🧬',
+      'Magic & Tech': '🔮',
+      'History': '📜',
+      'Items': '⚔️'
+    };
+
+    this.primaryCategories = [
+      'Characters',
+      'Locations',
+      'Factions',
+      'Races & Species',
+      'Magic & Tech',
+      'History',
+      'Items'
+    ];
+
     this.initEvents();
+    this.renderFilterChips();
+  }
+
+  /**
+   * Renders the 8 filter chips (All Nodes + 7 primary categories)
+   * into the #graph-category-filters container.
+   */
+  renderFilterChips() {
+    const container = document.getElementById('graph-category-filters');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // "All Nodes" chip
+    const allChip = document.createElement('button');
+    allChip.className = 'graph-filter-chip active';
+    allChip.textContent = '🌐 All Nodes';
+    allChip.dataset.category = 'all';
+    allChip.addEventListener('click', () => this.filterNodesByCategory('all'));
+    container.appendChild(allChip);
+
+    // 7 primary category chips
+    this.primaryCategories.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.className = 'graph-filter-chip';
+      chip.dataset.category = cat;
+      const icon = this.categoryIcons[cat] || '📄';
+      chip.textContent = `${icon} ${cat}`;
+      chip.addEventListener('click', () => this.filterNodesByCategory(cat));
+      container.appendChild(chip);
+    });
   }
 
   setData(nodes, links) {
@@ -36,7 +92,7 @@ class LoreGraph {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    this.nodes = nodes.map((node, i) => {
+    this.allNodes = nodes.map((node, i) => {
       const angle = (i / nodes.length) * 2 * Math.PI;
       return {
         ...node,
@@ -48,14 +104,72 @@ class LoreGraph {
       };
     });
 
+    this.allLinks = links.map(link => ({
+      source: link.source,
+      target: link.target
+    }));
+
+    // Apply current filter
+    this.applyFilter();
+  }
+
+  /**
+   * Filters visible graph nodes by category.
+   * Updates the graph simulation/physics without re-instantiating full canvas.
+   * @param {string} category - Category name or 'all' for all nodes.
+   */
+  filterNodesByCategory(category) {
+    this.activeFilter = category;
+    this.updateFilterChipStates();
+    this.applyFilter();
+  }
+
+  /**
+   * Applies the current activeFilter to node/link datasets and redraws.
+   * Does not re-instantiate the canvas — only updates visible datasets.
+   */
+  applyFilter() {
+    if (this.activeFilter === 'all') {
+      this.nodes = [...this.allNodes];
+    } else {
+      this.nodes = this.allNodes.filter(n => n.category === this.activeFilter);
+    }
+
+    // Build nodeMap from visible nodes
     this.nodeMap = new Map(this.nodes.map(n => [n.id, n]));
 
-    this.links = links.map(link => ({
-      source: this.nodeMap.get(link.source),
-      target: this.nodeMap.get(link.target)
-    })).filter(l => l.source && l.target);
+    // Filter links to only those connecting visible nodes
+    this.links = this.allLinks
+      .map(link => ({
+        source: this.nodeMap.get(link.source),
+        target: this.nodeMap.get(link.target)
+      }))
+      .filter(l => l.source && l.target);
+
+    // Clear hovered state if filtered out
+    if (this.hoveredNode && !this.nodeMap.has(this.hoveredNode.id)) {
+      this.hoveredNode = null;
+      this.canvas.style.cursor = 'default';
+    }
 
     this.animate();
+  }
+
+  /**
+   * Updates the active state CSS classes on graph filter chip buttons.
+   */
+  updateFilterChipStates() {
+    const container = document.getElementById('graph-category-filters');
+    if (!container) return;
+
+    const chips = container.querySelectorAll('.graph-filter-chip');
+    chips.forEach(chip => {
+      if (chip.dataset.category === this.activeFilter) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
   }
 
   animate() {

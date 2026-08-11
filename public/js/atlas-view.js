@@ -1221,7 +1221,15 @@ class AtlasView {
       zoomSnap: 0.5
     });
 
-    L.imageOverlay(this.currentMap.image_path, bounds).addTo(this.mapInstance);
+    const imgOverlay = L.imageOverlay(this.currentMap.image_path || '/uploads/images/default-map.png', bounds).addTo(this.mapInstance);
+    if (imgOverlay && typeof imgOverlay.getElement === 'function' && imgOverlay.getElement()) {
+      imgOverlay.getElement().onerror = () => {
+        console.warn(`[Atlas] Map image '${this.currentMap.image_path}' failed to load. Falling back to default map.`);
+        if (typeof imgOverlay.setUrl === 'function') {
+          imgOverlay.setUrl('/uploads/images/default-map.png');
+        }
+      };
+    }
     this.mapInstance.fitBounds(bounds);
 
     this.mapInstance.on('click', (e) => {

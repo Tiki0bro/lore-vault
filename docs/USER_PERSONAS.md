@@ -170,10 +170,76 @@ This document contains the primary user personas established for **LoreWeaver**.
 
 ---
 
+## 🤖 8. Grant Harlow — AI-Forward Novelist & Tech Enthusiast
+
+> *"AI is a creative multiplier. I want every possible workflow — brainstorming, outlining, drafting, editing, consistency checking — to have an AI-assisted path. If there's a manual step left, I want to know why it hasn't been automated yet."*
+
+### Background & Profile
+* **Role**: Fantasy & Sci-Fi novelist and independent author with a strong software engineering background.
+* **Environment**: Uses multiple AI services (OpenAI, Anthropic, Google, Mistral, local models), follows AI product launches obsessively (reads changelogs, benchmarks new models on release day), and actively beta-tests competitor worldbuilding and writing tools.
+* **Core Goal**: Maximise AI integration at every layer of the creative process — from ideation and world generation through drafting, revision, and publishing prep — so that Loreweave becomes a fully AI-native writing platform.
+
+### Key Pain Points
+* **Under-utilised AI Surface Area**: Tools that offer a single "Ask AI" button but lack deep integration into outlining, relationship mapping, timeline generation, and style coaching.
+* **Stale Model Support**: Products that lock into a single LLM provider or lag months behind the latest model releases, missing out on improved context windows, reasoning, and cost reductions.
+* **Manual Bottlenecks**: Any workflow step that requires copy-pasting between tools, manually re-entering context, or hand-curating prompts that the system could assemble automatically.
+* **Competitor Awareness**: Frustrated when Loreweave falls behind features already shipped by rivals (e.g., Sudowrite's story engine, Novelcrafter's codex injection, Campfire's AI integrations).
+
+### Context Builder Wishlist & Requirements
+1. **AI-Everywhere Philosophy**: Expects AI assistance to be woven into every major feature — article generation, relationship inference, timeline suggestions, plot-hole detection, style transfer, and even marketing copy generation.
+2. **Model Agnosticism & Rapid Adoption**: First-class support for swapping between LLM providers and models; automatic adoption of new model releases with minimal configuration.
+3. **Automated Context Assembly**: Zero-click context building — the system should infer which lore, characters, and scenes are relevant based on the user's current task and active document.
+4. **AI Pipeline Transparency**: Full visibility into how context is assembled, what tokens cost, which model is being used, and why certain lore was included or excluded — not a black box.
+5. **Competitive Feature Parity Tracker**: Wants Loreweave to actively track and match (or exceed) AI capabilities offered by competing platforms.
+
+---
+
+## 🖋️ 9. Merryn Ashford — Creative Purist & Craft-First Author
+
+> *"The words on the page need to be mine. I'll happily let a tool organise my notes, catch my plot holes, and keep my timeline straight — but the moment it starts writing my prose, it's overstepped."*
+
+### Background & Profile
+* **Role**: Literary fantasy author and poet focused on voice-driven, character-rich fiction.
+* **Environment**: Prefers distraction-free writing environments, handwritten notebooks for ideation, and structured digital tools for organisation. Uses Scrivener, Obsidian, and spreadsheets for world management.
+* **Core Goal**: A powerful organisational and analytical tool that respects the boundary between *her craft* (prose, dialogue, voice) and *tool assistance* (structure, consistency, search, cross-referencing).
+
+### Key Pain Points
+* **Unwanted Generative AI in the Writing Flow**: Auto-complete suggestions, AI-drafted paragraphs, or "Write for me" buttons that interrupt her creative process and undermine her sense of authorship.
+* **AI-Generated Content Contamination**: Fear that AI-written text will creep into her manuscripts, diluting her voice and raising ethical concerns with publishers and readers.
+* **All-or-Nothing AI Toggle**: Products that force users to either embrace full AI generation or get no AI assistance at all — no middle ground for analytical-only AI use.
+* **Organisational Gaps Without AI**: Non-AI tools that lack the smart cross-referencing, timeline validation, and consistency auditing that would genuinely save her time without touching her prose.
+
+### Context Builder Wishlist & Requirements
+1. **AI-Assisted Organisation (Not Generation)**: Smart tagging, automatic cross-link suggestions, timeline conflict detection, and character relationship mapping — all without generating prose.
+2. **Strict "No-Generate" Mode**: A clear, enforceable setting that disables all generative AI features (drafting, rewriting, auto-complete) while keeping analytical and organisational AI fully active.
+3. **Canon Consistency Auditor**: AI-powered validation that flags contradictions, timeline errors, and relationship inconsistencies across articles — reporting problems, not writing fixes.
+4. **Clean, Distraction-Free UI**: Writing interface that prioritises focus and readability, with AI features tucked away behind intentional user actions rather than surfaced proactively.
+5. **Transparent AI Boundaries**: Clear labelling of which features use generative AI vs. analytical AI, so she can make informed choices about what to enable.
+
+---
+
+## 🔍 10. Arthur "The Griller" Vance — Socratic Architect & Stress Tester ("Grill Me")
+
+> *"If an architecture, lore rule, or feature design can't survive five consecutive 'Why?' questions, it isn't ready for implementation."*
+
+### Background & Profile
+* **Role**: Principal Systems Architect, Socratic Design Auditor, and Narrative Stress-Tester.
+* **Environment**: Architecture reviews, feature spec discussions, worldbuilding lore sanity checks, design gates, and interactive grilling sessions.
+* **Core Goal**: Uncover hidden assumptions, unexamined dependencies, scope creep, and plot holes before code is written or lore is locked in.
+
+### Key Grilling Domains & Interrogation Focus
+1. **The 5-Whys Deep Probe**: Interrogating feature requests down to their root value (*"Why do we need this button? What breaks if we don't build it?"*).
+2. **Edge-Case & Failure-Mode Auditing**: Forcing failure mode definitions upfront (*"What happens if the API times out? What if an article cross-links to itself?"*).
+3. **YAGNI & Complexity Tax**: Challenging over-engineered solutions and calculating ongoing maintenance debt vs. user utility.
+4. **Lore & Narrative Sanity Testing**: Interrogating magic systems, faction motivations, and timeline logic for contradictions.
+5. **Cross-Persona Interrogations**: Stress-testing proposals from Ethen (scope), Grant (AI enthusiasm), Alex (dev complexity), or Merryn (craft boundaries).
+
+---
+
 ## 🛠️ Summary Matrix for Feature & QA Evaluation
 
-| Feature / Consideration | Ethen (PO) | Maya (UI/UX) | Riley (QA / Debugging) | Alex (Developer / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing) |
-|---|---|---|---|---|---|---|---|
-| **Primary Goal** | Balanced Scope & UX | Zero-Overflow & Clean Visual Hierarchy | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality & Lore Distribution |
-| **Primary Interface** | Presets & Progressive UI | Streamlined Navbar & Responsive Grids | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Cross-link Search | Scene Slate & Style Chips | Promo Slates & Excerpt Exports |
-| **Key Metric** | User Adoption & Roadmap | Screen Compliance & Zero Clipping | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates & Conversion |
+| Feature / Consideration | Ethen (PO) | Maya (UI/UX) | Riley (QA) | Alex (Dev / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing) | Grant (AI-Forward) | Merryn (Purist) | Arthur (Grill Me) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Primary Goal** | Balanced Scope & UX | Zero-Overflow & Clean Hierarchy | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality & Lore Distribution | Maximum AI Integration | Craft Ownership & Analytical AI | Expose Assumptions & Stress-Test Designs |
+| **Primary Interface** | Presets & Progressive UI | Streamlined Navbar & Responsive Grids | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Search | Scene Slate & Style Chips | Promo Slates & Excerpt Exports | AI Pipeline & Model Switcher | No-Generate Mode & Auditor | Socratic Q&A & Interactive Grilling |
+| **Key Metric** | User Adoption & Roadmap | Screen Compliance & Zero Clipping | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates & Conversion | AI Feature Coverage | Zero AI Prose & Org Efficiency | Zero Unexamined Assumptions & Robust Specs |

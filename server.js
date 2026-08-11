@@ -228,6 +228,23 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS timeline_events (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      article_id TEXT,
+      title TEXT NOT NULL,
+      epoch_name TEXT DEFAULT 'Common Era',
+      display_year TEXT NOT NULL,
+      sort_order REAL NOT NULL,
+      summary TEXT,
+      is_secret INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE,
+      FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
+    )
+  `);
+
   db.run("ALTER TABLE map_pins ADD COLUMN target_sub_map_id TEXT", (err) => {});
   db.run("ALTER TABLE map_pins ADD COLUMN category TEXT DEFAULT 'Location'", (err) => {});
 
@@ -506,17 +523,22 @@ app.get('/api/worlds', (req, res) => {
 
 // POST /api/worlds - Create new world
 app.post('/api/worlds', (req, res) => {
-  const { name, description, color, theme } = req.body;
+  const { name, description, color, theme, tagline, banner_image } = req.body;
   if (!name) return res.status(400).json({ error: 'World name is required.' });
 
-  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'world-' + Date.now();
+  const id = (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'world') + '-' + Math.random().toString(36).substr(2, 6);
   const hexColor = color || '#' + Math.floor(Math.random()*16777215).toString(16);
   const worldTheme = theme || 'ancient-codex';
 
-  db.run('INSERT INTO worlds (id, name, description, color, theme) VALUES (?, ?, ?, ?, ?)', [id, name, description || '', hexColor, worldTheme], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id, name, description, color: hexColor, theme: worldTheme, message: 'World created successfully!' });
-  });
+  db.run('INSERT INTO worlds (id, name, description, color, theme, tagline, banner_image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, name, description || '', hexColor, worldTheme, tagline || '', banner_image || '/uploads/images/default-banner.png'],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      db.get('SELECT * FROM worlds WHERE id = ?', [id], (err2, world) => {
+        res.status(201).json({ success: true, world: world || { id, name, description, color: hexColor, theme: worldTheme } });
+      });
+    }
+  );
 });
 
 // PUT /api/worlds/:id - Update existing world
@@ -5299,6 +5321,74 @@ app.post('/api/export/atlas/:worldId', (req, res) => {
         res.status(500).json({ error: 'Failed to generate offline HTML bundle', details: err3.message });
       });
     });
+  });
+});
+
+// ====================================================
+// ⏳ TIMELINE CHRONOLOGY ENGINE REST API
+// ====================================================
+
+app.get('/api/worlds/:worldId/timeline', (req, res) => {
+  const { worldId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+
+  let query = 'SELECT * FROM timeline_events WHERE world_id = ? OR world_id = "default"';
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+  query += ' ORDER BY sort_order ASC';
+
+  db.all(query, [worldId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const events = (rows || []).map(ev => ({
+      ...ev,
+      summary: isPlayerMode ? sanitizeSecretContent(ev.summary) : ev.summary
+    }));
+    res.json({ success: true, events });
+  });
+});
+
+app.post('/api/timeline-events', (req, res) => {
+  const { world_id, article_id, title, epoch_name, display_year, sort_order, summary, is_secret } = req.body;
+  if (!title || !display_year) {
+    return res.status(400).json({ error: 'Title and display_year are required' });
+  }
+
+  const id = `ev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const order = sort_order !== undefined ? parseFloat(sort_order) : parseFloat(display_year.replace(/[^0-9.-]/g, '')) || 0;
+
+  const query = `
+    INSERT INTO timeline_events (id, world_id, article_id, title, epoch_name, display_year, sort_order, summary, is_secret)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(query, [id, world_id || 'default', article_id || null, title, epoch_name || 'Common Era', display_year, order, summary || '', is_secret ? 1 : 0], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM timeline_events WHERE id = ?', [id], (err2, ev) => {
+      res.status(201).json({ success: true, event: ev });
+    });
+  });
+});
+
+app.delete('/api/timeline-events/:id', (req, res) => {
+  db.run('DELETE FROM timeline_events WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// ====================================================
+// 🌍 MULTI-WORLD VAULT MANAGER REST API
+// ====================================================
+
+app.delete('/api/worlds/:id', (req, res) => {
+  if (req.params.id === 'default') {
+    return res.status(400).json({ error: 'Cannot delete default world' });
+  }
+
+  db.run('DELETE FROM worlds WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
   });
 });
 

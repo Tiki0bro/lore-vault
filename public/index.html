@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Lora:ital,wght@0,400;0,600;1,400&family=MedievalSharp&family=Orbitron:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- CSS Styles -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css?v=13">
   <link rel="stylesheet" href="css/style.css?v=1">
 </head>
@@ -39,8 +41,13 @@
       <div class="navbar-zone-center">
         <nav class="nav-tabs">
           <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')"><span class="tab-icon">📚</span> Lore Codex</button>
-          <button class="tab-btn" id="tab-studio" onclick="window.switchTab('studio')"><span class="tab-icon">🎬</span> Narrative Slate</button>
+          <button class="tab-btn" id="tab-frontpage" onclick="window.switchTab('frontpage')"><span class="tab-icon">🌐</span> World Frontpage</button>
+          <button class="tab-btn" id="tab-atlas" onclick="window.switchTab('atlas')"><span class="tab-icon">🗺️</span> World Atlas</button>
+          <button class="tab-btn" id="tab-timeline" onclick="window.switchTab('timeline')"><span class="tab-icon">⏳</span> Timeline</button>
+          <button id="narrative-slate-nav-btn" class="nav-tab tab-btn" onclick="switchView('narrative-slate')">📜 Narrative Slate</button>
+
           <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')"><span class="tab-icon">⚡</span> Weave Matrix</button>
+          <button class="tab-btn" id="tab-marketing" onclick="switchView('marketing')"><span class="tab-icon">📢</span> Marketing</button>
         </nav>
       </div>
 
@@ -49,7 +56,7 @@
         <!-- World & Theme Selector Dropdown -->
         <div class="world-theme-container">
           <span class="world-icon">🌍</span>
-          <select id="world-select-dropdown" style="background:transparent; color:var(--accent-primary, #38bdf8); border:none; outline:none; font-size:0.8rem; font-weight:700; cursor:pointer;" onchange="window.app.switchWorld(this.value)">
+          <select id="world-select-dropdown" class="custom-select" onchange="window.app.switchWorld(this.value)">
             <option value="default">Primary World</option>
           </select>
         </div>
@@ -60,6 +67,10 @@
             ⚙️ Tools ▾
           </button>
           <div id="tools-dropdown-menu" class="tools-dropdown-menu hidden">
+            <button class="dropdown-item" onclick="window.switchTab('frontpage'); window.closeToolsMenu();">🌐 World Frontpage Portal</button>
+            <button class="dropdown-item" onclick="window.switchTab('atlas'); window.closeToolsMenu();">🗺️ Interactive World Atlas</button>
+            <button class="dropdown-item" onclick="window.switchTab('timeline'); window.closeToolsMenu();">⏳ World Chronology Timeline</button>
+            <button class="dropdown-item" onclick="window.app.openGraphModal(); window.closeToolsMenu();">🕸️ Knowledge Graph</button>
             <button class="dropdown-item" onclick="window.openDoctorModal(); window.closeToolsMenu();">🩺 World Doctor</button>
             <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">🖼️ Media Vault</button>
             <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">💬 Ask AI Assistant</button>
@@ -67,6 +78,12 @@
             <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">📥 Import World</button>
           </div>
         </div>
+
+        <!-- Light / Dark Mode Toggle -->
+        <button id="theme-mode-toggle" class="btn btn-secondary btn-icon-toggle" title="Toggle Light/Dark Mode" aria-label="Toggle Light/Dark Mode">
+          <span class="mode-icon-sun">☀️</span>
+          <span class="mode-icon-moon" style="display:none;">🌙</span>
+        </button>
 
         <button class="btn btn-primary" onclick="window.app.openEditor()">✍️ New Article</button>
       </div>
@@ -77,95 +94,101 @@
       
       <!-- TAB 1: LORE CODEX -->
       <section id="view-library" class="view-panel active">
-        <!-- Category Sidebar -->
-        <aside class="sidebar">
-          <div class="sidebar-section">
-            <h3>Categories</h3>
-            <ul id="category-list" class="category-menu">
-              <!-- Dynamically populated -->
-            </ul>
-          </div>
+        <!-- Main Library Content Area -->
+        <div class="library-main-content">
+          <!-- Visual Category Dock Bar -->
+          <div id="category-dock-bar" class="category-dock-bar"></div>
 
-          <div class="sidebar-section tags-accordion">
-            <button id="tags-accordion-toggle" class="tags-accordion-header" onclick="window.app ? window.app.toggleTagsAccordion() : window.toggleTagsAccordion()">
-              <span>🏷️ Tags</span>
-              <span class="accordion-arrow">▸</span>
-            </button>
-            <div id="tags-accordion-body" class="tags-accordion-body collapsed">
-              <div id="tag-cloud" class="tag-cloud">
-                <!-- Dynamically populated -->
-              </div>
-            </div>
-          </div>
-        </aside>
+          <!-- Contextual Sub-Category Bar -->
+          <div id="sub-category-bar" class="sub-category-bar"></div>
 
-        <!-- Articles Master-Detail View -->
-        <div class="articles-layout">
-          <!-- Article List Cards Column -->
-          <div class="article-list-column">
-            <div class="list-header">
-              <span id="article-count">0 Articles</span>
-              <select id="sort-select" onchange="window.app.handleSort(this.value)">
-                <option value="updated">Recently Updated</option>
-                <option value="title">Title (A-Z)</option>
-                <option value="category">Category</option>
-              </select>
-            </div>
-            <div id="articles-cards" class="cards-wrapper">
-              <!-- Dynamically populated cards -->
-            </div>
-          </div>
-
-          <!-- Article Detail Viewer Column (WorldAnvil Rendered) -->
-          <div class="article-detail-column">
-            <div id="article-viewer-empty" class="empty-detail-state">
-              <div class="empty-icon">📖</div>
-              <h2>Select an Article to View</h2>
-              <p>Explore your canonical world lore, cross-link references, and WorldAnvil formatted articles.</p>
-            </div>
-
-            <article id="article-viewer" class="article-viewer hidden">
-              <div class="article-actions">
-                <div class="article-meta-tags">
-                  <span id="view-category-badge" class="badge">Category</span>
-                  <span id="view-updated-date" class="meta-date">Updated: --</span>
-                </div>
-                <div class="article-viewer-toolbar">
-                  <select id="move-world-select" class="toolbar-select" onchange="window.app.moveCurrentArticleToWorld(this.value)">
-                    <option value="" disabled selected>🌍 Move to World...</option>
-                  </select>
-                  <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
-                  <button class="btn btn-danger toolbar-btn" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
+          <!-- Articles Master-Detail View -->
+          <div class="articles-layout">
+            <!-- Article List Cards Column -->
+            <div class="article-list-column">
+              <div class="list-header">
+                <span id="article-count">0 Articles</span>
+                <div class="segmented-control" id="sort-segmented-control">
+                  <button type="button" class="segmented-btn active" data-sort="updated" onclick="window.app.handleSortSegment('updated')">Recently Updated</button>
+                  <button type="button" class="segmented-btn" data-sort="title" onclick="window.app.handleSortSegment('title')">Title (A-Z)</button>
+                  <button type="button" class="segmented-btn" data-sort="category" onclick="window.app.handleSortSegment('category')">Category</button>
                 </div>
               </div>
+              <div id="active-filter-breadcrumb" class="filter-breadcrumb-bar hidden"></div>
+              <div id="articles-cards" class="cards-wrapper">
+                <!-- Dynamically populated cards -->
+              </div>
+            </div>
 
-              <!-- WorldAnvil Article Render Target -->
-              <div id="wa-article-render" class="wa-article-body">
-                <!-- Parsed WorldAnvil HTML goes here -->
+            <!-- Article Detail Viewer Column (WorldAnvil Rendered) -->
+            <div class="article-detail-column">
+              <div id="article-viewer-empty" class="empty-detail-state">
+                <div class="empty-icon">📖</div>
+                <h2>Select an Article to View</h2>
+                <p>Explore your canonical world lore, cross-link references, and WorldAnvil formatted articles.</p>
               </div>
 
-              <!-- Persona Hub Target -->
-              <div id="persona-hub-container" style="display:none; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
-                <!-- Dynamic Persona UI gets injected here -->
-              </div>
-
-              <!-- Inbound & Outbound Cross-Links Drawer -->
-              <div class="cross-links-footer">
-                <div class="link-column">
-                  <h4>🔗 Outbound References</h4>
-                  <ul id="outbound-links-list"></ul>
+              <article id="article-viewer" class="article-viewer hidden">
+                <div class="article-actions">
+                  <div class="article-meta-tags">
+                    <span id="view-category-badge" class="badge">Category</span>
+                    <span id="view-updated-date" class="meta-date">Updated: --</span>
+                  </div>
+                  <div class="article-viewer-toolbar">
+                    <button id="add-to-slate-btn" class="add-to-slate-btn toolbar-btn" title="Add to Scene Slate">+ Add to Slate</button>
+                    <button id="zen-mode-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleZenMode()">📖 Focus Mode</button>
+                    <select id="move-world-select" class="toolbar-select" onchange="window.app.moveCurrentArticleToWorld(this.value)">
+                      <option value="" disabled selected>🌍 Move to World...</option>
+                    </select>
+                    <button class="btn btn-secondary toolbar-btn" onclick="openQuickMarketingModal()">📢 Quick Promo Copy</button>
+                    <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
+                    <button class="btn btn-danger toolbar-btn" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
+                  </div>
                 </div>
-                <div class="link-column">
-                  <h4>⬅️ Referenced By</h4>
-                  <ul id="inbound-links-list"></ul>
+
+                <!-- WorldAnvil Article Render Target -->
+                <div id="wa-article-render" class="wa-article-body">
+                  <!-- Parsed WorldAnvil HTML goes here -->
                 </div>
-              </div>
-            </article>
+
+                <!-- Persona Hub Target -->
+                <div id="persona-hub-container" style="display:none; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+                  <!-- Dynamic Persona UI gets injected here -->
+                </div>
+
+                <!-- Inbound & Outbound Cross-Links Drawer -->
+                <div class="cross-links-footer">
+                  <div class="link-column">
+                    <h4>🔗 Outbound References</h4>
+                    <ul id="outbound-links-list"></ul>
+                  </div>
+                  <div class="link-column">
+                    <h4>⬅️ Referenced By</h4>
+                    <ul id="inbound-links-list"></ul>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- TAB 2: WEAVE MATRIX -->
+      <!-- TAB 2: WORLD FRONTPAGE -->
+      <section id="view-frontpage" class="view-panel">
+        <div id="frontpage-app-root" style="width: 100%; height: calc(100vh - 56px); overflow-y: auto;"></div>
+      </section>
+
+      <!-- TAB 3: WORLD ATLAS -->
+      <section id="view-atlas" class="view-panel">
+        <div id="atlas-app-root" style="width: 100%; height: calc(100vh - 56px);"></div>
+      </section>
+
+      <!-- TAB 4: TIMELINE -->
+      <section id="view-timeline" class="view-panel">
+        <div id="timeline-app-root" style="width: 100%; height: calc(100vh - 56px); overflow-y: auto;"></div>
+      </section>
+
+      <!-- TAB 3: WEAVE MATRIX -->
       <section id="view-context" class="view-panel">
         <div class="cb-wrapper">
           <!-- Header Bar -->
@@ -217,6 +240,17 @@
                 <div class="tray-title-row">
                   <h3>📜 Lore Vault Tray</h3>
                   <span id="selected-count" class="badge-count">0 Selected</span>
+                </div>
+
+                <!-- Token Capacity Gauge Bar -->
+                <div id="token-budget-bar" class="token-budget-bar">
+                  <div class="token-budget-info">
+                    <span class="token-budget-label">⚡ Token Capacity:</span>
+                    <span id="token-budget-status" class="token-budget-status">0 / 4,096 tokens (0% used)</span>
+                  </div>
+                  <div class="token-budget-track">
+                    <div id="token-budget-fill" class="token-budget-fill tier-green" style="width: 0%;"></div>
+                  </div>
                 </div>
 
                 <!-- Search Filter -->
@@ -372,38 +406,33 @@
           </div>
 
           <!-- BOTTOM PANEL: Developer Inspector & Action Bar -->
-          <footer class="cb-bottom-panel">
-            <!-- Token Capacity Gauge Bar -->
-            <div class="token-capacity-bar">
-              <div class="token-info">
-                <span class="token-title">📊 Live Token Capacity:</span>
-                <span class="token-count-display" id="cb-token-count-text">0 / 4,096 Tokens</span>
-              </div>
-              <div class="token-gauge-bar">
-                <div class="token-gauge-fill" id="cb-token-gauge-fill" style="width: 0%;"></div>
-              </div>
-            </div>
-
-            <!-- Action Buttons & Inspector Toggle -->
-            <div class="cb-action-bar">
-              <div class="cb-action-left">
-                <button class="btn btn-secondary inspector-toggle-btn" id="cb-inspector-toggle-btn" onclick="ContextBuilder.toggleInspector()">
-                  🛠️ Developer Inspection & Output <span id="cb-inspector-chevron">▲</span>
-                </button>
+          <!-- BOTTOM PANEL: Developer Inspector & Action Bar -->
+          <footer class="cb-bottom-panel weave-sticky-footer">
+            <div class="cb-action-bar" style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 1rem;">
+              <div class="token-capacity-bar" style="flex: 1; margin: 0; padding: 0; border: none; background: transparent;">
+                <div class="token-info">
+                  <span class="token-title">📊 Live Token Capacity:</span>
+                  <span class="token-count-display" id="cb-token-count-text">0 / 4,096 Tokens</span>
+                </div>
+                <div class="token-gauge-bar">
+                  <div class="token-gauge-fill" id="cb-token-gauge-fill" style="width: 0%;"></div>
+                </div>
               </div>
 
-              <div class="cb-action-right">
+              <div class="cb-action-right" style="display: flex; gap: 0.5rem; justify-content: flex-end; width: auto;">
                 <button class="btn btn-secondary" id="copy-context-btn" onclick="ContextBuilder.copyToClipboard()">
                   📋 Copy Prompt
                 </button>
-                <button class="btn btn-primary" onclick="ContextBuilder.compileContext()">
+                <button class="btn btn-primary" onclick="ContextBuilder.compileContext(true)">
                   ⚡ Compile Context Pack
                 </button>
               </div>
             </div>
+          </footer>
 
-            <!-- Developer Inspector Collapsible Panel -->
-            <div class="inspector-panel hidden" id="cb-inspector-panel">
+          <details id="weave-dev-accordion" class="inspector-panel" style="margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 2rem;">
+            <summary style="padding: 0.75rem 1rem; cursor: pointer; font-weight: 600; background: #0f172a; border-radius: 8px; color: var(--text-secondary); list-style: none;">⚙️ Advanced Developer Output</summary>
+            <div id="cb-inspector-panel" style="padding-top: 1rem; border-top: 1px solid var(--border-color);">
               <div class="inspector-header">
                 <div class="serializer-selector">
                   <span class="serializer-label">Serializer Format:</span>
@@ -444,7 +473,7 @@
                 </div>
               </div>
             </div>
-          </footer>
+          </details>
         </div>
       </section>
 
@@ -452,7 +481,7 @@
       <section id="view-studio" class="view-panel">
         <div style="display:grid; grid-template-columns: 290px 1fr; gap:1.25rem; height:calc(100vh - 140px);">
           <!-- LEFT SIDEBAR: OUTLINE & PERSONA SYNC -->
-          <aside style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
+          <aside style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:1rem;">
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
                 <h3 style="font-size:0.85rem; color:#38bdf8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🎬 Scenes & Chapters</h3>
@@ -473,14 +502,14 @@
                   <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.2rem 0.5rem; background:#059669; color:#fff;" onclick="window.app.openPersonaInterviewer()">💬 Prompt Persona</button>
                 </div>
               </div>
-              <div id="scene-studio-persona-sync" style="background:#0f172a; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
+              <div id="scene-studio-persona-sync" style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
                 Hover or click any <code style="color:#38bdf8;">[[WikiLink]]</code> in the editor to inspect character thoughts, wants, and needs.
               </div>
             </div>
           </aside>
 
           <!-- RIGHT MAIN STUDIO EDITOR -->
-          <main style="display:flex; flex-direction:column; background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1.25rem;">
+          <main style="display:flex; flex-direction:column; background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:1.25rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem;">
               <input id="scene-title-input" type="text" placeholder="Scene Title (e.g. Ambushed in Merton)" style="background:transparent; border:none; border-bottom:1px solid var(--border-color); color:#fff; font-size:1.25rem; font-weight:700; width:55%; outline:none;" value="Ambushed in Merton">
               <div style="display:flex; gap:0.5rem; align-items:center;">
@@ -497,7 +526,240 @@
         </div>
       </section>
 
+      <!-- NARRATIVE SLATE WORKSPACE VIEW -->
+      <section id="narrative-slate-view" class="view-panel hidden">
+        <div class="narrative-workspace">
+          <!-- LEFT PANE: Prose Editor & Actions Toolbar -->
+          <div class="prose-editor-pane">
+            <div class="pane-header">
+              <div class="pane-title">
+                <span class="icon">✍️</span>
+                <h2>Narrative Prose Editor</h2>
+              </div>
+              <div class="prose-editor-meta">
+                <span id="slate-word-count" class="word-count-badge">0 words</span>
+              </div>
+            </div>
+
+            <!-- WEAVE MATRIX ACTIVE CONTEXT BADGE -->
+            <div id="slate-weave-context-banner" class="weave-active-banner hidden" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: #38bdf8;">
+              <span>⚡ <strong>Weave Matrix Context Active</strong> (Loaded from Weave Matrix)</span>
+              <button onclick="clearActiveWeaveContext()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">✕ Clear</button>
+            </div>
+
+            <!-- Prose Textarea Area with relative positioning container for autocomplete popover -->
+            <div class="editor-textarea-wrapper">
+              <textarea id="narrative-prose-editor" class="narrative-prose-textarea" placeholder="Start typing your story scene manuscript here... Type [[ to trigger live lore and character auto-complete." oninput="handleWikiLinkAutocomplete(event)" onkeyup="handleWikiLinkAutocomplete(event)"></textarea>
+              
+              <!-- WikiLink Autocomplete Popover -->
+              <div id="wikilink-autocomplete-popover" class="wikilink-popover hidden"></div>
+            </div>
+
+            <!-- Prose Action Toolbar -->
+            <div class="prose-toolbar">
+              <button id="btn-continue-prose" class="btn btn-primary" onclick="generateProseContinuation()">⚡ Continue Prose</button>
+              <button id="btn-pov-rewrite" class="btn btn-secondary" onclick="showPovRewriteModal()">🎭 POV Rewrite</button>
+              <button id="btn-suggest-beats" class="btn btn-secondary" onclick="suggestNextBeats()">💡 Suggest Next Steps</button>
+              <button id="btn-save-slate" class="btn btn-secondary" onclick="saveNarrativeSlate()">💾 Save Slate</button>
+            </div>
+          </div>
+
+          <!-- RIGHT PANE: Slate Drawer (Config, Beats, Cast, Tone, Lore) -->
+          <div class="slate-drawer-pane">
+            <!-- Saved Slates Snapshot Manager -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>📂 Saved Slates</h3>
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <select id="slate-snapshot-select" class="slate-input-select" onchange="loadNarrativeSlate(this.value)">
+                  <option value="">📂 Load Saved Slate Snapshot...</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Plot Hook Input -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>🎣 Plot Hook & Scene Directive</h3>
+              </div>
+              <textarea id="slate-plot-hook" class="slate-textarea-input" rows="2" placeholder="e.g. Elena intercepts an Imperial courier in the rain at Merton tavern..."></textarea>
+            </div>
+
+            <!-- Scene Action Steps List -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>🎬 Scene Action Steps</h3>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="addSceneStep()">+ Add Step</button>
+              </div>
+              <div id="slate-steps-container" class="slate-steps-list">
+                <!-- Dynamically populated scene step items -->
+              </div>
+            </div>
+
+            <!-- Active Cast & Wants/Flaws Cards -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>🎭 Active Cast</h3>
+              </div>
+              <div id="slate-cast-multiselect" class="cast-multiselect-container">
+                <!-- Dynamically rendered character checkboxes -->
+              </div>
+              <div id="slate-cast-cards" class="cast-wants-flaws-cards">
+                <!-- Wants & Flaws cards rendered for active cast -->
+              </div>
+            </div>
+
+            <!-- Tone Chips -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>🎨 Narrative Tone Chips</h3>
+              </div>
+              <div id="slate-tone-chips" class="tone-chips-container">
+                <button type="button" class="tone-chip" data-tone="Gritty & Noir" onclick="toggleToneChip(this)">Gritty & Noir</button>
+                <button type="button" class="tone-chip" data-tone="Fast-Paced" onclick="toggleToneChip(this)">Fast-Paced</button>
+                <button type="button" class="tone-chip" data-tone="Whimsical" onclick="toggleToneChip(this)">Whimsical</button>
+                <button type="button" class="tone-chip" data-tone="Deep Monologue" onclick="toggleToneChip(this)">Deep Monologue</button>
+                <button type="button" class="tone-chip" data-tone="High-Stakes" onclick="toggleToneChip(this)">High-Stakes</button>
+              </div>
+            </div>
+
+            <!-- Pinned Lore List -->
+            <div class="slate-section">
+              <div class="slate-section-header">
+                <h3>📌 Pinned Lore Context</h3>
+              </div>
+              <div id="slate-pinned-lore-container" class="pinned-lore-container">
+                <!-- Dynamically rendered pinned lore items/checkboxes -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: MARKETING DASHBOARD -->
+      <section id="marketing-view" class="view-panel hidden">
+        <div class="marketing-dashboard">
+          <header class="marketing-header">
+            <div class="marketing-header-title">
+              <h2><span class="icon">📢</span> Lore Marketing Engine</h2>
+              <p class="subtext">Generate high-converting social promotional copy, newsletter teasers, Kickstarter hooks, and Discord announcements from canonical world lore.</p>
+            </div>
+          </header>
+
+          <div class="marketing-grid">
+            <aside class="marketing-controls-card">
+              <h3>⚙️ Copy Configuration</h3>
+              
+              <div class="form-group">
+                <label for="marketing-article-select">Source Lore Article(s)</label>
+                <select id="marketing-article-select" class="marketing-select" multiple size="6">
+                  <!-- Dynamically populated options -->
+                </select>
+                <small class="form-help">Hold Ctrl/Cmd to select multiple articles</small>
+              </div>
+
+              <div class="form-group">
+                <label for="marketing-preset-select">Preset Campaign Format</label>
+                <select id="marketing-preset-select" class="preset-dropdown">
+                  <option value="tweet">🐦 X/Twitter Thread (Punchy & Hook-Driven)</option>
+                  <option value="kickstarter">🚀 Kickstarter / Crowdfunding Lore Update</option>
+                  <option value="newsletter">📧 Substack / Email Newsletter Teaser</option>
+                  <option value="discord">💬 Discord / Community Announcement</option>
+                  <option value="store">🛒 Store / VTT Listing Product Description</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Tone Style</label>
+                <div id="marketing-tone-chips" class="tone-chips-container">
+                  <button type="button" class="tone-chip active" data-tone="Epic & Hype" onclick="selectMarketingTone(this)">Epic & Hype</button>
+                  <button type="button" class="tone-chip" data-tone="Mysterious & Dark" onclick="selectMarketingTone(this)">Mysterious & Dark</button>
+                  <button type="button" class="tone-chip" data-tone="Academic & Codex" onclick="selectMarketingTone(this)">Academic & Codex</button>
+                  <button type="button" class="tone-chip" data-tone="Whimsical" onclick="selectMarketingTone(this)">Whimsical</button>
+                  <button type="button" class="tone-chip" data-tone="Urgent CTA" onclick="selectMarketingTone(this)">Urgent CTA</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="marketing-cta-select">Call-To-Action (CTA)</label>
+                <select id="marketing-cta-select" class="cta-selector">
+                  <option value="kickstarter">🚀 Kickstarter ("Back our Kickstarter campaign today...")</option>
+                  <option value="patreon">👑 Patreon ("Join our Patreon for early access...")</option>
+                  <option value="vtt">🎲 VTT / Roll20 ("Get the full module on Roll20/Foundry...")</option>
+                  <option value="newsletter">📧 Newsletter ("Subscribe to our newsletter...")</option>
+                  <option value="none">🚫 No CTA</option>
+                </select>
+              </div>
+
+              <button id="btn-generate-marketing" class="btn btn-primary btn-block" onclick="generateMarketingCopy('dashboard')">
+                ⚡ Generate Promo Copy
+              </button>
+            </aside>
+
+            <main class="marketing-output-card">
+              <div class="output-header">
+                <h3>📜 Generated Promo Copy</h3>
+                <button id="btn-copy-marketing-output" class="btn btn-secondary btn-sm" onclick="copyMarketingOutput('dashboard')">
+                  📋 Copy to Clipboard
+                </button>
+              </div>
+
+              <div class="output-body">
+                <textarea id="marketing-output-text" class="marketing-textarea" placeholder="Generated promotional content with spoiler-filtered lore will appear here..." readonly></textarea>
+              </div>
+            </main>
+          </div>
+        </div>
+      </section>
+
     </main>
+
+    <!-- POV REWRITE MODAL -->
+    <div id="pov-rewrite-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="closePovRewriteModal()"></div>
+      <div class="modal-card" style="max-width: 550px;">
+        <div class="modal-header">
+          <h2>🎭 POV Rewrite Settings</h2>
+          <button class="close-btn" onclick="closePovRewriteModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="pov-target-character">Select Target Character Perspective (POV)</label>
+            <select id="pov-target-character" class="slate-input-select">
+              <option value="">-- Choose Character POV --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="pov-custom-directives">POV Directives / Style Focus (Optional)</label>
+            <textarea id="pov-custom-directives" rows="3" placeholder="e.g. Focus on internal conflict and sensory details of blood and cold rain..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePovRewriteModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="executePovRewrite()">Transform Prose POV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEATS SUGGESTION MODAL -->
+    <div id="beats-suggestion-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="closeBeatsModal()"></div>
+      <div class="modal-card" style="max-width: 600px;">
+        <div class="modal-header">
+          <h2>💡 Suggested Scene Direction Beats</h2>
+          <button class="close-btn" onclick="closeBeatsModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="beats-suggestion-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+            <!-- Dynamically injected beat choices -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeBeatsModal()">Close</button>
+        </div>
+      </div>
+    </div>
 
     <!-- EDITOR MODAL -->
     <div id="editor-modal" class="modal hidden">
@@ -514,17 +776,26 @@
               <label>Article Title *</label>
               <input type="text" id="edit-title" placeholder="e.g. The Obsidian Citadel" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="edit-category-container">
               <label>Category *</label>
-              <select id="edit-category" required>
+              <select id="edit-category" class="hidden" required>
                 <option value="Characters">Characters</option>
                 <option value="Locations">Locations</option>
                 <option value="Factions">Factions</option>
-                <option value="Species">Species</option>
+                <option value="Races & Species">Races & Species</option>
                 <option value="Magic & Tech">Magic & Tech</option>
                 <option value="History">History</option>
                 <option value="Items">Items</option>
               </select>
+              <div class="segmented-control segmented-control-category" id="edit-category-segmented">
+                <button type="button" class="segmented-btn active" data-cat="Characters" onclick="window.app.selectEditCategory('Characters')">👤 Characters</button>
+                <button type="button" class="segmented-btn" data-cat="Locations" onclick="window.app.selectEditCategory('Locations')">🏰 Locations</button>
+                <button type="button" class="segmented-btn" data-cat="Factions" onclick="window.app.selectEditCategory('Factions')">🛡️ Factions</button>
+                <button type="button" class="segmented-btn" data-cat="Races & Species" onclick="window.app.selectEditCategory('Races & Species')">🧬 Races & Species</button>
+                <button type="button" class="segmented-btn" data-cat="Magic & Tech" onclick="window.app.selectEditCategory('Magic & Tech')">🔮 Magic & Tech</button>
+                <button type="button" class="segmented-btn" data-cat="History" onclick="window.app.selectEditCategory('History')">📜 History</button>
+                <button type="button" class="segmented-btn" data-cat="Items" onclick="window.app.selectEditCategory('Items')">🗡️ Items</button>
+              </div>
             </div>
           </div>
 
@@ -556,7 +827,7 @@
                 <span class="sub-label" style="color:var(--accent-purple); font-weight:600;">🤖 Live AI Assistant:</span>
                 <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('format_worldanvil')">✨ Auto-Format Notes</button>
                 <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('expand_lore')">🪄 Expand Lore</button>
-                <button type="button" class="tool-btn" style="background:#334155; color:#fff;" onclick="window.app.openAISettings()">⚙️ AI Settings</button>
+                <button type="button" class="tool-btn" onclick="window.app.openAISettings()">⚙️ AI Settings</button>
               </div>
             </div>
             <div class="wa-toolbar" style="margin-top:0.35rem;">
@@ -567,19 +838,20 @@
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[b]Label:[/b] Details here\n')">Label [b]</button>
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('[hr]\n')">Divider [hr]</button>
               <button type="button" class="tool-btn" onclick="window.app.insertMarkup('@[Article Title](id)')">@[Cross-Link]</button>
-              <button type="button" class="tool-btn" style="background:#0284c7; color:#fff;" onclick="document.getElementById('body-image-file-input').click()">🖼️ Insert Image</button>
+              <button type="button" class="tool-btn btn-sky" onclick="document.getElementById('body-image-file-input').click()">🖼️ Insert Image</button>
               <input type="file" id="body-image-file-input" accept="image/*" style="display:none;" onchange="window.app.uploadBodyImage(this.files[0])">
               <button type="button" class="tool-btn btn-ai" onclick="window.app.generateAIImagePrompt()">🪄 AI Image Prompt</button>
-              <button type="button" class="tool-btn" style="background:#475569; color:#fff;" onclick="window.app.openMediaVault()">🖼️ Media Vault</button>
-              <button type="button" class="tool-btn" style="background:#334155; color:#fff;" onclick="window.app.stripMissingImageTags()">🧹 Strip Missing Images</button>
+              <button type="button" class="tool-btn" onclick="window.app.openMediaVault()">🖼️ Media Vault</button>
+              <button type="button" class="tool-btn" onclick="window.app.stripMissingImageTags()">🧹 Strip Missing Images</button>
             </div>
 
             <div class="editor-split">
-              <textarea id="edit-content" rows="12" placeholder="Write notes or drag & drop image files directly here... Type [[ to insert links." oninput="window.app.updateEditorPreview()"></textarea>
+              <textarea id="edit-content" rows="12" placeholder="Write notes or drag & drop image files directly here... Type @ to cross-link articles." oninput="window.app.updateEditorPreview()"></textarea>
               <div class="editor-preview-container">
                 <div class="preview-title">Live Article Preview</div>
                 <div id="editor-preview-render" class="wa-article-body"></div>
               </div>
+              <div id="crosslink-popover" class="crosslink-popover hidden"></div>
             </div>
           </div>
         </div>
@@ -664,6 +936,65 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="window.app.closeImportModal()">Cancel</button>
           <button class="btn btn-primary" onclick="window.app.processImport()">Start Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE CUSTOM CATEGORY MODAL -->
+    <div id="create-category-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeCreateCategoryModal()"></div>
+      <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-header">
+          <h2>📁 Create Custom Category & Sub-Category</h2>
+          <button class="modal-close" onclick="window.app.closeCreateCategoryModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:1.2rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.35rem; font-size:0.85rem; color:var(--text-primary);">Category Type</label>
+            <div class="segmented-control" id="cat-type-segmented">
+              <button type="button" class="segmented-btn active" data-type="primary" onclick="window.app.setCatTypeSegment('primary')">Primary Category</button>
+              <button type="button" class="segmented-btn" data-type="sub" onclick="window.app.setCatTypeSegment('sub')">Sub-Category</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.2rem;">
+            <label for="new-cat-name" style="font-weight:600; display:block; margin-bottom:0.35rem; font-size:0.85rem; color:var(--text-primary);">Category Name</label>
+            <input type="text" id="new-cat-name" class="custom-select" placeholder="e.g. Gods & Pantheons, Airships, Cosmology..." style="width:100%; cursor:text; background-image:none !important;" />
+          </div>
+
+          <div id="parent-cat-group" class="form-group hidden" style="margin-bottom:1.2rem;">
+            <label for="new-cat-parent" style="font-weight:600; display:block; margin-bottom:0.35rem; font-size:0.85rem; color:var(--text-primary);">Parent Category</label>
+            <select id="new-cat-parent" class="custom-select" style="width:100%;">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div id="icon-cat-group" class="form-group" style="margin-bottom:1.2rem;">
+            <label for="new-cat-icon" style="font-weight:600; display:block; margin-bottom:0.35rem; font-size:0.85rem; color:var(--text-primary);">Category Icon</label>
+            <select id="new-cat-icon" class="custom-select" style="width:100%;">
+              <option value="📁">📁 Folder (Default)</option>
+              <option value="👑">👑 Gods & Rulers</option>
+              <option value="🐉">🐉 Mythical & Creatures</option>
+              <option value="⚡">⚡ Magic & Artifacts</option>
+              <option value="⚔️">⚔️ Armaments & Gear</option>
+              <option value="📜">📜 Chronicles & Decrees</option>
+              <option value="🏰">🏰 Architecture & Realms</option>
+              <option value="🧬">🧬 Species & Lineages</option>
+              <option value="🔮">🔮 Spells & Mysticism</option>
+            </select>
+          </div>
+
+          <div id="existing-custom-cats-group" class="form-group" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+            <label style="font-weight:600; display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-primary);">Active Custom Categories</label>
+            <div id="custom-categories-manage-list" style="display:flex; flex-direction:column; gap:0.4rem; max-height:140px; overflow-y:auto;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeCreateCategoryModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.submitCustomCategory()">Save Category</button>
         </div>
       </div>
     </div>
@@ -809,7 +1140,7 @@
             <div class="doctor-tab-panels" style="margin-top:0.75rem;">
               <!-- Panel 1: Overview -->
               <div id="doctor-panel-overview" class="doctor-tab-panel">
-                <div style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
                   <div>
                     <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">World Vault Health Status</div>
                     <div id="doctor-health-summary" style="font-size:0.85rem; color:#e2e8f0; margin-top:0.2rem;">Click 'Run Vault Scan' or 'Run Deep AI Audit' to evaluate health score.</div>
@@ -827,7 +1158,7 @@
                   <h3 style="font-size:0.9rem; color:var(--accent-amber); margin:0;">⚠️ Misclassified Categories</h3>
                   <button id="fix-misclassified-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.applyCategoryFixes()">Fix All Misclassifications</button>
                 </div>
-                <div id="doctor-misclassified-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                <div id="doctor-misclassified-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Click 'Run Vault Scan' to analyze category assignments.</div>
                 </div>
               </div>
@@ -838,7 +1169,7 @@
                   <h3 style="font-size:0.9rem; color:var(--accent-purple); margin:0;">👯 Duplicate Articles (Double-Ups)</h3>
                   <button id="fix-duplicates-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.deleteDuplicates()">Delete Duplicate Copies</button>
                 </div>
-                <div id="doctor-duplicates-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                <div id="doctor-duplicates-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check for identical title double-ups.</div>
                 </div>
               </div>
@@ -852,7 +1183,7 @@
                     <button id="fix-stubs-btn" class="btn btn-secondary" style="display:none; font-size:0.75rem; padding:0.25rem 0.6rem;" onclick="window.app.cleanStubs()">Delete All Stubs</button>
                   </div>
                 </div>
-                <div id="doctor-stubs-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                <div id="doctor-stubs-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to detect stub articles.</div>
                 </div>
               </div>
@@ -863,7 +1194,7 @@
                   <h3 style="font-size:0.9rem; color:#38bdf8; margin:0;">🤖 Deep AI Narrative & Timeline Audit</h3>
                   <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.25rem 0.6rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">Run Deep AI Audit</button>
                 </div>
-                <div id="doctor-deep-ai-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                <div id="doctor-deep-ai-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Deep AI Audit' to scan for narrative & timeline conflicts using Gemini.</div>
                 </div>
               </div>
@@ -873,7 +1204,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
                   <h3 style="font-size:0.9rem; color:var(--accent-blue); margin:0;">🏝️ Orphaned Unlinked Lore</h3>
                 </div>
-                <div id="doctor-orphan-list" style="max-height:260px; overflow-y:auto; background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                <div id="doctor-orphan-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check cross-link health.</div>
                 </div>
               </div>
@@ -934,7 +1265,7 @@
           <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
             Your world package has been imported! Canon Guard has performed an immediate diagnostic sweep of the imported articles.
           </p>
-          <div id="import-triage-stats" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+          <div id="import-triage-stats" style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-bottom:1rem;">
             <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Analyzing imported items...</div>
           </div>
         </div>
@@ -956,14 +1287,14 @@
         <div class="modal-body">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
             <label style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">Genre & Writing Style:</label>
-            <select id="stub-genre-select" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); border-radius:4px; padding:0.25rem 0.5rem; font-size:0.8rem; outline:none; cursor:pointer;" onchange="window.app.regenerateStubPreview()">
+            <select id="stub-genre-select" style="background:var(--bg-main); color:var(--accent-blue); border:1px solid var(--border-color); border-radius:4px; padding:0.25rem 0.5rem; font-size:0.8rem; outline:none; cursor:pointer;" onchange="window.app.regenerateStubPreview()">
               <option value="High Fantasy">High Fantasy</option>
               <option value="Dark & Gritty">Dark & Gritty</option>
               <option value="Sci-Fi / Cyberpunk">Sci-Fi / Cyberpunk</option>
               <option value="Gothic Horror">Gothic Horror</option>
             </select>
           </div>
-          <div id="stub-rendered-preview" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:1rem; max-height:320px; overflow-y:auto;">
+          <div id="stub-rendered-preview" style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:1rem; max-height:320px; overflow-y:auto;">
             Rendering lore preview...
           </div>
         </div>
@@ -985,11 +1316,11 @@
         <div class="modal-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
           <div>
             <h4 id="harmonize-title-1" style="font-size:0.85rem; color:#f43f5e; margin-bottom:0.4rem; font-weight:700;">Article 1</h4>
-            <div id="harmonize-content-1" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
+            <div id="harmonize-content-1" style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
           </div>
           <div>
             <h4 id="harmonize-title-2" style="font-size:0.85rem; color:#4ade80; margin-bottom:0.4rem; font-weight:700;">Article 2</h4>
-            <div id="harmonize-content-2" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
+            <div id="harmonize-content-2" style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; font-size:0.8rem; max-height:280px; overflow-y:auto; line-height:1.4;"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -1078,23 +1409,38 @@
 
   <!-- ASK MY WORLD AI CHAT DRAWER -->
   <aside id="ai-chat-drawer" class="chat-drawer hidden">
-    <div class="drawer-header">
-      <div style="display:flex; align-items:center; gap:0.5rem;">
+    <div class="drawer-header" onclick="if(this.parentElement.classList.contains('minimized')) window.expandAIChatDrawer();">
+      <div class="drawer-header-title">
         <span style="font-size:1.1rem;">💬</span>
-        <h3 style="font-size:0.95rem; font-weight:700; color:#fff; margin:0;">Ask My World AI</h3>
+        <h3 class="drawer-title-text">Ask My World AI</h3>
       </div>
-      <div style="display:flex; align-items:center; gap:0.5rem;">
-        <select id="chat-category-filter" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); border-radius:4px; font-size:0.75rem; padding:0.2rem 0.4rem; outline:none; cursor:pointer;">
-          <option value="all">All Categories</option>
-          <option value="Characters">Characters</option>
-          <option value="Locations">Locations</option>
-          <option value="Factions">Factions</option>
-          <option value="Species">Species</option>
-          <option value="Magic & Tech">Magic & Tech</option>
-          <option value="History">History</option>
-          <option value="Items">Items</option>
-        </select>
-        <button class="close-btn" onclick="window.toggleAIChatDrawer()">✕</button>
+      <div class="drawer-header-actions">
+        <button class="minimize-btn" title="Minimize Chat" onclick="event.stopPropagation(); window.minimizeAIChatDrawer()">🗕</button>
+        <button class="close-btn" title="Close Chat" onclick="event.stopPropagation(); window.toggleAIChatDrawer()">✕</button>
+      </div>
+    </div>
+
+    <!-- Category Filter Sub-Bar -->
+    <div class="chat-category-bar">
+      <select id="chat-category-filter" class="hidden">
+        <option value="all">All Categories</option>
+        <option value="Characters">Characters</option>
+        <option value="Locations">Locations</option>
+        <option value="Factions">Factions</option>
+        <option value="Races & Species">Races & Species</option>
+        <option value="Magic & Tech">Magic & Tech</option>
+        <option value="History">History</option>
+        <option value="Items">Items</option>
+      </select>
+      <div class="segmented-control segmented-control-sm" id="chat-category-segmented">
+        <button type="button" class="segmented-btn active" data-chat-cat="all" onclick="window.app.selectChatCategoryFilter('all')">All</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Characters" onclick="window.app.selectChatCategoryFilter('Characters')">👤 Characters</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Locations" onclick="window.app.selectChatCategoryFilter('Locations')">🏰 Locations</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Factions" onclick="window.app.selectChatCategoryFilter('Factions')">🛡️ Factions</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Races & Species" onclick="window.app.selectChatCategoryFilter('Races & Species')">🧬 Races</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Magic & Tech" onclick="window.app.selectChatCategoryFilter('Magic & Tech')">🔮 Magic</button>
+        <button type="button" class="segmented-btn" data-chat-cat="History" onclick="window.app.selectChatCategoryFilter('History')">📜 History</button>
+        <button type="button" class="segmented-btn" data-chat-cat="Items" onclick="window.app.selectChatCategoryFilter('Items')">🗡️ Items</button>
       </div>
     </div>
 
@@ -1124,16 +1470,16 @@
       <div class="modal-body">
         <div style="margin-bottom:0.75rem;">
           <label style="font-size:0.8rem; color:var(--text-muted); font-weight:700;">Select Character Persona:</label>
-          <select id="persona-character-select" style="background:#090d16; color:#38bdf8; border:1px solid var(--border-color); padding:0.35rem; border-radius:4px; font-size:0.85rem; width:100%; margin-top:0.25rem; outline:none;" onchange="window.app.handleInterviewerPersonaSelect(this.value)"></select>
+          <select id="persona-character-select" style="background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-color); padding:0.35rem; border-radius:4px; font-size:0.85rem; width:100%; margin-top:0.25rem; outline:none;" onchange="window.app.handleInterviewerPersonaSelect(this.value)"></select>
           <div id="persona-interviewer-status" style="margin-top:0.4rem;"></div>
         </div>
 
-        <div id="persona-chat-messages" style="background:#090d16; border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; height:240px; overflow-y:auto; font-size:0.85rem; margin-bottom:0.75rem; display:flex; flex-direction:column; gap:0.6rem;">
-          <div style="color:var(--text-muted);">Select a character and pose a question to prompt their persona in-character...</div>
+        <div id="persona-chat-messages" style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; height:240px; overflow-y:auto; font-size:0.85rem; margin-bottom:0.75rem; display:flex; flex-direction:column; gap:0.6rem;">
+          <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">Select a character persona above to begin an interactive interview session.</div>
         </div>
 
         <div style="display:flex; gap:0.5rem;">
-          <input id="persona-question-input" type="text" placeholder="Ask a question (e.g. Roland, how do you feel about Merton?)..." style="flex:1; background:#090d16; border:1px solid var(--border-color); color:#fff; border-radius:4px; padding:0.4rem 0.6rem; font-size:0.85rem; outline:none;" onkeypress="if(event.key==='Enter') window.app.sendPersonaQuestion()">
+          <input id="persona-question-input" type="text" placeholder="Ask a question (e.g. Roland, how do you feel about Merton?)..." style="flex:1; background:var(--bg-main); border:1px solid var(--border-color); color:var(--text-primary); border-radius:4px; padding:0.4rem 0.6rem; font-size:0.85rem; outline:none;" onkeypress="if(event.key==='Enter') window.app.sendPersonaQuestion()">
           <button class="btn btn-primary" onclick="window.app.sendPersonaQuestion()">Ask Persona</button>
         </div>
       </div>
@@ -1160,7 +1506,7 @@
   </div>
 
   <!-- FLOATING WIKILINK AUTO-COMPLETE POPOVER -->
-  <div id="wikilink-autocomplete-popover" class="hidden" style="position:fixed; z-index:99999; background:#0f172a; border:1px solid #38bdf8; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.6); width:240px; max-height:180px; overflow-y:auto; padding:0.3rem;">
+  <div id="wikilink-autocomplete-popover" class="hidden" style="position:fixed; z-index:99999; background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.6); width:240px; max-height:180px; overflow-y:auto; padding:0.3rem;">
     <div id="wikilink-popover-list" style="display:flex; flex-direction:column; gap:0.2rem;"></div>
   </div>
 
@@ -1263,10 +1609,137 @@
     </div>
   </aside>
 
+  <!-- QUICK MARKETING PROMO MODAL -->
+  <div id="marketing-quick-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeQuickMarketingModal()"></div>
+    <div class="modal-card marketing-modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>📢 Quick Promo Copy Generator</h2>
+        <button class="close-btn" onclick="closeQuickMarketingModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="quick-marketing-article-id">
+        <div id="quick-marketing-article-info" class="quick-article-badge" style="margin-bottom:1rem; font-weight:600; color:var(--accent-primary, #38bdf8);"></div>
+
+        <div class="form-group">
+          <label for="quick-marketing-preset">Preset Campaign Format</label>
+          <select id="quick-marketing-preset" class="preset-dropdown">
+            <option value="tweet">🐦 X/Twitter Teaser</option>
+            <option value="kickstarter">🚀 Kickstarter Spotlight</option>
+            <option value="newsletter">📧 Substack / Newsletter Hook</option>
+            <option value="discord">💬 Discord Announcement</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quick-marketing-cta">Call-To-Action (CTA)</label>
+          <select id="quick-marketing-cta" class="cta-selector">
+            <option value="kickstarter">🚀 Kickstarter</option>
+            <option value="patreon">👑 Patreon</option>
+            <option value="vtt">🎲 VTT / Store</option>
+            <option value="newsletter">📧 Newsletter</option>
+            <option value="none">🚫 None</option>
+          </select>
+        </div>
+
+        <button id="btn-quick-generate-marketing" class="btn btn-primary btn-block" onclick="generateMarketingCopy('quick')">
+          ⚡ Generate Copy
+        </button>
+
+        <div class="form-group" style="margin-top:1rem;">
+          <label for="quick-marketing-output">Generated Output</label>
+          <textarea id="quick-marketing-output" class="marketing-textarea" rows="8" placeholder="Generated quick promo copy will appear here..." readonly></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeQuickMarketingModal()">Close</button>
+        <button id="btn-copy-quick-marketing" class="btn btn-primary" onclick="copyMarketingOutput('quick')">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEAVE MATRIX ACTION ROUTING MODAL -->
+  <div id="weave-action-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeWeaveActionModal()"></div>
+    <div class="modal-card weave-action-modal-card">
+      <div class="modal-header">
+        <h2>⚡ Context Compiled: Next Action</h2>
+        <button class="close-btn" onclick="closeWeaveActionModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="weave-modal-subtitle">Your Lore Context Pack has been compiled successfully. Select how you'd like to use it:</p>
+        <div class="weave-action-grid">
+          <button type="button" class="weave-action-btn" onclick="routeToNarrativeSlate()">
+            <span class="weave-action-icon">✍️</span>
+            <div class="weave-action-info">
+              <span class="weave-action-title">Open in Narrative Slate</span>
+              <span class="weave-action-desc">Draft prose, chapters & scenes using active lore context</span>
+            </div>
+          </button>
+          <button type="button" class="weave-action-btn" onclick="routeToMarketing()">
+            <span class="weave-action-icon">📢</span>
+            <div class="weave-action-info">
+              <span class="weave-action-title">Open in Marketing Engine</span>
+              <span class="weave-action-desc">Generate social posts, newsletters & campaign copy</span>
+            </div>
+          </button>
+          <button type="button" class="weave-action-btn" onclick="openQuickLoreChat()">
+            <span class="weave-action-icon">💬</span>
+            <div class="weave-action-info">
+              <span class="weave-action-title">Quick Chat (Interrogate Lore)</span>
+              <span class="weave-action-desc">Ask AI questions & brainstorm directly with lore</span>
+            </div>
+          </button>
+          <button type="button" class="weave-action-btn" onclick="routeToNewArticle()">
+            <span class="weave-action-icon">📄</span>
+            <div class="weave-action-info">
+              <span class="weave-action-title">Compile a New Article</span>
+              <span class="weave-action-desc">Draft and save a brand new article seeded from context</span>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeWeaveActionModal()">Close</button>
+      </div>
+    </div>
+  <!-- Knowledge Graph Modal Tool -->
+  <div id="graph-modal" class="modal-backdrop hidden" onclick="if(event.target === this) window.app.closeGraphModal()">
+    <div class="modal-box graph-modal-box">
+      <div class="modal-header">
+        <h3>🕸️ Knowledge Graph Explorer</h3>
+        <button class="modal-close-btn" onclick="window.app.closeGraphModal()">✕</button>
+      </div>
+      <div class="modal-body graph-modal-body">
+        <p class="graph-section-desc" style="margin-bottom:0.75rem; color:var(--text-muted); font-size:0.85rem;">
+          Visualize canonical cross-references, entity relationships, and lore clusters.
+        </p>
+        <div id="graph-category-filters" class="graph-category-filters">
+          <!-- Dynamically populated graph filter chips -->
+        </div>
+        <div id="graph-container" class="graph-container">
+          <div class="graph-canvas-wrapper">
+            <canvas id="graph-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
   <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="js/badges.js?v=13"></script>
   <script src="js/wa-parser.js?v=13"></script>
   <script src="js/context-builder.js?v=13"></script>
+  <script src="js/graph-view.js?v=13"></script>
+  <script src="js/atlas-view.js?v=13"></script>
+  <script src="js/frontpage-view.js?v=13"></script>
+  <script src="js/timeline-view.js?v=13"></script>
   <script src="js/app.js?v=13"></script>
 </body>
 </html>

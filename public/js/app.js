@@ -2,6 +2,40 @@
  * LoreWeaver Frontend Application Controller
  */
 
+// Global Toast Notification Helper
+window.showToast = function(message, type = 'error') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  const typeClass = type === 'success' ? 'toast-success' : (type === 'info' ? 'toast-info' : 'toast-error');
+  toast.className = `toast ${typeClass}`;
+
+  const icon = type === 'success' ? '✅' : (type === 'info' ? 'ℹ️' : '⚠️');
+
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-hiding');
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.remove();
+      }
+    }, 300);
+  }, 5000);
+};
+
 class LoreApp {
   constructor() {
     this.articles = [];
@@ -10,6 +44,7 @@ class LoreApp {
     this.currentWorldId = 'all';
     this.currentArticle = null;
     this.selectedCategory = null;
+    this.selectedSubCategory = null;
     this.selectedTag = null;
     this.searchQuery = '';
     this.editingId = null;
@@ -25,6 +60,7 @@ class LoreApp {
   }
 
   async init() {
+    this.initThemeMode();
     await this.fetchWorlds();
 
     let initialTheme = 'ancient-codex';
@@ -51,6 +87,64 @@ class LoreApp {
     }
 
     this.setupSearchBar();
+    this.setupWeaveMatrix();
+    this.setupCrosslinkPopover();
+  }
+
+  initThemeMode() {
+    const savedMode = localStorage.getItem('lorevault_mode') || 'dark';
+    document.body.setAttribute('data-mode', savedMode);
+    this.updateToggleIcon(savedMode);
+  }
+
+  toggleThemeMode() {
+    const currentMode = document.body.getAttribute('data-mode') || 'dark';
+    const newMode = currentMode === 'light' ? 'dark' : 'light';
+    document.body.setAttribute('data-mode', newMode);
+    localStorage.setItem('lorevault_mode', newMode);
+    this.updateToggleIcon(newMode);
+    return newMode;
+  }
+
+  toggleZenMode() {
+    const libraryView = document.getElementById('view-library');
+    const toggleBtn = document.getElementById('zen-mode-toggle');
+    if (!libraryView) return false;
+
+    const isZen = libraryView.classList.toggle('zen-mode');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = isZen ? '📖 Exit Focus' : '📖 Focus Mode';
+    }
+    return isZen;
+  }
+
+  updateToggleIcon(mode) {
+    const toggleBtn = document.getElementById('theme-mode-toggle');
+    if (!toggleBtn) return;
+    const sunIcon = toggleBtn.querySelector('.mode-icon-sun');
+    const moonIcon = toggleBtn.querySelector('.mode-icon-moon');
+
+    if (mode === 'light') {
+      if (sunIcon) {
+        sunIcon.style.display = 'none';
+        sunIcon.classList.add('hidden');
+      }
+      if (moonIcon) {
+        moonIcon.style.display = 'inline';
+        moonIcon.classList.remove('hidden');
+      }
+      toggleBtn.setAttribute('title', 'Switch to Dark Mode');
+    } else {
+      if (sunIcon) {
+        sunIcon.style.display = 'inline';
+        sunIcon.classList.remove('hidden');
+      }
+      if (moonIcon) {
+        moonIcon.style.display = 'none';
+        moonIcon.classList.add('hidden');
+      }
+      toggleBtn.setAttribute('title', "Switch to Scholar's Parchment Light Mode");
+    }
   }
 
   async fetchWorlds() {
@@ -87,6 +181,7 @@ class LoreApp {
   async switchWorld(worldId) {
     this.currentWorldId = worldId;
     this.selectedCategory = null;
+    this.selectedSubCategory = null;
     this.selectedTag = null;
     this.searchQuery = '';
     this.currentArticle = null;
@@ -107,6 +202,7 @@ class LoreApp {
 
     await this.fetchCategories();
     await this.fetchArticles();
+    this.renderCategoryDock();
 
     // Auto-load first article if available in the selected world
     if (this.articles.length > 0) {
@@ -241,15 +337,66 @@ class LoreApp {
     const libraryView = document.getElementById('view-library');
     const studioView = document.getElementById('view-studio');
     const contextView = document.getElementById('view-context');
+    const narrativeSlateView = document.getElementById('narrative-slate-view');
+    const marketingView = document.getElementById('marketing-view');
+    const atlasView = document.getElementById('view-atlas');
+    const frontpageView = document.getElementById('view-frontpage');
+    const timelineView = document.getElementById('view-timeline');
 
     const tabLibrary = document.getElementById('tab-library');
     const tabStudio = document.getElementById('tab-studio');
     const tabContext = document.getElementById('tab-context');
+    const narrativeSlateBtn = document.getElementById('narrative-slate-nav-btn');
+    const tabMarketing = document.getElementById('tab-marketing');
+    const tabAtlas = document.getElementById('tab-atlas');
+    const tabFrontpage = document.getElementById('tab-frontpage');
+    const tabTimeline = document.getElementById('tab-timeline');
 
-    [libraryView, studioView, contextView].forEach(v => v && v.classList.remove('active'));
-    [tabLibrary, tabStudio, tabContext].forEach(t => t && t.classList.remove('active'));
+    [libraryView, studioView, contextView, marketingView, atlasView, frontpageView, timelineView].forEach(v => v && v.classList.remove('active'));
+    if (narrativeSlateView) {
+      narrativeSlateView.classList.remove('active');
+      narrativeSlateView.classList.add('hidden');
+    }
 
-    if (tabName === 'studio') {
+    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabFrontpage, tabTimeline].forEach(t => t && t.classList.remove('active'));
+
+    if (tabName === 'timeline') {
+      if (timelineView) timelineView.classList.add('active');
+      if (tabTimeline) tabTimeline.classList.add('active');
+      if (!window.timelineView) {
+        window.timelineView = new TimelineView('timeline-app-root', { worldId: this.currentWorldId || 'default' });
+        window.timelineView.init();
+      } else {
+        window.timelineView.init();
+      }
+    } else if (tabName === 'frontpage') {
+      if (frontpageView) frontpageView.classList.add('active');
+      if (tabFrontpage) tabFrontpage.classList.add('active');
+      if (!window.frontpageView) {
+        window.frontpageView = new FrontpageView('frontpage-app-root', { worldId: this.currentWorldId || 'default' });
+        window.frontpageView.init();
+      } else {
+        window.frontpageView.init();
+      }
+    } else if (tabName === 'atlas') {
+      if (atlasView) atlasView.classList.add('active');
+      if (tabAtlas) tabAtlas.classList.add('active');
+      if (!window.atlasView) {
+        window.atlasView = new AtlasView('atlas-app-root', { worldId: this.currentWorldId || 'default' });
+        window.atlasView.init();
+      }
+    } else if (tabName === 'marketing') {
+      if (marketingView) marketingView.classList.add('active');
+      if (tabMarketing) tabMarketing.classList.add('active');
+      this.populateMarketingArticles();
+    } else if (tabName === 'narrative-slate') {
+      if (narrativeSlateView) {
+        narrativeSlateView.classList.remove('hidden');
+        narrativeSlateView.classList.add('active');
+      }
+      if (narrativeSlateBtn) narrativeSlateBtn.classList.add('active');
+      this.initNarrativeSlateWorkspace();
+    } else if (tabName === 'studio') {
       if (studioView) studioView.classList.add('active');
       if (tabStudio) tabStudio.classList.add('active');
       this.fetchScenes();
@@ -261,6 +408,835 @@ class LoreApp {
       if (libraryView) libraryView.classList.add('active');
       if (tabLibrary) tabLibrary.classList.add('active');
     }
+  }
+
+  switchView(viewName) {
+    this.switchTab(viewName);
+  }
+
+  /* --- MARKETING ENGINE METHODS --- */
+
+  populateMarketingArticles() {
+    const selectEl = document.getElementById('marketing-article-select');
+    if (!selectEl) return;
+
+    selectEl.innerHTML = '';
+    if (!this.articles || this.articles.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = '-- No Articles Available --';
+      option.disabled = true;
+      selectEl.appendChild(option);
+      return;
+    }
+
+    this.articles.forEach(art => {
+      const option = document.createElement('option');
+      option.value = art.id;
+      option.textContent = `${art.title} (${art.category || 'General'})`;
+      if (this.currentArticle && this.currentArticle.id === art.id) {
+        option.selected = true;
+      }
+      selectEl.appendChild(option);
+    });
+
+    if (selectEl.selectedIndex === -1 && selectEl.options.length > 0) {
+      selectEl.options[0].selected = true;
+    }
+  }
+
+  selectMarketingTone(btnElement) {
+    if (!btnElement) return;
+    const parent = btnElement.parentElement;
+    if (parent) {
+      const chips = parent.querySelectorAll('.tone-chip');
+      chips.forEach(c => c.classList.remove('active'));
+    }
+    btnElement.classList.add('active');
+  }
+
+  async generateMarketingCopy(mode = 'dashboard') {
+    let article_ids = [];
+    let preset = 'tweet';
+    let tone_chip = 'Epic & Hype';
+    let cta_type = 'kickstarter';
+    let outputEl = null;
+    let generateBtn = null;
+
+    if (mode === 'quick') {
+      const articleIdInput = document.getElementById('quick-marketing-article-id');
+      const artId = articleIdInput && articleIdInput.value ? articleIdInput.value : (this.currentArticle ? this.currentArticle.id : null);
+      if (!artId) {
+        alert('Please select an article first.');
+        return;
+      }
+      article_ids = [artId];
+
+      const presetSelect = document.getElementById('quick-marketing-preset');
+      if (presetSelect) preset = presetSelect.value;
+
+      const ctaSelect = document.getElementById('quick-marketing-cta');
+      if (ctaSelect) cta_type = ctaSelect.value;
+
+      outputEl = document.getElementById('quick-marketing-output');
+      generateBtn = document.getElementById('btn-quick-generate-marketing');
+    } else {
+      const selectEl = document.getElementById('marketing-article-select');
+      if (selectEl && selectEl.selectedOptions && selectEl.selectedOptions.length > 0) {
+        article_ids = Array.from(selectEl.selectedOptions).map(opt => opt.value).filter(Boolean);
+      } else if (this.currentArticle) {
+        article_ids = [this.currentArticle.id];
+      } else if (this.articles && this.articles.length > 0) {
+        article_ids = [this.articles[0].id];
+      }
+
+      if (article_ids.length === 0) {
+        alert('Please select at least one source article for marketing copy generation.');
+        return;
+      }
+
+      const presetSelect = document.getElementById('marketing-preset-select');
+      if (presetSelect) preset = presetSelect.value;
+
+      const activeToneBtn = document.querySelector('#marketing-tone-chips .tone-chip.active');
+      if (activeToneBtn) tone_chip = activeToneBtn.dataset.tone || activeToneBtn.textContent.trim();
+
+      const ctaSelect = document.getElementById('marketing-cta-select');
+      if (ctaSelect) cta_type = ctaSelect.value;
+
+      outputEl = document.getElementById('marketing-output-text');
+      generateBtn = document.getElementById('btn-generate-marketing');
+    }
+
+    if (outputEl) outputEl.value = '⚡ Generating marketing promotional copy... Please wait...';
+    if (generateBtn) generateBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/marketing/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          article_ids,
+          preset,
+          tone_chip,
+          cta_type
+        })
+      });
+
+      const data = await response.json();
+      if (data.status === 'success' && data.generated_copy) {
+        if (outputEl) outputEl.value = data.generated_copy;
+        window.showToast('Marketing copy generated successfully!', 'success');
+      } else {
+        const msg = data.message || data.error || 'Failed to generate copy';
+        if (outputEl) outputEl.value = `❌ Error: ${msg}`;
+        window.showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Marketing generation failed:', err);
+      if (outputEl) outputEl.value = `❌ Connection Error: ${err.message}`;
+      window.showToast(`Marketing generation error: ${err.message}`, 'error');
+    } finally {
+      if (generateBtn) generateBtn.disabled = false;
+    }
+  }
+
+  openQuickMarketingModal() {
+    let art = this.currentArticle;
+    if (!art && this.articles && this.articles.length > 0) {
+      art = this.articles[0];
+    }
+
+    if (!art) {
+      alert('No article selected or available in Lore Vault.');
+      return;
+    }
+
+    const modal = document.getElementById('marketing-quick-modal');
+    const idInput = document.getElementById('quick-marketing-article-id');
+    const infoEl = document.getElementById('quick-marketing-article-info');
+    const outputEl = document.getElementById('quick-marketing-output');
+
+    if (idInput) idInput.value = art.id;
+    if (infoEl) infoEl.textContent = `📢 Article: ${art.title} (${art.category || 'General'})`;
+    if (outputEl) outputEl.value = '';
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeQuickMarketingModal() {
+    const modal = document.getElementById('marketing-quick-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  showWeaveActionModal() {
+    const modal = document.getElementById('weave-action-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeWeaveActionModal() {
+    const modal = document.getElementById('weave-action-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  routeToNarrativeSlate() {
+    this.closeWeaveActionModal();
+    const compiledEl = document.getElementById('compiled-llm-output');
+    if (compiledEl && compiledEl.value.trim()) {
+      this.activeWeaveContext = compiledEl.value.trim();
+      const banner = document.getElementById('slate-weave-context-banner');
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
+    }
+    this.switchTab('narrative-slate');
+    if (window.showToast) {
+      window.showToast('Weave Matrix Context loaded into Narrative Slate!', 'success');
+    }
+  }
+
+  clearActiveWeaveContext() {
+    this.activeWeaveContext = null;
+    const banner = document.getElementById('slate-weave-context-banner');
+    if (banner) {
+      banner.classList.add('hidden');
+    }
+    if (window.showToast) {
+      window.showToast('Cleared active Weave Matrix context overlay', 'info');
+    }
+  }
+
+  routeToMarketing() {
+    this.closeWeaveActionModal();
+    this.switchTab('marketing');
+    if (window.showToast) {
+      window.showToast('Routed context to Marketing Engine', 'success');
+    }
+  }
+
+  openQuickLoreChat() {
+    this.closeWeaveActionModal();
+    if (typeof window.toggleAIChatDrawer === 'function') {
+      window.toggleAIChatDrawer();
+    } else {
+      const drawer = document.getElementById('ai-chat-drawer');
+      if (drawer) drawer.classList.remove('hidden');
+    }
+    if (window.showToast) {
+      window.showToast('Quick Chat (Lore Interrogation) opened', 'info');
+    }
+  }
+
+  routeToNewArticle() {
+    this.closeWeaveActionModal();
+    this.openEditor();
+    if (window.showToast) {
+      window.showToast('Opened New Article editor', 'info');
+    }
+  }
+
+  copyMarketingOutput(mode = 'dashboard') {
+    const outputEl = mode === 'quick'
+      ? document.getElementById('quick-marketing-output')
+      : document.getElementById('marketing-output-text');
+    
+    const btn = mode === 'quick'
+      ? document.getElementById('btn-copy-quick-marketing')
+      : document.getElementById('btn-copy-marketing-output');
+
+    if (!outputEl || !outputEl.value) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(outputEl.value).then(() => {
+        if (btn) {
+          const originalText = btn.textContent;
+          btn.textContent = '✅ Copied!';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        outputEl.select();
+        document.execCommand('copy');
+        if (btn) {
+          const originalText = btn.textContent;
+          btn.textContent = '✅ Copied!';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 2000);
+        }
+      });
+    } else {
+      outputEl.select();
+      document.execCommand('copy');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    }
+  }
+
+  /* --- NARRATIVE SLATE WORKSPACE METHODS --- */
+
+  initNarrativeSlateWorkspace() {
+    this.renderCastMultiselect();
+    this.renderPinnedLoreMultiselect();
+    this.fetchSavedSlates();
+    this.updateSlateWordCount();
+
+    const container = document.getElementById('slate-steps-container');
+    if (container && container.children.length === 0) {
+      this.addSceneStep('Protagonist arrives at scene location');
+    }
+  }
+
+  renderCastMultiselect() {
+    const container = document.getElementById('slate-cast-multiselect');
+    if (!container) return;
+
+    const charArticles = (this.articles || []).filter(a => a.category === 'Characters');
+    if (charArticles.length === 0) {
+      container.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted);">No character articles in lore database.</span>';
+      return;
+    }
+
+    container.innerHTML = charArticles.map(art => `
+      <label class="cast-checkbox-label">
+        <input type="checkbox" value="${art.id}" onchange="window.app.renderCastWantsFlawsCards()">
+        <span>🎭 ${this.escapeHtml(art.title)}</span>
+      </label>
+    `).join('');
+
+    this.renderCastWantsFlawsCards();
+  }
+
+  renderPinnedLoreMultiselect() {
+    const container = document.getElementById('slate-pinned-lore-container');
+    if (!container) return;
+
+    if (!this.articles || this.articles.length === 0) {
+      container.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted);">No articles in lore database.</span>';
+      return;
+    }
+
+    container.innerHTML = this.articles.map(art => `
+      <label class="lore-checkbox-label">
+        <input type="checkbox" value="${art.id}">
+        <span>📜 ${this.escapeHtml(art.title)} <small style="color:var(--text-muted);">(${this.escapeHtml(art.category || 'General')})</small></span>
+      </label>
+    `).join('');
+  }
+
+  renderCastWantsFlawsCards() {
+    const cardsContainer = document.getElementById('slate-cast-cards');
+    if (!cardsContainer) return;
+
+    const checkedBoxes = document.querySelectorAll('#slate-cast-multiselect input[type="checkbox"]:checked');
+    const selectedIds = Array.from(checkedBoxes).map(b => b.value);
+
+    if (selectedIds.length === 0) {
+      cardsContainer.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted);">Select cast members above to display active Wants & Flaws.</span>';
+      return;
+    }
+
+    const cardsHtml = selectedIds.map(id => {
+      const art = (this.articles || []).find(a => a.id === id);
+      const title = art ? art.title : id;
+      const summary = art ? (art.summary || art.content.substring(0, 120) + '...') : '';
+      return `
+        <div class="cast-card">
+          <div class="cast-card-name">🎭 ${this.escapeHtml(title)}</div>
+          <div class="cast-card-detail"><strong>Wants:</strong> Secure safety, unearth hidden truth</div>
+          <div class="cast-card-detail"><strong>Flaws/Conflict:</strong> Hyper-vigilant, hesitant trust</div>
+          ${summary ? `<div class="cast-card-detail" style="font-style:italic; margin-top:0.25rem;">"${this.escapeHtml(summary)}"</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    cardsContainer.innerHTML = cardsHtml;
+  }
+
+  addSceneStep(text = '') {
+    const container = document.getElementById('slate-steps-container');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'step-item-row';
+    row.innerHTML = `
+      <input type="text" class="step-item-input" value="${this.escapeHtml(text)}" placeholder="Enter scene step directive...">
+      <button type="button" class="step-remove-btn" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(row);
+  }
+
+  updateSlateWordCount() {
+    const editor = document.getElementById('narrative-prose-editor');
+    const badge = document.getElementById('slate-word-count');
+    if (!editor || !badge) return;
+
+    const text = editor.value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    badge.textContent = `${words} word${words === 1 ? '' : 's'}`;
+  }
+
+  async compileNarrativeSlate() {
+    if (this.activeWeaveContext) {
+      const plot_hook = document.getElementById('slate-plot-hook') ? document.getElementById('slate-plot-hook').value.trim() : '';
+      let finalPrompt = this.activeWeaveContext;
+      if (plot_hook) {
+        finalPrompt += `\n\n[ADDITIONAL SCENE DIRECTIVE & HOOK]\n${plot_hook}`;
+      }
+      return {
+        status: 'success',
+        compiled_prompt: finalPrompt
+      };
+    }
+
+    const plot_hook = document.getElementById('slate-plot-hook') ? document.getElementById('slate-plot-hook').value.trim() : '';
+
+    const stepInputs = document.querySelectorAll('#slate-steps-container .step-item-input');
+    const scene_steps = Array.from(stepInputs).map(i => i.value.trim()).filter(Boolean);
+
+    const checkedCast = document.querySelectorAll('#slate-cast-multiselect input[type="checkbox"]:checked');
+    const cast_ids = Array.from(checkedCast).map(c => c.value);
+
+    const checkedLore = document.querySelectorAll('#slate-pinned-lore-container input[type="checkbox"]:checked');
+    const pinned_lore_ids = Array.from(checkedLore).map(l => l.value);
+
+    const activeChips = document.querySelectorAll('#slate-tone-chips .tone-chip.active');
+    const tone_chips = Array.from(activeChips).map(c => c.getAttribute('data-tone') || c.innerText.trim());
+
+    const payload = {
+      plot_hook,
+      scene_steps,
+      cast_ids,
+      pinned_lore_ids,
+      tone_chips,
+      visibility: 'public',
+      max_tokens: 4000
+    };
+
+    try {
+      const res = await fetch('/api/narrative/compile-slate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await res.json();
+      } else {
+        const textError = await res.text();
+        throw new Error(`Server returned non-JSON response: ${textError.substring(0, 100)}...`);
+      }
+
+      if (data.status === 'success') {
+        return data;
+      } else {
+        const msg = data.message || data.error || 'Failed to compile narrative slate';
+        window.showToast(msg, 'error');
+        throw new Error(msg);
+      }
+    } catch (err) {
+      window.showToast(`Slate Compilation Error: ${err.message}`, 'error');
+      throw err;
+    }
+  }
+
+  async generateProseContinuation() {
+    const btn = document.getElementById('btn-continue-prose');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = '⏳ Writing...';
+    }
+
+    try {
+      const compileData = await this.compileNarrativeSlate();
+      const editor = document.getElementById('narrative-prose-editor');
+      const current_draft = editor ? editor.value : '';
+
+      const res = await fetch('/api/narrative/continue-prose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          compiled_prompt: compileData.compiled_prompt,
+          current_draft: current_draft
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success' && data.generated_text) {
+        if (editor.value.trim().length > 0) {
+          editor.value += '\n\n' + data.generated_text;
+        } else {
+          editor.value = data.generated_text;
+        }
+        this.updateSlateWordCount();
+        window.showToast('Prose generated successfully!', 'success');
+      } else {
+        const msg = data.message || data.error || 'Unknown server error';
+        window.showToast('Error generating prose continuation: ' + msg, 'error');
+      }
+    } catch (err) {
+      window.showToast('Prose Error: ' + err.message, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '⚡ Continue Prose';
+      }
+    }
+  }
+
+  showPovRewriteModal() {
+    const modal = document.getElementById('pov-rewrite-modal');
+    if (!modal) return;
+
+    const select = document.getElementById('pov-target-character');
+    if (select) {
+      select.innerHTML = '<option value="">-- Choose Character POV --</option>';
+      const charArticles = (this.articles || []).filter(a => a.category === 'Characters');
+      charArticles.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.title;
+        select.appendChild(opt);
+      });
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+
+  closePovRewriteModal() {
+    const modal = document.getElementById('pov-rewrite-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+
+  async executePovRewrite() {
+    const editor = document.getElementById('narrative-prose-editor');
+    if (!editor) return;
+
+    const charId = document.getElementById('pov-target-character') ? document.getElementById('pov-target-character').value : '';
+    if (!charId) {
+      alert('Please select a target character perspective.');
+      return;
+    }
+
+    let textToRewrite = '';
+    const startPos = editor.selectionStart;
+    const endPos = editor.selectionEnd;
+
+    if (startPos !== endPos) {
+      textToRewrite = editor.value.substring(startPos, endPos);
+    } else {
+      textToRewrite = editor.value.trim();
+    }
+
+    if (!textToRewrite) {
+      alert('Please write or select text in the editor to rewrite.');
+      return;
+    }
+
+    this.closePovRewriteModal();
+
+    try {
+      const res = await fetch('/api/narrative/pov-rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          highlighted_text: textToRewrite,
+          pov_character_id: charId
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success' && data.rewritten_text) {
+        if (startPos !== endPos) {
+          editor.value = editor.value.substring(0, startPos) + data.rewritten_text + editor.value.substring(endPos);
+        } else {
+          editor.value = data.rewritten_text;
+        }
+        this.updateSlateWordCount();
+      } else {
+        alert('Error performing POV rewrite: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  async suggestNextBeats() {
+    const btn = document.getElementById('btn-suggest-beats');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = '⏳ Brainstorming...';
+    }
+
+    try {
+      const compileData = await this.compileNarrativeSlate();
+      const editor = document.getElementById('narrative-prose-editor');
+      const current_draft = editor ? editor.value : '';
+
+      const res = await fetch('/api/narrative/suggest-beats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          compiled_prompt: compileData.compiled_prompt,
+          current_draft: current_draft
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.beats)) {
+        this.showBeatSuggestionsModal(data.beats);
+      } else {
+        alert('Error suggesting beats: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '💡 Suggest Next Steps';
+      }
+    }
+  }
+
+  showBeatSuggestionsModal(beats) {
+    const modal = document.getElementById('beats-suggestion-modal');
+    const container = document.getElementById('beats-suggestion-list');
+    if (!modal || !container) return;
+
+    container.innerHTML = beats.map((beat, idx) => `
+      <div style="background:rgba(15,23,42,0.9); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+          <strong style="color:var(--accent-amber); font-size:0.9rem;">${idx + 1}. ${this.escapeHtml(beat.title)}</strong>
+          <span style="font-size:0.7rem; padding:0.15rem 0.5rem; background:rgba(56,189,248,0.1); color:var(--accent-primary); border-radius:4px;">${this.escapeHtml(beat.type || 'Beat')}</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">${this.escapeHtml(beat.description)}</p>
+        <button class="btn btn-sm btn-primary" onclick="window.app.insertBeatStep('${this.escapeHtml(beat.title + ': ' + beat.description)}')">+ Add to Scene Steps</button>
+      </div>
+    `).join('');
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+
+  closeBeatsModal() {
+    const modal = document.getElementById('beats-suggestion-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+
+  insertBeatStep(stepText) {
+    this.addSceneStep(stepText);
+    this.closeBeatsModal();
+  }
+
+  async saveNarrativeSlate() {
+    const name = prompt('Enter a name for this Narrative Slate:', 'Scene Slate - ' + new Date().toLocaleTimeString());
+    if (!name) return;
+
+    const plot_hook = document.getElementById('slate-plot-hook') ? document.getElementById('slate-plot-hook').value.trim() : '';
+
+    const stepInputs = document.querySelectorAll('#slate-steps-container .step-item-input');
+    const scene_steps = Array.from(stepInputs).map(i => i.value.trim()).filter(Boolean);
+
+    const checkedCast = document.querySelectorAll('#slate-cast-multiselect input[type="checkbox"]:checked');
+    const cast_ids = Array.from(checkedCast).map(c => c.value);
+
+    const checkedLore = document.querySelectorAll('#slate-pinned-lore-container input[type="checkbox"]:checked');
+    const pinned_lore_ids = Array.from(checkedLore).map(l => l.value);
+
+    const activeChips = document.querySelectorAll('#slate-tone-chips .tone-chip.active');
+    const tone_chips = Array.from(activeChips).map(c => c.getAttribute('data-tone') || c.innerText.trim());
+
+    const payload = {
+      name,
+      world_id: this.currentWorldId || 'all',
+      plot_hook,
+      scene_steps,
+      cast_ids,
+      pinned_lore_ids,
+      tone_chips
+    };
+
+    try {
+      const res = await fetch('/api/narrative/save-slate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert('Narrative Slate saved successfully!');
+        this.fetchSavedSlates();
+      } else {
+        alert('Failed to save slate: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Error saving slate: ' + e.message);
+    }
+  }
+
+  async fetchSavedSlates() {
+    const select = document.getElementById('slate-snapshot-select');
+    if (!select) return;
+
+    try {
+      const res = await fetch(`/api/narrative/slates?world_id=${this.currentWorldId || 'all'}`);
+      const data = await res.json();
+
+      select.innerHTML = '<option value="">📂 Load Saved Slate Snapshot...</option>';
+
+      if (data.status === 'success' && Array.isArray(data.slates)) {
+        data.slates.forEach(slate => {
+          const opt = document.createElement('option');
+          opt.value = slate.id;
+          opt.textContent = `${slate.name} (${new Date(slate.updated_at).toLocaleDateString()})`;
+          select.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch saved slates:', e);
+    }
+  }
+
+  async loadNarrativeSlate(slateId) {
+    if (!slateId) return;
+
+    try {
+      const res = await fetch(`/api/narrative/slates?world_id=${this.currentWorldId || 'all'}`);
+      const data = await res.json();
+
+      if (data.status === 'success' && Array.isArray(data.slates)) {
+        const slate = data.slates.find(s => s.id === slateId);
+        if (!slate) return;
+
+        if (document.getElementById('slate-plot-hook')) {
+          document.getElementById('slate-plot-hook').value = slate.plot_hook || '';
+        }
+
+        const stepsContainer = document.getElementById('slate-steps-container');
+        if (stepsContainer) {
+          stepsContainer.innerHTML = '';
+          let steps = [];
+          try {
+            steps = typeof slate.scene_steps === 'string' ? JSON.parse(slate.scene_steps) : slate.scene_steps;
+          } catch (e) {}
+          if (Array.isArray(steps) && steps.length > 0) {
+            steps.forEach(stepText => this.addSceneStep(stepText));
+          } else {
+            this.addSceneStep('');
+          }
+        }
+
+        let castIds = [];
+        try {
+          castIds = typeof slate.cast_ids === 'string' ? JSON.parse(slate.cast_ids) : slate.cast_ids;
+        } catch (e) {}
+        const castBoxes = document.querySelectorAll('#slate-cast-multiselect input[type="checkbox"]');
+        castBoxes.forEach(box => {
+          box.checked = Array.isArray(castIds) && castIds.includes(box.value);
+        });
+        this.renderCastWantsFlawsCards();
+
+        let tones = [];
+        try {
+          tones = typeof slate.tone_chips === 'string' ? JSON.parse(slate.tone_chips) : slate.tone_chips;
+        } catch (e) {}
+        const toneButtons = document.querySelectorAll('#slate-tone-chips .tone-chip');
+        toneButtons.forEach(btn => {
+          const tVal = btn.getAttribute('data-tone') || btn.innerText.trim();
+          if (Array.isArray(tones) && tones.includes(tVal)) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+
+        let loreIds = [];
+        try {
+          loreIds = typeof slate.pinned_lore_ids === 'string' ? JSON.parse(slate.pinned_lore_ids) : slate.pinned_lore_ids;
+        } catch (e) {}
+        const loreBoxes = document.querySelectorAll('#slate-pinned-lore-container input[type="checkbox"]');
+        loreBoxes.forEach(box => {
+          box.checked = Array.isArray(loreIds) && loreIds.includes(box.value);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load slate details:', e);
+    }
+  }
+
+  handleWikiLinkAutocomplete(event) {
+    this.updateSlateWordCount();
+
+    const editor = document.getElementById('narrative-prose-editor');
+    const popover = document.getElementById('wikilink-autocomplete-popover');
+    if (!editor || !popover) return;
+
+    const cursorPos = editor.selectionStart;
+    const textBefore = editor.value.substring(0, cursorPos);
+    const lastOpenIndex = textBefore.lastIndexOf('[[');
+
+    if (lastOpenIndex !== -1) {
+      const textAfterOpen = textBefore.substring(lastOpenIndex + 2);
+      if (!textAfterOpen.includes(']]') && !textAfterOpen.includes('\n')) {
+        const query = textAfterOpen.toLowerCase();
+        const matches = (this.articles || []).filter(art =>
+          art.title.toLowerCase().includes(query)
+        ).slice(0, 8);
+
+        if (matches.length > 0) {
+          popover.innerHTML = matches.map((art, idx) => `
+            <div class="wikilink-item ${idx === 0 ? 'selected' : ''}" onclick="window.app.selectWikiLinkItem('${this.escapeHtml(art.title)}')">
+              <span>[[${this.escapeHtml(art.title)}]]</span>
+              <span class="item-category">${this.escapeHtml(art.category || 'Lore')}</span>
+            </div>
+          `).join('');
+
+          popover.classList.remove('hidden');
+          return;
+        }
+      }
+    }
+
+    popover.classList.add('hidden');
+  }
+
+  selectWikiLinkItem(articleTitle) {
+    const editor = document.getElementById('narrative-prose-editor');
+    const popover = document.getElementById('wikilink-autocomplete-popover');
+    if (!editor) return;
+
+    const cursorPos = editor.selectionStart;
+    const textBefore = editor.value.substring(0, cursorPos);
+    const textAfter = editor.value.substring(cursorPos);
+    const lastOpenIndex = textBefore.lastIndexOf('[[');
+
+    if (lastOpenIndex !== -1) {
+      const prefix = textBefore.substring(0, lastOpenIndex);
+      editor.value = prefix + `[[${articleTitle}]]` + textAfter;
+      const newCursorPos = prefix.length + articleTitle.length + 4;
+      editor.selectionStart = newCursorPos;
+      editor.selectionEnd = newCursorPos;
+      editor.focus();
+    }
+
+    if (popover) popover.classList.add('hidden');
+    this.updateSlateWordCount();
   }
 
   // --- PHASE 3 NARRATIVE SLATE & PERSONA CONTROLLERS ---
@@ -594,6 +1570,7 @@ class LoreApp {
       const res = await fetch(`/api/categories?world_id=${this.currentWorldId || 'all'}`);
       this.categories = await res.json();
       this.renderCategoryMenu();
+      this.renderCategoryDock();
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
@@ -612,14 +1589,222 @@ class LoreApp {
       
       this.renderArticlesList();
       this.renderTagCloud();
+      this.renderFilterChips();
+      this.renderCategoryDock();
       
       // Update ContextBuilder dataset
       if (window.ContextBuilder) {
         window.ContextBuilder.init(this.articles);
       }
+      this.populateMarketingArticles();
+      this.loadKnowledgeGraph();
     } catch (err) {
       console.error('Failed to fetch articles:', err);
     }
+  }
+
+  renderCategoryDock() {
+    const dockEl = document.getElementById('category-dock-bar');
+    if (!dockEl) return;
+
+    const standardCategories = [
+      'Characters',
+      'Locations',
+      'Factions',
+      'Races & Species',
+      'Magic & Tech',
+      'History',
+      'Items'
+    ];
+
+    const categoryIcons = {
+      'Characters': '👤',
+      'Locations': '🏰',
+      'Factions': '🛡️',
+      'Races & Species': '🧬',
+      'Magic & Tech': '🔮',
+      'History': '📜',
+      'Items': '⚔️'
+    };
+
+    let totalCount = 0;
+    const countMap = {};
+    standardCategories.forEach(cat => { countMap[cat] = 0; });
+
+    if (Array.isArray(this.categories) && this.categories.length > 0) {
+      this.categories.forEach(c => {
+        if (c.category && countMap.hasOwnProperty(c.category)) {
+          countMap[c.category] = c.count || 0;
+        }
+        totalCount += (c.count || 0);
+      });
+    } else if (Array.isArray(this.articles)) {
+      this.articles.forEach(a => {
+        if (a.category && countMap.hasOwnProperty(a.category)) {
+          countMap[a.category]++;
+        }
+        totalCount++;
+      });
+    }
+
+    const isAllActive = !this.selectedCategory;
+    let html = `
+      <button class="category-dock-pill ${isAllActive ? 'active' : ''}" onclick="window.app.filterByCategory(null)" title="All Categories">
+        <span class="dock-icon">📚</span>
+        <span class="dock-title">All</span>
+        <span class="dock-count-badge">${totalCount}</span>
+      </button>
+    `;
+
+    standardCategories.forEach(catName => {
+      const count = countMap[catName] || 0;
+      const isActive = this.selectedCategory === catName;
+      const icon = (window.LoreBadges && typeof window.LoreBadges.getCategoryIcon === 'function')
+        ? window.LoreBadges.getCategoryIcon(catName)
+        : (categoryIcons[catName] || '📜');
+
+      const escapedCat = catName.replace(/'/g, "\\'");
+      html += `
+        <button class="category-dock-pill ${isActive ? 'active' : ''}" onclick="window.app.filterByCategory('${escapedCat}')" title="${catName}">
+          <span class="dock-icon">${icon}</span>
+          <span class="dock-title">${catName}</span>
+          <span class="dock-count-badge">${count}</span>
+        </button>
+      `;
+    });
+
+    // Render Custom Primary Categories
+    if (Array.isArray(this.categories)) {
+      this.categories.forEach(c => {
+        if (c.isCustom && c.category && !standardCategories.includes(c.category)) {
+          const catName = c.category;
+          const count = c.count || 0;
+          const isActive = this.selectedCategory === catName;
+          const icon = c.icon || '📁';
+          const escapedCat = catName.replace(/'/g, "\\'");
+          html += `
+            <button class="category-dock-pill ${isActive ? 'active' : ''}" onclick="window.app.filterByCategory('${escapedCat}')" title="${catName}">
+              <span class="dock-icon">${icon}</span>
+              <span class="dock-title">${catName}</span>
+              <span class="dock-count-badge">${count}</span>
+            </button>
+          `;
+        }
+      });
+    }
+
+    // Add Custom Category CTA Button
+    html += `
+      <button class="add-category-dock-btn" onclick="window.app.openCreateCategoryModal()" title="Add Custom Category or Sub-Category">
+        <span>+ Category</span>
+      </button>
+    `;
+
+    dockEl.innerHTML = html;
+    this.renderSubCategoryBar();
+  }
+
+  renderSubCategoryBar() {
+    const barEl = document.getElementById('sub-category-bar');
+    if (!barEl) return;
+
+    const currentCat = this.selectedCategory;
+    const subCategoriesMap = {
+      'Characters': ['Rulers & Nobility', 'Mages & Mystics', 'Warriors & Officers', 'Key Figures & Personages'],
+      'Locations': ['Cities & Settlements', 'Fortresses & Strongholds', 'Realms & Territories', 'Geography & Wilderness', 'Landmarks & Ruins'],
+      'Factions': ['Noble Houses & Dynasties', 'Syndicates & Guilds', 'Military Orders', 'Organizations & Societies'],
+      'Races & Species': ['Playable Races & Lineages', 'Beasts & Creatures', 'Monsters & Entities', 'Flora & Ecology'],
+      'Magic & Tech': ['Spells & Incantations', 'Arcane Artifacts & Catalysts', 'Technology & Machinery', 'Magic Systems & Theories'],
+      'History': ['Eras & Ages', 'Wars & Battles', 'Treaties & Accords', 'Chronicles & Key Events'],
+      'Items': ['Weapons & Armaments', 'Armor & Relics', 'Potions & Reagents', 'Trinkets & Valuables']
+    };
+
+    const hasFilter = !!(this.selectedCategory || this.selectedSubCategory || this.selectedTag || this.searchQuery);
+
+    if (!currentCat) {
+      if (hasFilter) {
+        barEl.classList.remove('hidden');
+        barEl.innerHTML = `
+          <button class="clear-filter-chip" onclick="window.app.clearCategoryFilters()" title="Clear Active Filters">
+            <span>✕ Clear Filter</span>
+          </button>
+        `;
+      } else {
+        barEl.classList.add('hidden');
+        barEl.innerHTML = '';
+      }
+      return;
+    }
+
+    barEl.classList.remove('hidden');
+
+    const knownSubs = subCategoriesMap[currentCat] || [];
+    const dbSubMap = new Map();
+
+    const found = Array.isArray(this.categories) ? this.categories.find(c => c.category === currentCat) : null;
+    if (found && Array.isArray(found.subCategories)) {
+      found.subCategories.forEach(s => {
+        if (s.subCategory) dbSubMap.set(s.subCategory, s.count || 0);
+      });
+    }
+
+    if (Array.isArray(this.articles)) {
+      const articleSubCounts = new Map();
+      this.articles.forEach(a => {
+        if (a.category === currentCat) {
+          const sub = a.sub_category || a.subCategory;
+          if (sub) {
+            articleSubCounts.set(sub, (articleSubCounts.get(sub) || 0) + 1);
+          } else if (Array.isArray(a.tags)) {
+            a.tags.forEach(t => {
+              if (knownSubs.includes(t)) {
+                articleSubCounts.set(t, (articleSubCounts.get(t) || 0) + 1);
+              }
+            });
+          }
+        }
+      });
+      articleSubCounts.forEach((cnt, sName) => {
+        const existing = dbSubMap.get(sName) || 0;
+        if (cnt > existing || !dbSubMap.has(sName)) {
+          dbSubMap.set(sName, cnt);
+        }
+      });
+    }
+
+    const subList = Array.from(new Set([...knownSubs, ...dbSubMap.keys()]));
+
+    let html = '';
+
+    // 1-Click Clear Filter Chip
+    html += `
+      <button class="clear-filter-chip" onclick="window.app.clearCategoryFilters()" title="Clear Active Filters">
+        <span>✕ Clear Filter</span>
+      </button>
+    `;
+
+    // "All [Category]" Chip
+    const isAllSubActive = !this.selectedSubCategory && !this.selectedTag;
+    html += `
+      <button class="sub-category-chip ${isAllSubActive ? 'active' : ''}" onclick="window.app.filterBySubCategory('All')" title="All ${currentCat}">
+        <span>All ${currentCat}</span>
+      </button>
+    `;
+
+    // Sub-category Chips
+    subList.forEach(subName => {
+      const count = dbSubMap.get(subName) || 0;
+      const isSubActive = (this.selectedSubCategory === subName || this.selectedTag === subName);
+      const escapedSub = subName.replace(/'/g, "\\'");
+      html += `
+        <button class="sub-category-chip ${isSubActive ? 'active' : ''}" onclick="window.app.filterBySubCategory('${escapedSub}')" title="${subName}">
+          <span>${subName}</span>
+          <span class="sub-chip-count">${count}</span>
+        </button>
+      `;
+    });
+
+    barEl.innerHTML = html;
   }
 
   renderCategoryMenu() {
@@ -635,7 +1820,26 @@ class LoreApp {
       </li>
     `;
 
-    const standardCategories = ['Characters', 'Locations', 'Factions', 'Species', 'Magic & Tech', 'History', 'Items'];
+    const standardCategories = [
+      'Characters',
+      'Locations',
+      'Factions',
+      'Races & Species',
+      'Magic & Tech',
+      'History',
+      'Items'
+    ];
+
+    const subCategoriesMap = {
+      'Characters': ['Rulers & Nobility', 'Mages & Mystics', 'Warriors & Officers', 'Key Figures & Personages'],
+      'Locations': ['Cities & Settlements', 'Fortresses & Strongholds', 'Realms & Territories', 'Geography & Wilderness', 'Landmarks & Ruins'],
+      'Factions': ['Noble Houses & Dynasties', 'Syndicates & Guilds', 'Military Orders', 'Organizations & Societies'],
+      'Races & Species': ['Playable Races & Lineages', 'Beasts & Creatures', 'Monsters & Entities', 'Flora & Ecology'],
+      'Magic & Tech': ['Spells & Incantations', 'Arcane Artifacts & Catalysts', 'Technology & Machinery', 'Magic Systems & Theories'],
+      'History': ['Eras & Ages', 'Wars & Battles', 'Treaties & Accords', 'Chronicles & Key Events'],
+      'Items': ['Weapons & Armaments', 'Armor & Relics', 'Potions & Reagents', 'Trinkets & Valuables']
+    };
+
     standardCategories.forEach(catName => {
       const found = this.categories.find(c => c.category === catName);
       const count = found ? found.count : 0;
@@ -648,15 +1852,25 @@ class LoreApp {
         </li>
       `;
 
-      // Render Sub-Category Subsets when Active
-      if (isActive && found && found.subCategories && found.subCategories.length > 0) {
+      // Render Sub-Category Tree Nodes when Active/Selected
+      if (isActive) {
+        const knownSubs = subCategoriesMap[catName] || [];
+        const dbSubMap = new Map();
+        if (found && Array.isArray(found.subCategories)) {
+          found.subCategories.forEach(s => dbSubMap.set(s.subCategory, s.count));
+        }
+
+        // Combine taxonomy standard subcategories with dynamic DB subcategories
+        const subList = Array.from(new Set([...knownSubs, ...dbSubMap.keys()]));
+
         html += `<div class="sub-category-list" style="padding-left:1rem; margin:0.3rem 0; display:flex; flex-direction:column; gap:0.2rem;">`;
-        found.subCategories.forEach(sub => {
-          const isSubActive = this.selectedTag === sub.subCategory;
+        subList.forEach(subName => {
+          const subCount = dbSubMap.get(subName) || 0;
+          const isSubActive = this.selectedTag === subName;
           html += `
-            <div class="sub-cat-item ${isSubActive ? 'active' : ''}" style="font-size:0.75rem; color:${isSubActive ? 'var(--accent-blue)' : 'var(--text-muted)'}; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px; display:flex; justify-content:space-between;" onclick="event.stopPropagation(); window.app.filterByTag('${sub.subCategory}')">
-              <span>↳ ${sub.subCategory}</span>
-              <span style="font-size:0.65rem;">${sub.count}</span>
+            <div class="sub-cat-item ${isSubActive ? 'active' : ''}" style="font-size:0.75rem; color:${isSubActive ? 'var(--accent-blue)' : 'var(--text-muted)'}; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px; display:flex; justify-content:space-between;" onclick="event.stopPropagation(); window.app.filterByTag('${subName}')">
+              <span>↳ ${subName}</span>
+              <span style="font-size:0.65rem;">${subCount}</span>
             </div>
           `;
         });
@@ -711,14 +1925,16 @@ class LoreApp {
     }
   }
 
-  renderArticlesList() {
+  renderArticleList(articles = this.articles) {
     const container = document.getElementById('articles-cards');
     const countEl = document.getElementById('article-count');
     if (!container) return;
 
-    if (countEl) countEl.textContent = `${this.articles.length} Articles`;
+    const list = articles || [];
 
-    if (this.articles.length === 0) {
+    if (countEl) countEl.textContent = `${list.length} Articles`;
+
+    if (list.length === 0) {
       container.innerHTML = `
         <div style="text-align:center; padding:2rem; color:var(--text-muted);">
           No lore articles found matching criteria.
@@ -727,24 +1943,157 @@ class LoreApp {
       return;
     }
 
-    container.innerHTML = this.articles.map(art => {
-      const isActive = this.currentArticle && this.currentArticle.id === art.id;
-      const catClass = art.category.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const tagsList = Array.isArray(art.tags) ? art.tags : [];
+    // Group articles by Category or Type or fallback to Uncategorized
+    const groups = {};
+    list.forEach(art => {
+      let cat = art.category || art.type;
+      if (!cat && Array.isArray(art.tags) && art.tags.length > 0) {
+        cat = art.tags[0];
+      }
+      if (!cat || typeof cat !== 'string' || !cat.trim()) {
+        cat = 'Uncategorized';
+      } else {
+        cat = cat.trim();
+      }
+
+      if (!groups[cat]) {
+        groups[cat] = [];
+      }
+      groups[cat].push(art);
+    });
+
+    const sortedCategories = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    const catIconMap = {
+      'Characters': '👥',
+      'Locations': '🏰',
+      'Factions': '🛡️',
+      'Races & Species': '🧬',
+      'Magic & Tech': '🔮',
+      'History': '📜',
+      'Items': '🗡️'
+    };
+
+    // --- FULL-COLUMN CARD STREAM WHEN CATEGORY OR FILTER IS ACTIVE ---
+    if (this.selectedCategory || this.selectedSubCategory || this.selectedTag || this.searchQuery) {
+      container.innerHTML = list.map(art => {
+        const isActive = this.currentArticle && this.currentArticle.id === art.id;
+        const catClass = (art.category || 'uncategorized').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const tagsList = Array.isArray(art.tags) ? art.tags : [];
+        const icon = catIconMap[art.category] || '📁';
+
+        return `
+          <div class="article-card ${isActive ? 'active' : ''}" onclick="window.app.loadArticle('${art.id}')">
+            <div class="card-top">
+              <h3 class="card-title">${this.escapeHtml(art.title)}</h3>
+              <span class="badge badge-${catClass}">${icon} ${this.escapeHtml(art.category || 'Lore')}</span>
+            </div>
+            <p class="card-summary">${this.escapeHtml(art.summary || 'No summary available.')}</p>
+            <div class="card-footer">
+              ${tagsList.slice(0, 4).map(t => `<span class="tag-pill" style="font-size:0.65rem;" onclick="event.stopPropagation(); window.app.filterByTag('${this.escapeHtml(t)}')">#${this.escapeHtml(t)}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      return;
+    }
+
+    // --- COLLAPSIBLE ACCORDIONS FOR ALL CATEGORIES VIEW ---
+    container.innerHTML = sortedCategories.map(catName => {
+      const categoryArticles = groups[catName];
+      const icon = catIconMap[catName] || '📁';
+      const isOpen = !this.selectedCategory || this.selectedCategory === catName;
+
+      const articlesHtml = categoryArticles.map(art => {
+        const isActive = this.currentArticle && this.currentArticle.id === art.id;
+        const catClass = (art.category || 'uncategorized').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const tagsList = Array.isArray(art.tags) ? art.tags : [];
+
+        return `
+          <li>
+            <div class="article-card ${isActive ? 'active' : ''}" onclick="window.app.loadArticle('${art.id}')">
+              <div class="card-top">
+                <h3 class="card-title">${this.escapeHtml(art.title)}</h3>
+                <span class="badge badge-${catClass}">${icon} ${this.escapeHtml(art.category || catName)}</span>
+              </div>
+              <p class="card-summary">${this.escapeHtml(art.summary || 'No summary available.')}</p>
+              <div class="card-footer">
+                ${tagsList.slice(0, 3).map(t => `<span class="tag-pill" style="font-size:0.65rem;">#${this.escapeHtml(t)}</span>`).join('')}
+              </div>
+            </div>
+          </li>
+        `;
+      }).join('');
 
       return `
-        <div class="article-card ${isActive ? 'active' : ''}" onclick="window.app.loadArticle('${art.id}')">
-          <div class="card-top">
-            <h3 class="card-title">${art.title}</h3>
-            <span class="badge badge-${catClass}">${art.category}</span>
-          </div>
-          <p class="card-summary">${art.summary || 'No summary available.'}</p>
-          <div class="card-footer">
-            ${tagsList.slice(0, 3).map(t => `<span class="tag-pill" style="font-size:0.65rem;">#${t}</span>`).join('')}
-          </div>
-        </div>
+        <details class="category-folder" ${isOpen ? 'open' : ''}>
+          <summary class="category-folder-summary">
+            <span class="category-folder-title">
+              <span class="folder-icon">${icon}</span>
+              <span>${this.escapeHtml(catName)}</span>
+            </span>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="cat-count" style="font-size:0.75rem;">${categoryArticles.length}</span>
+              <span class="category-folder-caret">▶</span>
+            </div>
+          </summary>
+          <ul class="article-list-group">
+            ${articlesHtml}
+          </ul>
+        </details>
       `;
     }).join('');
+
+    this.renderFilterBreadcrumb();
+  }
+
+  renderFilterBreadcrumb() {
+    const el = document.getElementById('active-filter-breadcrumb');
+    if (!el) return;
+
+    if (!this.selectedCategory && !this.selectedTag && !this.searchQuery) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+
+    const catIconMap = {
+      'Characters': '👥',
+      'Locations': '🏰',
+      'Factions': '🛡️',
+      'Races & Species': '🧬',
+      'Magic & Tech': '🔮',
+      'History': '📜',
+      'Items': '🗡️'
+    };
+
+    let pathHtml = '';
+    if (this.selectedCategory) {
+      const icon = catIconMap[this.selectedCategory] || '📁';
+      pathHtml += `<span>${icon} ${this.escapeHtml(this.selectedCategory)}</span>`;
+    }
+
+    if (this.selectedTag) {
+      if (pathHtml) pathHtml += `<span class="breadcrumb-sep">›</span>`;
+      pathHtml += `<span>${this.escapeHtml(this.selectedTag)}</span>`;
+    }
+
+    if (this.searchQuery) {
+      if (pathHtml) pathHtml += `<span class="breadcrumb-sep">›</span>`;
+      pathHtml += `<span>🔍 "${this.escapeHtml(this.searchQuery)}"</span>`;
+    }
+
+    const count = this.articles ? this.articles.length : 0;
+    pathHtml += ` <span style="font-size:0.7rem; opacity:0.7; font-weight:normal;">(${count})</span>`;
+
+    el.innerHTML = `
+      <div class="breadcrumb-path">${pathHtml}</div>
+      <button class="breadcrumb-clear" onclick="window.app.clearCategoryFilters()">✕ Clear Filter</button>
+    `;
+    el.classList.remove('hidden');
+  }
+
+  renderArticlesList() {
+    this.renderArticleList(this.articles);
   }
 
   async loadArticle(id) {
@@ -810,9 +2159,68 @@ class LoreApp {
           : '<li style="color:var(--text-muted); font-size:0.8rem;">No inbound cross-links</li>';
       }
 
+      // Sync Add to Slate button state
+      this.syncAddToSlateBtn();
+
       this.renderArticlesList();
     } catch (err) {
       console.error('Failed to load article:', err);
+    }
+  }
+
+  /**
+   * Sync #add-to-slate-btn visual state with ContextBuilder slate.
+   */
+  syncAddToSlateBtn() {
+    const btn = document.getElementById('add-to-slate-btn');
+    if (!btn || !this.currentArticle) return;
+
+    const isInSlate = window.ContextBuilder &&
+      window.ContextBuilder.state.slate.selectedArticleIds.has(this.currentArticle.id);
+
+    if (isInSlate) {
+      btn.textContent = '✓ In Slate';
+      btn.classList.add('added');
+      btn.disabled = true;
+    } else {
+      btn.textContent = '+ Add to Slate';
+      btn.classList.remove('added');
+      btn.disabled = false;
+    }
+  }
+
+  /**
+   * Handle click on the #add-to-slate-btn.
+   * Adds the current article to the Weave Matrix slate with visual feedback.
+   */
+  handleAddToSlateClick() {
+    if (!this.currentArticle) return;
+
+    const btn = document.getElementById('add-to-slate-btn');
+    if (!btn || btn.disabled) return;
+
+    const articleId = this.currentArticle.id;
+
+    // Delegate to ContextBuilder
+    let wasAdded = true;
+    if (window.ContextBuilder && typeof window.ContextBuilder.addArticleToSlate === 'function') {
+      wasAdded = window.ContextBuilder.addArticleToSlate(articleId);
+    }
+
+    if (wasAdded) {
+      // Visual feedback: text change + pulse animation
+      btn.textContent = '✓ Added';
+      btn.classList.add('added', 'slate-pulse-anim');
+      btn.disabled = true;
+
+      // Remove animation class after it completes
+      btn.addEventListener('animationend', () => {
+        btn.classList.remove('slate-pulse-anim');
+      }, { once: true });
+
+      if (window.showToast) {
+        window.showToast(`"${this.currentArticle.title}" added to Weave Matrix slate`, 'success');
+      }
     }
   }
 
@@ -837,15 +2245,138 @@ class LoreApp {
     }
   }
 
+  renderFilterChips() {
+    const container = document.getElementById('category-filter-chips');
+    if (!container) return;
+
+    const standardCategories = [
+      'Characters',
+      'Locations',
+      'Factions',
+      'Races & Species',
+      'Magic & Tech',
+      'History',
+      'Items'
+    ];
+
+    const subCategoriesMap = {
+      'Characters': ['Rulers & Nobility', 'Mages & Mystics', 'Warriors & Officers', 'Key Figures & Personages'],
+      'Locations': ['Cities & Settlements', 'Fortresses & Strongholds', 'Realms & Territories', 'Geography & Wilderness', 'Landmarks & Ruins'],
+      'Factions': ['Noble Houses & Dynasties', 'Syndicates & Guilds', 'Military Orders', 'Organizations & Societies'],
+      'Races & Species': ['Playable Races & Lineages', 'Beasts & Creatures', 'Monsters & Entities', 'Flora & Ecology'],
+      'Magic & Tech': ['Spells & Incantations', 'Arcane Artifacts & Catalysts', 'Technology & Machinery', 'Magic Systems & Theories'],
+      'History': ['Eras & Ages', 'Wars & Battles', 'Treaties & Accords', 'Chronicles & Key Events'],
+      'Items': ['Weapons & Armaments', 'Armor & Relics', 'Potions & Reagents', 'Trinkets & Valuables']
+    };
+
+    let chips = ['All'];
+    const currentCat = this.selectedCategory;
+
+    if (currentCat && subCategoriesMap[currentCat]) {
+      const knownSubs = subCategoriesMap[currentCat] || [];
+      const found = this.categories.find(c => c.category === currentCat);
+      const dbSubs = (found && Array.isArray(found.subCategories)) ? found.subCategories.map(s => s.subCategory) : [];
+      const combinedSubs = Array.from(new Set([...knownSubs, ...dbSubs]));
+      chips = ['All', ...combinedSubs];
+    } else {
+      chips = ['All', ...standardCategories];
+    }
+
+    container.innerHTML = chips.map(chip => {
+      let isActive = false;
+      if (currentCat && subCategoriesMap[currentCat]) {
+        if (chip === 'All') {
+          isActive = !this.selectedSubCategory && !this.selectedTag;
+        } else {
+          isActive = (this.selectedSubCategory === chip || this.selectedTag === chip);
+        }
+      } else {
+        if (chip === 'All') {
+          isActive = !this.selectedCategory;
+        } else {
+          isActive = (this.selectedCategory === chip);
+        }
+      }
+
+      const escapedChip = chip.replace(/'/g, "\\'");
+      return `
+        <button class="filter-chip ${isActive ? 'active' : ''}"
+                onclick="window.app.filterBySubCategory('${escapedChip}')">
+          ${chip}
+        </button>
+      `;
+    }).join('');
+  }
+
   filterByCategory(cat) {
     this.selectedCategory = cat;
+    this.selectedSubCategory = null;
+    this.selectedTag = null;
     this.fetchCategories();
     this.fetchArticles();
+    this.renderFilterChips();
+    this.renderCategoryDock();
+    this.renderSubCategoryBar();
   }
 
   filterByTag(tag) {
     this.selectedTag = this.selectedTag === tag ? null : tag;
+    this.selectedSubCategory = this.selectedTag;
     this.fetchArticles();
+    this.renderCategoryMenu();
+    this.renderFilterChips();
+    this.renderSubCategoryBar();
+  }
+
+  filterBySubCategory(sub) {
+    const standardCategories = [
+      'Characters', 'Locations', 'Factions', 'Races & Species',
+      'Magic & Tech', 'History', 'Items'
+    ];
+
+    if (sub === 'All') {
+      if (this.selectedSubCategory || this.selectedTag) {
+        this.selectedSubCategory = null;
+        this.selectedTag = null;
+        this.fetchArticles();
+        this.renderCategoryMenu();
+        this.renderFilterChips();
+        this.renderSubCategoryBar();
+      } else if (this.selectedCategory) {
+        this.selectedSubCategory = null;
+        this.selectedTag = null;
+        this.fetchArticles();
+        this.renderCategoryMenu();
+        this.renderFilterChips();
+        this.renderSubCategoryBar();
+      } else {
+        this.filterByCategory(null);
+      }
+      return;
+    }
+
+    if (!this.selectedCategory && standardCategories.includes(sub)) {
+      this.filterByCategory(sub);
+      return;
+    }
+
+    this.filterByTag(sub);
+    this.renderSubCategoryBar();
+  }
+
+  clearCategoryFilters() {
+    this.selectedCategory = null;
+    this.selectedSubCategory = null;
+    this.selectedTag = null;
+    this.searchQuery = '';
+    const searchInput = document.getElementById('global-search') || document.querySelector('.search-bar-container input');
+    if (searchInput) searchInput.value = '';
+    this.fetchCategories();
+    this.fetchArticles();
+    this.renderCategoryDock();
+    this.renderSubCategoryBar();
+    this.renderCategoryMenu();
+    this.renderFilterChips();
   }
 
   handleSearch(val) {
@@ -1083,6 +2614,7 @@ class LoreApp {
     let html = `<div class="search-dropdown-header"><span>${headerLabel}</span></div>`;
     html += results.map((art, i) => {
       const catIcon = this.getCategoryIcon(art.category);
+      const catBadgeClass = this.getCategoryBadgeClass(art.category);
       const hasSecret = /\[box=secret\]|\[secret\]/i.test(art.summary || '') || /\[box=secret\]|\[secret\]/i.test(art.content || '');
       
       let summaryText = art.summary || '';
@@ -1096,7 +2628,7 @@ class LoreApp {
         <div class="search-result-item ${i === this.selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.app.loadArticle('${art.id}'); window.app.hideSearchDropdown();" onmouseenter="window.app.setSelectedIndex(${i})">
           <div class="search-result-header">
             <span class="search-result-title">${catIcon} ${this.escapeHtml(art.title)} ${hasSecret ? '<span class="search-secret-badge" title="Contains secret lore">🔒</span>' : ''}</span>
-            <span class="search-result-badge">${this.escapeHtml(art.category || 'Lore')}</span>
+            <span class="search-result-badge ${catBadgeClass}">${catIcon} ${this.escapeHtml(art.category || 'Lore')}</span>
           </div>
           ${summaryText ? `<div class="search-result-summary">${this.escapeHtml(summaryText)}</div>` : ''}
         </div>
@@ -1107,15 +2639,27 @@ class LoreApp {
     dropdown.classList.remove('hidden');
   }
 
+  getCategoryBadgeClass(cat) {
+    if (window.LoreBadges && typeof window.LoreBadges.getCategoryBadgeClass === 'function') {
+      return window.LoreBadges.getCategoryBadgeClass(cat);
+    }
+    if (!cat) return 'badge-default';
+    const c = String(cat).toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `badge-${c}`;
+  }
+
   getCategoryIcon(cat) {
+    if (window.LoreBadges && typeof window.LoreBadges.getCategoryIcon === 'function') {
+      return window.LoreBadges.getCategoryIcon(cat);
+    }
     if (!cat) return '📜';
-    const c = cat.toLowerCase();
+    const c = String(cat).toLowerCase();
     if (c.includes('character') || c.includes('person') || c.includes('hero')) return '👤';
     if (c.includes('location') || c.includes('place') || c.includes('city') || c.includes('realm')) return '🏰';
     if (c.includes('faction') || c.includes('guild') || c.includes('nation') || c.includes('order')) return '🛡️';
     if (c.includes('magic') || c.includes('spell') || c.includes('artifact')) return '🔮';
     if (c.includes('item') || c.includes('weapon') || c.includes('gear')) return '⚔️';
-    if (c.includes('species') || c.includes('creature') || c.includes('beast')) return '🐉';
+    if (c.includes('species') || c.includes('race') || c.includes('creature') || c.includes('beast')) return '🧬';
     return '📜';
   }
 
@@ -1161,6 +2705,21 @@ class LoreApp {
     if (dropdown) dropdown.classList.add('hidden');
   }
 
+  handleSortSegment(mode) {
+    const container = document.getElementById('sort-segmented-control');
+    if (container) {
+      const btns = container.querySelectorAll('.segmented-btn');
+      btns.forEach(btn => {
+        if (btn.getAttribute('data-sort') === mode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+    this.handleSort(mode);
+  }
+
   handleSort(mode) {
     if (mode === 'title') {
       this.articles.sort((a, b) => a.title.localeCompare(b.title));
@@ -1170,6 +2729,42 @@ class LoreApp {
       this.articles.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     }
     this.renderArticlesList();
+  }
+
+  selectEditCategory(category) {
+    const catIn = document.getElementById('edit-category');
+    if (catIn) catIn.value = category;
+    this.updateEditCategoryUI(category);
+  }
+
+  updateEditCategoryUI(category) {
+    const container = document.getElementById('edit-category-segmented');
+    if (!container) return;
+    const targetCat = category || 'Characters';
+    const btns = container.querySelectorAll('.segmented-btn');
+    btns.forEach(btn => {
+      if (btn.getAttribute('data-cat') === targetCat) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  selectChatCategoryFilter(category) {
+    const catIn = document.getElementById('chat-category-filter');
+    if (catIn) catIn.value = category;
+    const container = document.getElementById('chat-category-segmented');
+    if (container) {
+      const btns = container.querySelectorAll('.segmented-btn');
+      btns.forEach(btn => {
+        if (btn.getAttribute('data-chat-cat') === category) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
   }
 
 
@@ -1203,6 +2798,7 @@ class LoreApp {
       titleHeader.textContent = 'Edit Lore Article';
       titleIn.value = this.currentArticle.title;
       catIn.value = this.currentArticle.category;
+      this.updateEditCategoryUI(this.currentArticle.category);
       summaryIn.value = this.currentArticle.summary || '';
       tagsIn.value = (this.currentArticle.tags || []).join(', ');
       contentIn.value = this.currentArticle.content;
@@ -1211,6 +2807,7 @@ class LoreApp {
       titleHeader.textContent = 'New Lore Article';
       titleIn.value = '';
       catIn.value = 'Locations';
+      this.updateEditCategoryUI('Locations');
       summaryIn.value = '';
       tagsIn.value = '';
       if (headerImgIn) headerImgIn.value = '';
@@ -1244,6 +2841,140 @@ Overview paragraph describing the location, faction, or character.
   closeEditor() {
     document.getElementById('editor-modal').classList.add('hidden');
     this.editingId = null;
+    this.hideCrosslinkPopover();
+  }
+
+  // --- @ CROSS-LINK AUTO-COMPLETE POPOVER ---
+  setupCrosslinkPopover() {
+    const textarea = document.getElementById('edit-content');
+    const popover = document.getElementById('crosslink-popover');
+    if (!textarea || !popover) return;
+
+    this.crosslinkMatches = [];
+    this.crosslinkIndex = 0;
+
+    textarea.addEventListener('input', (e) => this.handleCrosslinkInput(e));
+    textarea.addEventListener('keyup', (e) => this.handleCrosslinkInput(e));
+    textarea.addEventListener('keydown', (e) => this.handleCrosslinkKeydown(e));
+
+    document.addEventListener('click', (e) => {
+      if (popover && !popover.contains(e.target) && e.target !== textarea) {
+        this.hideCrosslinkPopover();
+      }
+    });
+
+    popover.addEventListener('click', (e) => {
+      const item = e.target.closest('.crosslink-item');
+      if (item) {
+        const idx = parseInt(item.getAttribute('data-idx'), 10);
+        if (!isNaN(idx) && this.crosslinkMatches && this.crosslinkMatches[idx]) {
+          this.insertCrosslink(this.crosslinkMatches[idx]);
+        }
+      }
+    });
+  }
+
+  handleCrosslinkInput(e) {
+    const textarea = document.getElementById('edit-content');
+    const popover = document.getElementById('crosslink-popover');
+    if (!textarea || !popover) return;
+
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.slice(0, cursorPos);
+    const match = textBefore.match(/@([^@\n\]]*)$/);
+
+    if (!match) {
+      this.hideCrosslinkPopover();
+      return;
+    }
+
+    const query = match[1].toLowerCase().trim();
+    const matches = (this.articles || []).filter(a =>
+      a.title && (query === '' || a.title.toLowerCase().includes(query))
+    ).slice(0, 8);
+
+    if (matches.length === 0) {
+      this.hideCrosslinkPopover();
+      return;
+    }
+
+    this.crosslinkMatches = matches;
+    if (this.crosslinkIndex >= matches.length) {
+      this.crosslinkIndex = 0;
+    }
+    this.renderCrosslinkMatches();
+  }
+
+  renderCrosslinkMatches() {
+    const popover = document.getElementById('crosslink-popover');
+    if (!popover || !this.crosslinkMatches || this.crosslinkMatches.length === 0) {
+      this.hideCrosslinkPopover();
+      return;
+    }
+
+    popover.innerHTML = this.crosslinkMatches.map((article, idx) => `
+      <div class="crosslink-item ${idx === this.crosslinkIndex ? 'active' : ''}" data-idx="${idx}" data-id="${article.id}">
+        <span class="crosslink-title">${this.escapeHtml ? this.escapeHtml(article.title) : article.title}</span>
+        <span class="crosslink-badge">${this.escapeHtml ? this.escapeHtml(article.category || 'Article') : (article.category || 'Article')}</span>
+      </div>
+    `).join('');
+
+    popover.classList.remove('hidden');
+  }
+
+  handleCrosslinkKeydown(e) {
+    const popover = document.getElementById('crosslink-popover');
+    if (!popover || popover.classList.contains('hidden') || !this.crosslinkMatches || !this.crosslinkMatches.length) {
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.crosslinkIndex = (this.crosslinkIndex + 1) % this.crosslinkMatches.length;
+      this.renderCrosslinkMatches();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.crosslinkIndex = (this.crosslinkIndex - 1 + this.crosslinkMatches.length) % this.crosslinkMatches.length;
+      this.renderCrosslinkMatches();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      if (this.crosslinkMatches[this.crosslinkIndex]) {
+        this.insertCrosslink(this.crosslinkMatches[this.crosslinkIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this.hideCrosslinkPopover();
+    }
+  }
+
+  insertCrosslink(article) {
+    const textarea = document.getElementById('edit-content');
+    if (!textarea || !article) return;
+
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.slice(0, cursorPos);
+    const textAfter = textarea.value.slice(cursorPos);
+
+    const atIndex = textBefore.lastIndexOf('@');
+    if (atIndex !== -1) {
+      const linkText = `@[${article.title}](${article.id})`;
+      const updatedBefore = textBefore.slice(0, atIndex) + linkText;
+      textarea.value = updatedBefore + textAfter;
+      const newCursorPos = updatedBefore.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.focus();
+      this.updateEditorPreview();
+    }
+    this.hideCrosslinkPopover();
+  }
+
+  hideCrosslinkPopover() {
+    const popover = document.getElementById('crosslink-popover');
+    if (popover) {
+      popover.classList.add('hidden');
+    }
+    this.crosslinkMatches = [];
+    this.crosslinkIndex = 0;
   }
 
   updateEditorPreview() {
@@ -1868,6 +3599,23 @@ Overview paragraph describing the location, faction, or character.
     textarea.value = cleaned.trim();
     this.updateEditorPreview();
     alert('Removed unlinked broken image tags from article content!');
+  }
+
+  openGraphModal() {
+    const modal = document.getElementById('graph-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    this.loadKnowledgeGraph();
+    requestAnimationFrame(() => {
+      if (window.loreGraph && typeof window.loreGraph.resizeCanvas === 'function') {
+        window.loreGraph.resizeCanvas();
+      }
+    });
+  }
+
+  closeGraphModal() {
+    const modal = document.getElementById('graph-modal');
+    if (modal) modal.classList.add('hidden');
   }
 
   // --- CANON GUARD & AUDITOR METHODS ---
@@ -2669,9 +4417,15 @@ Overview paragraph describing the location, faction, or character.
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Parse WikiLinks inside AI answer
-      const formattedAnswer = window.WAParser ? window.WAParser.parseWikiLinks(data.answer) : data.answer;
-      loadingDiv.innerHTML = `<div>${formattedAnswer}</div>`;
+      // Parse WikiLinks & format paragraphs inside AI answer
+      let parsed = window.WAParser ? window.WAParser.parseWikiLinks(data.answer) : data.answer;
+      if (!parsed.includes('<p>') && !parsed.includes('<div>')) {
+        parsed = parsed
+          .split(/\n\n+/)
+          .map(para => `<p>${para.trim().replace(/\n/g, '<br>')}</p>`)
+          .join('');
+      }
+      loadingDiv.innerHTML = `<div class="chat-message-content">${parsed}</div>`;
       container.scrollTop = container.scrollHeight;
 
     } catch (err) {
@@ -2685,12 +4439,399 @@ Overview paragraph describing the location, faction, or character.
       container.innerHTML = `<div class="chat-message ai-message">👋 Hello! Ask me any question about your active world lore, characters, or locations.</div>`;
     }
   }
+
+  // --- WEAVE MATRIX DRAWER METHODS ---
+  setupWeaveMatrix() {
+    this.weaveFormat = 'markdown';
+    this.weaveVisibility = 'public';
+    this.weaveMaxTokens = 4000;
+    this.weavePinnedIds = new Set();
+
+    const weaveBtn = document.getElementById('weave-matrix-btn');
+    if (weaveBtn) {
+      weaveBtn.addEventListener('click', () => this.toggleWeaveMatrixDrawer());
+    }
+
+    // Format Chips
+    const chipsContainer = document.getElementById('weave-format-chips');
+    if (chipsContainer) {
+      const chips = chipsContainer.querySelectorAll('.format-chip');
+      chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          chips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          this.weaveFormat = chip.dataset.format || 'markdown';
+          this.compileWeaveContext();
+        });
+      });
+    }
+
+    // Visibility Switch
+    const visToggle = document.getElementById('weave-visibility-toggle');
+    const visLabel = document.getElementById('weave-visibility-label');
+    if (visToggle) {
+      visToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          this.weaveVisibility = 'dm_only';
+          if (visLabel) visLabel.textContent = 'DM-Only Secrets Included';
+        } else {
+          this.weaveVisibility = 'public';
+          if (visLabel) visLabel.textContent = 'Public Only (Secrets Stripped)';
+        }
+        this.compileWeaveContext();
+      });
+    }
+
+    // Token Slider
+    const tokenSlider = document.getElementById('weave-token-slider');
+    if (tokenSlider) {
+      const updateSlider = (e) => {
+        this.weaveMaxTokens = parseInt(e.target.value, 10) || 4000;
+        const badge = document.getElementById('weave-token-badge');
+        if (badge) {
+          badge.textContent = `0 / ${this.weaveMaxTokens.toLocaleString()} tokens`;
+        }
+        this.compileWeaveContext();
+      };
+      tokenSlider.addEventListener('input', updateSlider);
+      tokenSlider.addEventListener('change', updateSlider);
+    }
+
+    // Copy Button
+    const copyBtn = document.getElementById('weave-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => this.copyWeaveCompiledContext());
+    }
+  }
+
+  toggleWeaveMatrixDrawer() {
+    const drawer = document.getElementById('weave-matrix-drawer');
+    if (!drawer) return;
+    const isHidden = drawer.classList.contains('hidden');
+    if (isHidden) {
+      drawer.classList.remove('hidden');
+      this.renderWeavePinnedArticles();
+      this.compileWeaveContext();
+    } else {
+      drawer.classList.add('hidden');
+    }
+  }
+
+  renderWeavePinnedArticles() {
+    const container = document.getElementById('weave-pinned-articles');
+    const countBadge = document.getElementById('weave-pinned-count');
+    if (!container) return;
+
+    if (countBadge) {
+      countBadge.textContent = `${this.weavePinnedIds.size} pinned`;
+    }
+
+    if (this.articles.length === 0) {
+      container.innerHTML = `<div style="color:var(--text-muted); font-size:0.75rem; padding:0.4rem; text-align:center;">No articles available in vault.</div>`;
+      return;
+    }
+
+    let html = '';
+    this.articles.forEach(art => {
+      const isPinned = this.weavePinnedIds.has(art.id);
+      html += `
+        <div class="pinned-item" style="${isPinned ? 'border: 1px solid #f59e0b;' : ''}">
+          <span>${isPinned ? '📌' : '📄'} <strong>${this.escapeHtml(art.title)}</strong> (${art.category || 'General'})</span>
+          <span class="pin-toggle" title="${isPinned ? 'Unpin article' : 'Pin article'}" onclick="window.app.togglePinArticle('${art.id}')">
+            ${isPinned ? '📍 Pinned' : '📌 Pin'}
+          </span>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  togglePinArticle(articleId) {
+    if (this.weavePinnedIds.has(articleId)) {
+      this.weavePinnedIds.delete(articleId);
+    } else {
+      this.weavePinnedIds.add(articleId);
+    }
+    this.renderWeavePinnedArticles();
+    this.compileWeaveContext();
+  }
+
+  async compileWeaveContext() {
+    const outputTextarea = document.getElementById('weave-output-preview');
+    const tokenBadge = document.getElementById('weave-token-badge');
+    const progressFill = document.getElementById('weave-token-progress-fill');
+
+    if (outputTextarea) {
+      outputTextarea.placeholder = 'Compiling context pack...';
+    }
+
+    try {
+      const res = await fetch('/api/context/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'all',
+          pinned_ids: Array.from(this.weavePinnedIds),
+          query: '',
+          format: this.weaveFormat || 'markdown',
+          visibility: this.weaveVisibility || 'public',
+          max_tokens: this.weaveMaxTokens || 4000
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        if (outputTextarea) {
+          outputTextarea.value = data.compiled_context || '';
+        }
+        if (data.token_metrics) {
+          const used = data.token_metrics.total_tokens || 0;
+          const max = data.token_metrics.max_budget || 4000;
+          const selected = data.token_metrics.selected_count || 0;
+          const total = data.token_metrics.total_available || 0;
+
+          if (tokenBadge) {
+            tokenBadge.textContent = `${used.toLocaleString()} / ${max.toLocaleString()} tokens (${selected}/${total} items)`;
+          }
+          if (progressFill) {
+            const pct = Math.min(100, Math.round((used / max) * 100));
+            progressFill.style.width = `${pct}%`;
+          }
+        }
+      } else {
+        const msg = data.message || data.error || 'Unknown error';
+        if (outputTextarea) outputTextarea.value = `Error compiling context: ${msg}`;
+        window.showToast(`Context compilation failed: ${msg}`, 'error');
+      }
+    } catch (err) {
+      console.error('Weave compile error:', err);
+      if (outputTextarea) outputTextarea.value = `Failed to connect to context compiler API: ${err.message}`;
+      window.showToast(`Context compile error: ${err.message}`, 'error');
+    }
+  }
+
+  copyWeaveCompiledContext() {
+    const outputTextarea = document.getElementById('weave-output-preview');
+    const copyBtn = document.getElementById('weave-copy-btn');
+    if (!outputTextarea || !outputTextarea.value.trim()) return;
+
+    navigator.clipboard.writeText(outputTextarea.value).then(() => {
+      if (copyBtn) {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✅ Copied Context!';
+      }
+    }).catch(err => {
+      console.error('Clipboard copy failed:', err);
+    });
+  }
+
+  openCreateCategoryModal() {
+    const modal = document.getElementById('create-category-modal');
+    if (!modal) return;
+
+    // Populate Parent Category dropdown
+    const parentSelect = document.getElementById('new-cat-parent');
+    if (parentSelect) {
+      const standardCats = ['Characters', 'Locations', 'Factions', 'Races & Species', 'Magic & Tech', 'History', 'Items'];
+      const customCats = Array.isArray(this.categories) ? this.categories.map(c => c.category).filter(c => c && !standardCats.includes(c)) : [];
+      const allCats = Array.from(new Set([...standardCats, ...customCats]));
+      
+      parentSelect.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    this.renderManageCustomCategories();
+    modal.classList.remove('hidden');
+  }
+
+  renderManageCustomCategories() {
+    const listEl = document.getElementById('custom-categories-manage-list');
+    if (!listEl) return;
+
+    const customItems = [];
+    const standardCats = ['Characters', 'Locations', 'Factions', 'Races & Species', 'Magic & Tech', 'History', 'Items'];
+
+    if (Array.isArray(this.categories)) {
+      this.categories.forEach(c => {
+        if (c.isCustom && c.category && !standardCats.includes(c.category)) {
+          customItems.push({ name: c.category, type: 'Primary Category', icon: c.icon || '📁' });
+        }
+        if (Array.isArray(c.subCategories)) {
+          c.subCategories.forEach(s => {
+            if (s.isCustom && s.subCategory) {
+              customItems.push({ name: s.subCategory, type: `Sub-Category under ${c.category}`, icon: '🏷️' });
+            }
+          });
+        }
+      });
+    }
+
+    if (customItems.length === 0) {
+      listEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">No custom categories created yet.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = customItems.map(item => {
+      const escapedName = item.name.replace(/'/g, "\\'");
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.65rem; background:var(--surface-sidebar); border:1px solid var(--border-color); border-radius:6px; font-size:0.8rem;">
+          <div style="display:flex; align-items:center; gap:0.4rem; min-width:0; flex:1;">
+            <span>${item.icon}</span>
+            <span style="font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${this.escapeHtml(item.name)}</span>
+            <span style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">(${this.escapeHtml(item.type)})</span>
+          </div>
+          <button type="button" class="btn btn-danger" style="padding:0.15rem 0.45rem; font-size:0.7rem;" onclick="window.app.deleteCustomCategory('${escapedName}')">
+            🗑️ Delete
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async deleteCustomCategory(name) {
+    const standardCats = ['Characters', 'Locations', 'Factions', 'Races & Species', 'Magic & Tech', 'History', 'Items'];
+    if (standardCats.includes(name)) {
+      alert('Standard built-in categories cannot be deleted.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete the custom category '${name}'?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/categories/${encodeURIComponent(name)}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert('Error deleting category: ' + (data.error || 'Failed to delete'));
+        return;
+      }
+
+      if (this.selectedCategory === name) {
+        this.selectedCategory = null;
+      }
+      if (this.selectedSubCategory === name) {
+        this.selectedSubCategory = null;
+      }
+
+      await this.fetchCategories();
+      this.renderCategoryDock();
+      this.renderArticlesList();
+      this.renderManageCustomCategories();
+      alert(`Custom category '${name}' deleted.`);
+    } catch (err) {
+      console.error('Failed to delete custom category:', err);
+      alert('Error deleting custom category: ' + err.message);
+    }
+  }
+
+  closeCreateCategoryModal() {
+    const modal = document.getElementById('create-category-modal');
+    if (modal) modal.classList.add('hidden');
+    const nameInput = document.getElementById('new-cat-name');
+    if (nameInput) nameInput.value = '';
+  }
+
+  setCatTypeSegment(type) {
+    const segmented = document.getElementById('cat-type-segmented');
+    if (segmented) {
+      const btns = segmented.querySelectorAll('.segmented-btn');
+      btns.forEach(b => {
+        if (b.getAttribute('data-type') === type) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+    }
+
+    const parentGroup = document.getElementById('parent-cat-group');
+    const iconGroup = document.getElementById('icon-cat-group');
+    if (type === 'sub') {
+      if (parentGroup) parentGroup.classList.remove('hidden');
+      if (iconGroup) iconGroup.classList.add('hidden');
+    } else {
+      if (parentGroup) parentGroup.classList.add('hidden');
+      if (iconGroup) iconGroup.classList.remove('hidden');
+    }
+  }
+
+  async submitCustomCategory() {
+    const nameInput = document.getElementById('new-cat-name');
+    if (!nameInput || !nameInput.value.trim()) {
+      alert('Please enter a category name');
+      return;
+    }
+
+    const name = nameInput.value.trim();
+    const activeTypeBtn = document.querySelector('#cat-type-segmented .segmented-btn.active');
+    const type = activeTypeBtn ? activeTypeBtn.getAttribute('data-type') : 'primary';
+
+    let parent_category = null;
+    let icon = '📁';
+
+    if (type === 'sub') {
+      const parentSelect = document.getElementById('new-cat-parent');
+      if (parentSelect) parent_category = parentSelect.value;
+    } else {
+      const iconSelect = document.getElementById('new-cat-icon');
+      if (iconSelect) icon = iconSelect.value;
+    }
+
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parent_category, icon })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'Failed to save category'));
+        return;
+      }
+
+      this.closeCreateCategoryModal();
+      await this.fetchCategories();
+      this.renderCategoryDock();
+      this.renderArticlesList();
+      alert(`Category '${name}' created successfully!`);
+    } catch (err) {
+      console.error('Failed to submit custom category:', err);
+      alert('Error saving category: ' + err.message);
+    }
+  }
+
+  filterByTag(tag) {
+    this.selectedTag = tag;
+    this.renderSubCategoryBar();
+    this.renderArticlesList();
+  }
 }
 
 // Global initialization
+window.LoreApp = LoreApp;
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new LoreApp();
 });
+
+document.addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('#theme-mode-toggle');
+  if (toggleBtn) {
+    e.preventDefault();
+    if (window.app && typeof window.app.toggleThemeMode === 'function') {
+      window.app.toggleThemeMode();
+    }
+  }
+});
+
+window.toggleWeaveMatrixDrawer = function() {
+  if (window.app && typeof window.app.toggleWeaveMatrixDrawer === 'function') {
+    window.app.toggleWeaveMatrixDrawer();
+  } else {
+    const drawer = document.getElementById('weave-matrix-drawer');
+    if (drawer) drawer.classList.toggle('hidden');
+  }
+};
 
 // Global fail-safe helpers for Canon Guard modal
 window.openDoctorModal = function() {
@@ -2798,11 +4939,30 @@ window.closeEditWorldModal = function() {
   }
 };
 
-// Global fail-safe helper for Ask AI Chat Drawer
+// Global fail-safe helper for Ask AI Chat Drawer & Minimize State
+window.minimizeAIChatDrawer = function() {
+  const drawer = document.getElementById('ai-chat-drawer');
+  if (drawer) {
+    drawer.classList.add('minimized');
+  }
+};
+
+window.expandAIChatDrawer = function() {
+  const drawer = document.getElementById('ai-chat-drawer');
+  if (drawer) {
+    drawer.classList.remove('minimized');
+    drawer.classList.remove('hidden');
+  }
+};
+
 window.toggleAIChatDrawer = function() {
   const drawer = document.getElementById('ai-chat-drawer');
   if (drawer) {
-    drawer.classList.toggle('hidden');
+    if (drawer.classList.contains('minimized')) {
+      drawer.classList.remove('minimized');
+    } else {
+      drawer.classList.toggle('hidden');
+    }
   }
 };
 
@@ -3039,6 +5199,19 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     window.closeImageLightbox();
     window.closeToolsMenu();
+    const libraryView = document.getElementById('view-library');
+    if (libraryView && libraryView.classList.contains('zen-mode')) {
+      if (window.app && typeof window.app.toggleZenMode === 'function') {
+        window.app.toggleZenMode();
+      }
+    }
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+    e.preventDefault();
+    if (window.app && typeof window.app.toggleZenMode === 'function') {
+      window.app.toggleZenMode();
+    }
   }
 });
 
@@ -3083,4 +5256,169 @@ window.toggleTagsAccordion = function() {
   }
 };
 
+/* --- Global Narrative Slate Helper Bindings --- */
+window.switchView = function(viewName) {
+  if (window.app && typeof window.app.switchView === 'function') {
+    window.app.switchView(viewName);
+  } else if (window.app && typeof window.app.switchTab === 'function') {
+    window.app.switchTab(viewName);
+  }
+};
 
+window.compileNarrativeSlate = function() {
+  if (window.app && typeof window.app.compileNarrativeSlate === 'function') {
+    return window.app.compileNarrativeSlate();
+  }
+};
+
+window.generateProseContinuation = function() {
+  if (window.app && typeof window.app.generateProseContinuation === 'function') {
+    return window.app.generateProseContinuation();
+  }
+};
+
+window.showPovRewriteModal = function() {
+  if (window.app && typeof window.app.showPovRewriteModal === 'function') {
+    return window.app.showPovRewriteModal();
+  }
+};
+
+window.closePovRewriteModal = function() {
+  if (window.app && typeof window.app.closePovRewriteModal === 'function') {
+    return window.app.closePovRewriteModal();
+  }
+};
+
+window.executePovRewrite = function() {
+  if (window.app && typeof window.app.executePovRewrite === 'function') {
+    return window.app.executePovRewrite();
+  }
+};
+
+window.suggestNextBeats = function() {
+  if (window.app && typeof window.app.suggestNextBeats === 'function') {
+    return window.app.suggestNextBeats();
+  }
+};
+
+window.closeBeatsModal = function() {
+  if (window.app && typeof window.app.closeBeatsModal === 'function') {
+    return window.app.closeBeatsModal();
+  }
+};
+
+window.saveNarrativeSlate = function() {
+  if (window.app && typeof window.app.saveNarrativeSlate === 'function') {
+    return window.app.saveNarrativeSlate();
+  }
+};
+
+window.loadNarrativeSlate = function(slateId) {
+  if (window.app && typeof window.app.loadNarrativeSlate === 'function') {
+    return window.app.loadNarrativeSlate(slateId);
+  }
+};
+
+window.addSceneStep = function(text) {
+  if (window.app && typeof window.app.addSceneStep === 'function') {
+    return window.app.addSceneStep(text);
+  }
+};
+
+window.toggleToneChip = function(btn) {
+  if (btn) btn.classList.toggle('active');
+};
+
+window.handleWikiLinkAutocomplete = function(event) {
+  if (window.app && typeof window.app.handleWikiLinkAutocomplete === 'function') {
+    window.app.handleWikiLinkAutocomplete(event);
+  }
+};
+
+window.openQuickMarketingModal = function() {
+  if (window.app && typeof window.app.openQuickMarketingModal === 'function') {
+    return window.app.openQuickMarketingModal();
+  }
+};
+
+window.closeQuickMarketingModal = function() {
+  if (window.app && typeof window.app.closeQuickMarketingModal === 'function') {
+    return window.app.closeQuickMarketingModal();
+  }
+};
+
+window.generateMarketingCopy = function(mode) {
+  if (window.app && typeof window.app.generateMarketingCopy === 'function') {
+    return window.app.generateMarketingCopy(mode);
+  }
+};
+
+window.copyMarketingOutput = function(mode) {
+  if (window.app && typeof window.app.copyMarketingOutput === 'function') {
+    return window.app.copyMarketingOutput(mode);
+  }
+};
+
+window.selectMarketingTone = function(btn) {
+  if (window.app && typeof window.app.selectMarketingTone === 'function') {
+    return window.app.selectMarketingTone(btn);
+  }
+};
+
+window.showWeaveActionModal = function() {
+  if (window.app && typeof window.app.showWeaveActionModal === 'function') {
+    return window.app.showWeaveActionModal();
+  } else {
+    const modal = document.getElementById('weave-action-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+};
+
+window.closeWeaveActionModal = function() {
+  if (window.app && typeof window.app.closeWeaveActionModal === 'function') {
+    return window.app.closeWeaveActionModal();
+  } else {
+    const modal = document.getElementById('weave-action-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+window.routeToNarrativeSlate = function() {
+  if (window.app && typeof window.app.routeToNarrativeSlate === 'function') {
+    return window.app.routeToNarrativeSlate();
+  }
+};
+
+window.clearActiveWeaveContext = function() {
+  if (window.app && typeof window.app.clearActiveWeaveContext === 'function') {
+    return window.app.clearActiveWeaveContext();
+  }
+};
+
+window.routeToMarketing = function() {
+  if (window.app && typeof window.app.routeToMarketing === 'function') {
+    return window.app.routeToMarketing();
+  }
+};
+
+window.openQuickLoreChat = function() {
+  if (window.app && typeof window.app.openQuickLoreChat === 'function') {
+    return window.app.openQuickLoreChat();
+  }
+};
+
+window.routeToNewArticle = function() {
+  if (window.app && typeof window.app.routeToNewArticle === 'function') {
+    return window.app.routeToNewArticle();
+  }
+};
+
+// --- Event Delegation: Add to Slate Button ---
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'add-to-slate-btn') {
+    e.preventDefault();
+    if (window.app && typeof window.app.handleAddToSlateClick === 'function') {
+      window.app.handleAddToSlateClick();
+    }
+  }
+});

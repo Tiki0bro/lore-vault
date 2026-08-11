@@ -173,6 +173,48 @@
     },
 
     /**
+     * Category Icon Mapping
+     */
+    categoryIcons: {
+      'Characters': '👤',
+      'Locations': '🏰',
+      'Factions': '🛡️',
+      'Races & Species': '🧬',
+      'Species': '🧬',
+      'Magic & Tech': '🔮',
+      'History': '📜',
+      'Items': '⚔️'
+    },
+
+    /**
+     * Category Badge CSS Class Mapping
+     */
+    categoryBadges: {
+      'Characters': 'badge-characters',
+      'Locations': 'badge-locations',
+      'Factions': 'badge-factions',
+      'Races & Species': 'badge-racesspecies',
+      'Species': 'badge-species',
+      'Magic & Tech': 'badge-magictech',
+      'History': 'badge-history',
+      'Items': 'badge-items'
+    },
+
+    getCategoryIcon(cat) {
+      if (!cat) return '📜';
+      if (this.categoryIcons[cat]) return this.categoryIcons[cat];
+      const lower = String(cat).toLowerCase();
+      if (lower.includes('race') || lower.includes('species') || lower.includes('creature')) return '🧬';
+      return '📜';
+    },
+
+    getCategoryBadgeClass(cat) {
+      if (!cat) return 'badge-default';
+      if (this.categoryBadges[cat]) return this.categoryBadges[cat];
+      return `badge-${String(cat).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    },
+
+    /**
      * Alias for renderAll()
      */
     injectAll() {

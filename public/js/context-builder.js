@@ -48,7 +48,7 @@ const ContextBuilder = {
     }
 
     this.renderAll();
-    this.compileContext();
+    this.compileContext(false);
   },
 
   initFilterOptions() {
@@ -66,6 +66,9 @@ const ContextBuilder = {
 
     this.allCategories = Array.from(categories);
     this.allTags = Array.from(tags);
+
+    // M-03: Immediately populate the World Scope grids after loading articles
+    this.renderWorldScopeFilters();
   },
 
   renderAll() {
@@ -73,9 +76,27 @@ const ContextBuilder = {
     this.renderTray();
     this.renderBucketTabs();
     this.renderWorldScopeFilters();
-    this.renderSlatePersonas();
+    this.renderSlateBucket();
     this.renderInspectorState();
     this.updateTokenMeter();
+  },
+
+  // Stub for header control sync (preset badge, exclude secrets toggle)
+  renderHeaderControls() {
+    const badge = document.getElementById('cb-current-preset-badge');
+    if (badge) {
+      const labels = {
+        session_prep: '🧙‍♂️ Session Prep Mode',
+        cowriter: '✍️ Co-Writer Slate Mode',
+        developer: '🛠️ Developer API Mode',
+        custom: '⚙️ Custom Setup Mode'
+      };
+      badge.textContent = labels[this.state.system.preset] || 'Custom Setup';
+    }
+    const presetDropdown = document.getElementById('cb-workflow-preset');
+    if (presetDropdown) presetDropdown.value = this.state.system.preset;
+    const toggle = document.getElementById('cb-exclude-secrets-toggle');
+    if (toggle) toggle.checked = this.state.system.excludeSecrets;
   },
 
   // --- WORKFLOW PRESETS ---
@@ -95,9 +116,13 @@ const ContextBuilder = {
       this.state.system.tone = 'Action';
       this.state.system.customInstructions = 'Write immersive narrative prose with rich sensory detail, dialogue flair, and high dramatic stakes.';
       this.state.inspector.serializer = 'Markdown';
-      this.state.workingState.taskPreset = 'scene';
-      this.state.workingState.taskInstructions = 'TASK: Write a dramatic narrative scene featuring the active slate characters in a high-stakes encounter.';
+      // E-02: Co-Writer defaults to Character Dialogue Generator task
+      this.state.workingState.taskPreset = 'dialogue';
+      this.state.workingState.taskInstructions = 'TASK: Generate a sharp dialogue interaction between the active slate personas, highlighting their contrasting motivations and secret agendas.';
       this.state.slate.activeBucket = 'slate';
+      // E-02: Sync the #preset-selector dropdown
+      const presetSelectorEl = document.getElementById('preset-selector');
+      if (presetSelectorEl) presetSelectorEl.value = 'dialogue';
     } else if (presetName === 'developer') {
       this.state.system.excludeSecrets = true;
       this.state.system.tone = 'Gritty';
@@ -170,6 +195,35 @@ const ContextBuilder = {
       selectedCountEl.textContent = `${this.state.slate.selectedArticleIds.size} Selected`;
     }
 
+    // Update Token Budget Capacity Gauge Bar (#token-budget-bar)
+    const budgetFill = document.getElementById('token-budget-fill');
+    const budgetStatus = document.getElementById('token-budget-status');
+    if (budgetFill || budgetStatus) {
+      const selectedArticles = (this.articles || []).filter(a => this.state.slate.selectedArticleIds && this.state.slate.selectedArticleIds.has(a.id));
+      const slateText = selectedArticles.length > 0 && typeof this.buildSlateBucketText === 'function'
+        ? this.buildSlateBucketText(selectedArticles)
+        : '';
+      const slateTokens = selectedArticles.length > 0 ? Math.ceil((slateText || '').length / 3.8) : 0;
+      const maxTokens = 4096;
+      const percentage = Math.min(100, Math.round((slateTokens / maxTokens) * 100));
+
+      if (budgetFill) {
+        budgetFill.style.width = `${percentage}%`;
+        budgetFill.classList.remove('tier-green', 'tier-amber', 'tier-red');
+        if (percentage > 90) {
+          budgetFill.classList.add('tier-red');
+        } else if (percentage > 70) {
+          budgetFill.classList.add('tier-amber');
+        } else {
+          budgetFill.classList.add('tier-green');
+        }
+      }
+
+      if (budgetStatus) {
+        budgetStatus.textContent = `${slateTokens.toLocaleString()} / ${maxTokens.toLocaleString()} tokens (${percentage}% used)`;
+      }
+    }
+
     if (!container) return;
 
     // Filter articles based on search term & category selection
@@ -181,7 +235,8 @@ const ContextBuilder = {
         (art.content && art.content.toLowerCase().includes(search));
       
       const matchesCategory = this.state.world.selectedCategories.size === 0 || 
-        this.state.world.selectedCategories.has(art.category);
+        this.state.world.selectedCategories.has(art.category) ||
+        (this.state.world.selectedCategories.has('Races & Species') && art.category === 'Species');
 
       return matchesSearch && matchesCategory;
     });
@@ -195,6 +250,11 @@ const ContextBuilder = {
       const isChecked = this.state.slate.selectedArticleIds.has(art.id);
       const catClass = (art.category || 'general').toLowerCase().replace(/[^a-z0-9]/g, '');
       const rel = this.state.slate.relationships[art.id] || 'Neutral';
+
+      // M-01: Count @[Title](template:id) cross-link references in content/summary
+      const searchText = (art.content || '') + ' ' + (art.summary || '');
+      const crosslinkMatches = searchText.match(/@\[[^\]]+\]\(template:[^)]+\)/g);
+      const crosslinkCount = crosslinkMatches ? new Set(crosslinkMatches).size : 0;
       
       return `
         <div class="tray-article-card ${isChecked ? 'active' : ''}" onclick="ContextBuilder.toggleArticle('${art.id}', event)">
@@ -209,6 +269,7 @@ const ContextBuilder = {
             <div class="card-meta-row">
               <span class="badge badge-${catClass}">${art.category || 'General'}</span>
               ${art.summary ? `<span class="summary-preview">${this.escapeHtml(art.summary.substring(0, 45))}...</span>` : ''}
+              ${crosslinkCount > 0 ? `<span class="crosslink-badge">🔗 +${crosslinkCount} linked</span>` : ''}
             </div>
           </div>
         </div>
@@ -228,7 +289,8 @@ const ContextBuilder = {
       ${this.allCategories.map(cat => {
         const isSel = this.state.world.selectedCategories.has(cat);
         return `<button class="cat-pill ${isSel ? 'active' : ''}" 
-                        onclick="ContextBuilder.toggleCategoryFilter('${this.escapeHtml(cat)}')">${this.escapeHtml(cat)}</button>`;
+                        data-cat="${this.escapeHtml(cat)}"
+                        onclick="ContextBuilder.toggleCategoryFilter(this.getAttribute('data-cat'))">${this.escapeHtml(cat)}</button>`;
       }).join('')}
     `;
   },
@@ -266,7 +328,7 @@ const ContextBuilder = {
       this.state.slate.selectedArticleIds.add(id);
     }
     this.renderTray();
-    this.renderSlatePersonas();
+    this.renderSlateBucket(); // E-01: live-reactive slate panel
     this.renderBucketTabs();
     this.compileContext();
   },
@@ -274,7 +336,7 @@ const ContextBuilder = {
   selectAll() {
     this.articles.forEach(a => this.state.slate.selectedArticleIds.add(a.id));
     this.renderTray();
-    this.renderSlatePersonas();
+    this.renderSlateBucket(); // E-01
     this.renderBucketTabs();
     this.compileContext();
   },
@@ -282,9 +344,14 @@ const ContextBuilder = {
   clearAll() {
     this.state.slate.selectedArticleIds.clear();
     this.renderTray();
-    this.renderSlatePersonas();
+    this.renderSlateBucket(); // E-01
     this.renderBucketTabs();
     this.compileContext();
+  },
+
+  // E-01: Named alias so toggle/selectAll/clearAll always re-render the Bucket 3 panel
+  renderSlateBucket() {
+    this.renderSlatePersonas();
   },
 
   // --- BUCKET 1: SYSTEM TONE ---
@@ -309,30 +376,40 @@ const ContextBuilder = {
 
   // --- BUCKET 2: WORLD SCOPE FILTERS ---
   renderWorldScopeFilters() {
+    // M-03: Populate category grid with fallback message when empty
     const catGrid = document.getElementById('cb-world-category-grid');
-    if (catGrid && this.allCategories) {
-      catGrid.innerHTML = this.allCategories.map(cat => {
-        const isChecked = this.state.world.selectedCategories.has(cat);
-        return `
-          <label class="cb-chip-checkbox ${isChecked ? 'active' : ''}">
-            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="ContextBuilder.toggleCategoryFilter('${this.escapeHtml(cat)}')">
-            <span>${this.escapeHtml(cat)}</span>
-          </label>
-        `;
-      }).join('');
+    if (catGrid) {
+      if (this.allCategories && this.allCategories.length > 0) {
+        catGrid.innerHTML = this.allCategories.map(cat => {
+          const isChecked = this.state.world.selectedCategories.has(cat);
+          return `
+            <label class="cb-chip-checkbox ${isChecked ? 'active' : ''}">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} data-cat="${this.escapeHtml(cat)}" onchange="ContextBuilder.toggleCategoryFilter(this.getAttribute('data-cat'))">
+              <span>${this.escapeHtml(cat)}</span>
+            </label>
+          `;
+        }).join('');
+      } else {
+        catGrid.innerHTML = `<span class="empty-filter-hint">No articles loaded yet.</span>`;
+      }
     }
 
+    // M-03: Populate tag grid with fallback message when empty
     const tagGrid = document.getElementById('cb-world-tag-grid');
-    if (tagGrid && this.allTags) {
-      tagGrid.innerHTML = this.allTags.map(tag => {
-        const isChecked = this.state.world.selectedTags.has(tag);
-        return `
-          <label class="cb-chip-checkbox ${isChecked ? 'active' : ''}">
-            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="ContextBuilder.toggleTagFilter('${this.escapeHtml(tag)}')">
-            <span>#${this.escapeHtml(tag)}</span>
-          </label>
-        `;
-      }).join('');
+    if (tagGrid) {
+      if (this.allTags && this.allTags.length > 0) {
+        tagGrid.innerHTML = this.allTags.map(tag => {
+          const isChecked = this.state.world.selectedTags.has(tag);
+          return `
+            <label class="cb-chip-checkbox ${isChecked ? 'active' : ''}">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="ContextBuilder.toggleTagFilter('${this.escapeHtml(tag)}')">
+              <span>#${this.escapeHtml(tag)}</span>
+            </label>
+          `;
+        }).join('');
+      } else {
+        tagGrid.innerHTML = `<span class="empty-filter-hint">No articles loaded yet.</span>`;
+      }
     }
   },
 
@@ -372,12 +449,13 @@ const ContextBuilder = {
 
     container.innerHTML = selectedArticles.map(art => {
       const rel = this.state.slate.relationships[art.id] || 'Neutral';
+      const catClass = (art.category || 'general').toLowerCase().replace(/[^a-z0-9]/g, '');
       return `
         <div class="slate-persona-card">
           <div class="persona-card-header">
             <div class="persona-title-group">
               <strong>${this.escapeHtml(art.title)}</strong>
-              <span class="badge badge-${(art.category || 'general').toLowerCase()}">${art.category}</span>
+              <span class="badge badge-${catClass}">${this.escapeHtml(art.category || 'General')}</span>
             </div>
             <button class="btn-remove-persona" onclick="ContextBuilder.toggleArticle('${art.id}')" title="Remove from Slate">✕</button>
           </div>
@@ -463,7 +541,7 @@ const ContextBuilder = {
   },
 
   // --- PROMPT COMPILATION ENGINE ---
-  async compileContext() {
+  async compileContext(showModal = false) {
     const selectedIds = Array.from(this.state.slate.selectedArticleIds);
     const selectedArticles = this.articles.filter(a => selectedIds.includes(a.id));
 
@@ -507,8 +585,19 @@ const ContextBuilder = {
       outputEl.value = fullOutput;
     }
 
+    // M-02: Auto-open Developer Inspector after successful compile
+    if (!this.state.inspector.isOpen) {
+      this.state.inspector.isOpen = true;
+      this.renderInspectorState();
+    }
+
     // Calculate Token Statistics
     this.updateTokenMeter(systemText, worldText, slateText, taskText, fullOutput);
+
+    // Call Weave Action Routing Modal on compilation success
+    if (showModal !== false && typeof window.showWeaveActionModal === 'function') {
+      window.showWeaveActionModal();
+    }
   },
 
   buildSystemBucketText() {
@@ -534,13 +623,14 @@ const ContextBuilder = {
 
     return selectedArticles.map(art => {
       const rel = this.state.slate.relationships[art.id] || 'Neutral';
+      const catUpper = (art.category || 'Lore').toUpperCase();
       const body = this.state.world.summariesOnly 
         ? (art.summary || art.content?.substring(0, 200) || '')
         : (art.content || art.summary || '');
       
       const cleanBody = this.processSecretStripping(body);
 
-      return `### ${art.title} (${art.category || 'Lore'}) - Role: [${rel}]\n${cleanBody}`;
+      return `### [${catUpper}: ${art.title}] - Role: [${rel}]\n${cleanBody}`;
     }).join('\n\n');
   },
 
@@ -612,13 +702,52 @@ const ContextBuilder = {
   },
 
   // --- SNAPSHOT MANAGEMENT ---
-  loadSavedSnapshots() {
-    try {
-      const saved = localStorage.getItem('lore_vault_context_snapshots');
-      this.state.snapshots = saved ? JSON.parse(saved) : this.getDefaultSnapshots();
-    } catch (e) {
-      this.state.snapshots = this.getDefaultSnapshots();
+  async loadSavedSnapshots() {
+    const worldId = (window.app && window.app.activeWorldId) ? window.app.activeWorldId : 'default';
+    let serverSnapshots = null;
+
+    // E-03: Try fetching snapshots from server DB first
+    if (typeof fetch !== 'undefined') {
+      try {
+        const resp = await fetch(`/api/context/snapshots?world_id=${encodeURIComponent(worldId)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (Array.isArray(data)) {
+            // Convert array to keyed object matching state.snapshots shape
+            serverSnapshots = {};
+            data.forEach(snap => {
+              const config = snap.config || {};
+              serverSnapshots[snap.id] = {
+                name: snap.name,
+                preset: snap.preset_type || config.preset,
+                tone: config.tone,
+                serializer: config.serializer,
+                taskInstructions: config.taskInstructions,
+                sceneBeats: config.sceneBeats,
+                selectedArticleIds: config.selectedArticleIds,
+                relationships: config.relationships,
+                _serverId: snap.id
+              };
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Server snapshot fetch failed, falling back to localStorage:', e);
+      }
     }
+
+    if (serverSnapshots && Object.keys(serverSnapshots).length > 0) {
+      this.state.snapshots = serverSnapshots;
+    } else {
+      // E-03: Fallback to localStorage
+      try {
+        const saved = localStorage.getItem('lore_vault_context_snapshots');
+        this.state.snapshots = saved ? JSON.parse(saved) : this.getDefaultSnapshots();
+      } catch (e) {
+        this.state.snapshots = this.getDefaultSnapshots();
+      }
+    }
+
     this.renderSnapshotDropdown();
   },
 
@@ -652,13 +781,12 @@ const ContextBuilder = {
       }).join('');
   },
 
-  openSaveSnapshotModal() {
+  async openSaveSnapshotModal() {
     const name = prompt('Enter a title for this Slate Snapshot:', `Slate Backup - ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
     if (!name) return;
 
-    const id = `snap-${Date.now()}`;
-    this.state.snapshots[id] = {
-      name,
+    const worldId = (window.app && window.app.activeWorldId) ? window.app.activeWorldId : 'default';
+    const configPayload = {
       preset: this.state.system.preset,
       tone: this.state.system.tone,
       selectedArticleIds: Array.from(this.state.slate.selectedArticleIds),
@@ -666,6 +794,41 @@ const ContextBuilder = {
       serializer: this.state.inspector.serializer,
       taskInstructions: this.state.workingState.taskInstructions,
       sceneBeats: this.state.workingState.sceneBeats
+    };
+
+    let savedId = `snap-${Date.now()}`;
+
+    // E-03: Save to server DB
+    if (typeof fetch !== 'undefined') {
+      try {
+        const resp = await fetch('/api/context/snapshots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            preset_type: this.state.system.preset,
+            config_json: JSON.stringify(configPayload),
+            world_id: worldId
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.snapshot && data.snapshot.id) {
+            savedId = data.snapshot.id;
+          }
+        } else {
+          console.warn('Server snapshot save failed, falling back to localStorage.');
+        }
+      } catch (e) {
+        console.warn('Server snapshot save error, falling back to localStorage:', e);
+      }
+    }
+
+    // E-03: Always update local state + localStorage as fallback
+    this.state.snapshots[savedId] = {
+      name,
+      ...configPayload,
+      _serverId: savedId
     };
 
     try {
@@ -676,7 +839,7 @@ const ContextBuilder = {
 
     this.renderSnapshotDropdown();
     const dropdown = document.getElementById('cb-load-snapshot');
-    if (dropdown) dropdown.value = id;
+    if (dropdown) dropdown.value = savedId;
     alert(`✓ Slate snapshot "${name}" saved!`);
   },
 
@@ -694,6 +857,29 @@ const ContextBuilder = {
 
     this.renderAll();
     this.compileContext();
+  },
+
+  // E-03: Delete snapshot from server DB + local state
+  async deleteSnapshot(id) {
+    if (!id || !this.state.snapshots[id]) return;
+    const snap = this.state.snapshots[id];
+    const serverId = snap._serverId || id;
+
+    if (typeof fetch !== 'undefined') {
+      try {
+        const resp = await fetch(`/api/context/snapshots/${encodeURIComponent(serverId)}`, { method: 'DELETE' });
+        if (!resp.ok) console.warn('Server delete failed for snapshot:', serverId);
+      } catch (e) {
+        console.warn('Server delete error for snapshot:', e);
+      }
+    }
+
+    delete this.state.snapshots[id];
+    try {
+      localStorage.setItem('lore_vault_context_snapshots', JSON.stringify(this.state.snapshots));
+    } catch (e) { /* ignore */ }
+
+    this.renderSnapshotDropdown();
   },
 
   // --- COPY TO CLIPBOARD ---
@@ -715,6 +901,26 @@ const ContextBuilder = {
         }, 2000);
       }
     });
+  },
+
+  /**
+   * Add (or remove) an article to/from the Weave Matrix slate.
+   * Called from the #add-to-slate-btn reader action in the article detail view.
+   * Returns true if article was added, false if it was removed.
+   */
+  addArticleToSlate(articleId) {
+    if (!articleId) return false;
+    const wasAdded = !this.state.slate.selectedArticleIds.has(articleId);
+    if (wasAdded) {
+      this.state.slate.selectedArticleIds.add(articleId);
+    } else {
+      this.state.slate.selectedArticleIds.delete(articleId);
+    }
+    this.renderTray();
+    this.renderSlateBucket();
+    this.renderBucketTabs();
+    this.compileContext();
+    return wasAdded;
   },
 
   escapeHtml(str) {
