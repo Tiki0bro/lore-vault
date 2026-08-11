@@ -342,6 +342,7 @@ class LoreApp {
     const atlasView = document.getElementById('view-atlas');
     const frontpageView = document.getElementById('view-frontpage');
     const timelineView = document.getElementById('view-timeline');
+    const relationshipsView = document.getElementById('view-relationships');
 
     const tabLibrary = document.getElementById('tab-library');
     const tabStudio = document.getElementById('tab-studio');
@@ -351,16 +352,23 @@ class LoreApp {
     const tabAtlas = document.getElementById('tab-atlas');
     const tabFrontpage = document.getElementById('tab-frontpage');
     const tabTimeline = document.getElementById('tab-timeline');
+    const tabRelationships = document.getElementById('tab-relationships') || document.querySelector('button[data-view="view-relationships"]');
 
-    [libraryView, studioView, contextView, marketingView, atlasView, frontpageView, timelineView].forEach(v => v && v.classList.remove('active'));
+    [libraryView, studioView, contextView, marketingView, atlasView, frontpageView, timelineView, relationshipsView].forEach(v => v && v.classList.remove('active'));
     if (narrativeSlateView) {
       narrativeSlateView.classList.remove('active');
       narrativeSlateView.classList.add('hidden');
     }
 
-    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabFrontpage, tabTimeline].forEach(t => t && t.classList.remove('active'));
+    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabFrontpage, tabTimeline, tabRelationships].forEach(t => t && t.classList.remove('active'));
 
-    if (tabName === 'timeline') {
+    if (tabName === 'relationships' || tabName === 'view-relationships') {
+      if (relationshipsView) relationshipsView.classList.add('active');
+      if (tabRelationships) tabRelationships.classList.add('active');
+      if (window.relationshipView) {
+        window.relationshipView.init(this.currentWorldId || 'default');
+      }
+    } else if (tabName === 'timeline') {
       if (timelineView) timelineView.classList.add('active');
       if (tabTimeline) tabTimeline.classList.add('active');
       if (!window.timelineView) {

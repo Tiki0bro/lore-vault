@@ -44,6 +44,7 @@
           <button class="tab-btn" id="tab-frontpage" onclick="window.switchTab('frontpage')"><span class="tab-icon">🌐</span> World Frontpage</button>
           <button class="tab-btn" id="tab-atlas" onclick="window.switchTab('atlas')"><span class="tab-icon">🗺️</span> World Atlas</button>
           <button class="tab-btn" id="tab-timeline" onclick="window.switchTab('timeline')"><span class="tab-icon">⏳</span> Timeline</button>
+          <button class="nav-tab tab-btn" id="tab-relationships" data-view="view-relationships" onclick="window.switchTab('view-relationships')">⚔️ Relationships</button>
           <button id="narrative-slate-nav-btn" class="nav-tab tab-btn" onclick="switchView('narrative-slate')">📜 Narrative Slate</button>
 
           <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')"><span class="tab-icon">⚡</span> Weave Matrix</button>
@@ -710,6 +711,35 @@
               </div>
             </main>
           </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: FACTION & CHARACTER RELATIONSHIP MATRIX -->
+      <section id="view-relationships" class="view-panel">
+        <div class="relationship-toolbar">
+          <div class="filter-group">
+            <select id="rel-category-filter" class="toolbar-select">
+              <option value="all">All Entities</option>
+              <option value="factions">Factions Only</option>
+              <option value="characters">Characters Only</option>
+            </select>
+            <select id="rel-type-filter" class="toolbar-select">
+              <option value="all">All Statuses</option>
+              <option value="hostile">🔴 Hostile</option>
+              <option value="allied">🟢 Allied</option>
+              <option value="tense">🟡 Tense</option>
+              <option value="secret_master">🟣 Secret/Debt</option>
+            </select>
+            <input type="text" id="rel-search-input" class="toolbar-input" placeholder="Search entities...">
+          </div>
+          <div class="action-group">
+            <button id="rel-ai-extract-btn" class="btn btn-primary">✨ AI Extract Relationships</button>
+            <button id="rel-add-btn" class="btn btn-secondary">+ Add Relationship</button>
+          </div>
+        </div>
+
+        <div id="relationship-grid-container" class="grid-scroll-pane">
+          <!-- Matrix Grid dynamically rendered by relationship-view.js -->
         </div>
       </section>
 
@@ -1728,6 +1758,42 @@
     </div>
   </div>
 
+  <!-- Slide-out Relationship Detail Drawer -->
+  <div id="relationship-detail-drawer" class="drawer hidden">
+    <div class="drawer-header">
+      <h3 id="rel-drawer-title">Entity A ↔ Entity B</h3>
+      <button id="rel-drawer-close" class="btn-icon">✕</button>
+    </div>
+    <div class="drawer-content">
+      <div class="form-group">
+        <label>Relationship Type</label>
+        <select id="drawer-rel-type" class="form-control">
+          <option value="allied">🟢 Allied / Vassal</option>
+          <option value="hostile">🔴 Hostile / Enemy</option>
+          <option value="tense">🟡 Tense / Rival</option>
+          <option value="secret_master">🟣 Secret Master / Debt</option>
+          <option value="neutral">⚪ Neutral / None</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sentiment Score (-100 to +100)</label>
+        <input type="range" id="drawer-sentiment-slider" min="-100" max="100" class="form-range">
+        <span id="drawer-sentiment-val">0</span>
+      </div>
+      <div class="form-group">
+        <label>DM Secret Note</label>
+        <textarea id="drawer-summary" class="form-control" rows="3" placeholder="Supporting lore notes..."></textarea>
+        <label class="checkbox-label"><input type="checkbox" id="drawer-is-secret"> 🔒 DM Only Secret</label>
+      </div>
+      <div class="drawer-actions">
+        <button id="drawer-save-btn" class="btn btn-primary">Save Relationship</button>
+        <button id="drawer-spark-btn" class="btn btn-warning">⚡ Spark Story Conflict</button>
+        <button id="drawer-delete-btn" class="btn btn-danger">Delete</button>
+      </div>
+      <div id="drawer-conflict-results" class="conflict-container hidden"></div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
@@ -1737,9 +1803,11 @@
   <script src="js/wa-parser.js?v=13"></script>
   <script src="js/context-builder.js?v=13"></script>
   <script src="js/graph-view.js?v=13"></script>
+  <script src="js/perlin-cartography.js?v=13"></script>
   <script src="js/atlas-view.js?v=13"></script>
   <script src="js/frontpage-view.js?v=13"></script>
   <script src="js/timeline-view.js?v=13"></script>
+  <script src="js/relationship-view.js?v=13"></script>
   <script src="js/app.js?v=13"></script>
 </body>
 </html>
