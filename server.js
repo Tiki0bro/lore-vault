@@ -5437,6 +5437,82 @@ app.delete('/api/worlds/:id', (req, res) => {
   });
 });
 
+// ====================================================
+// 🕸️ FACTION & CHARACTER RELATIONSHIP MATRIX REST API
+// ====================================================
+
+app.get('/api/worlds/:worldId/relationships', (req, res) => {
+  const { worldId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+  let query = 'SELECT * FROM lore_relationships WHERE world_id = ?';
+  const params = [worldId];
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+  query += ' ORDER BY source_entity_title ASC';
+  
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ relationships: rows });
+  });
+});
+
+app.post('/api/relationships', (req, res) => {
+  const {
+    world_id,
+    source_entity_id,
+    source_entity_title,
+    target_entity_id,
+    target_entity_title,
+    relationship_type,
+    sentiment_score,
+    summary,
+    is_secret
+  } = req.body;
+
+  if (!world_id || !source_entity_title || !target_entity_title) {
+    return res.status(400).json({ error: 'Missing required entity titles or world_id' });
+  }
+
+  const query = `
+    INSERT INTO lore_relationships (
+      world_id, source_entity_id, source_entity_title,
+      target_entity_id, target_entity_title, relationship_type,
+      sentiment_score, summary, is_secret, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(world_id, source_entity_id, target_entity_id) DO UPDATE SET
+      relationship_type = excluded.relationship_type,
+      sentiment_score = excluded.sentiment_score,
+      summary = excluded.summary,
+      is_secret = excluded.is_secret,
+      updated_at = CURRENT_TIMESTAMP
+  `;
+
+  db.run(query, [
+    world_id,
+    source_entity_id || source_entity_title.toLowerCase().replace(/\s+/g, '-'),
+    source_entity_title,
+    target_entity_id || target_entity_title.toLowerCase().replace(/\s+/g, '-'),
+    target_entity_title,
+    relationship_type || 'neutral',
+    sentiment_score || 0,
+    summary || '',
+    is_secret ? 1 : 0
+  ], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+app.delete('/api/relationships/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM lore_relationships WHERE id = ?', [id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`LoreVault Server running locally on http://localhost:${PORT}`);
