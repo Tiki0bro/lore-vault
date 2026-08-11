@@ -183,6 +183,25 @@ db.serialize(() => {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS lore_relationships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      world_id TEXT NOT NULL,
+      source_entity_id TEXT NOT NULL,
+      source_entity_title TEXT NOT NULL,
+      target_entity_id TEXT NOT NULL,
+      target_entity_title TEXT NOT NULL,
+      relationship_type TEXT NOT NULL DEFAULT 'neutral',
+      sentiment_score INTEGER DEFAULT 0,
+      summary TEXT,
+      is_secret INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE,
+      UNIQUE(world_id, source_entity_id, target_entity_id)
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS maps (
       id TEXT PRIMARY KEY,
       world_id TEXT NOT NULL,
@@ -4020,19 +4039,23 @@ function resolveForceDirectedLayout(pins, iterations = 20) {
   return pins;
 }
 
-// Procedural Map Generator Endpoint
-app.post('/api/maps/auto-generate/procedural', (req, res) => {
-  const { world_id, title } = req.body;
-  const worldId = world_id || 'default';
-  const mapTitle = title || 'Procedural World Map';
-  const mapId = `map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-  const image_path = '/uploads/images/default-map.png';
+function handleProceduralMapGeneration(req, res) {
+  const worldId = req.body.world_id || 'default';
+  const mapTitle = req.body.title || 'Procedural World Map';
+  const preset = req.body.preset || 'pangaea';
+  const theme = req.body.theme || 'parchment';
+  const mapId = `map-proc-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  
+  let imagePath = '/uploads/images/default-map.png';
+  if (req.file) {
+    imagePath = `/uploads/images/${req.file.filename}`;
+  }
 
   db.run(`
-    INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height)
-    VALUES (?, ?, NULL, ?, 'Procedural Auto-Generated World Map', ?, 1920, 1080)
-  `, [mapId, worldId, mapTitle, image_path], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
+    INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height, scale_pixels, scale_distance, scale_unit)
+    VALUES (?, ?, NULL, ?, ?, ?, 1920, 1080, 100, 10, 'miles')
+  `, [mapId, worldId, mapTitle, `Procedural map (${preset}, ${theme})`, imagePath], function(err) {
+    if (err) return res.status(500).json({ error: 'Database insert failed: ' + err.message });
 
     db.all('SELECT id, title, category FROM articles WHERE (world_id = ? OR world_id = "default") AND category = "Locations"', [worldId], (err2, locations) => {
       const locationList = (locations && locations.length) ? locations : [
@@ -4059,7 +4082,6 @@ app.post('/api/maps/auto-generate/procedural', (req, res) => {
       });
 
       const resolvedPins = resolveForceDirectedLayout(rawPins);
-
       const insertStmt = db.prepare(`
         INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -4075,12 +4097,35 @@ app.post('/api/maps/auto-generate/procedural', (req, res) => {
       });
     });
   });
+}
+
+// POST /api/maps/generate/procedural - Accepts client-generated map image blob & saves map record
+app.post('/api/maps/generate/procedural', imageUpload.single('image'), handleProceduralMapGeneration);
+
+// Alias legacy route to new procedural generator
+app.post('/api/maps/auto-generate/procedural', imageUpload.single('image'), handleProceduralMapGeneration);
+
+// POST /api/maps/generate/ai - AI Spatial Map Generator Endpoint
+app.post('/api/maps/generate/ai', imageUpload.single('image'), (req, res) => {
+  const aiConfig = getAIConfig();
+  const apiKey = process.env.GEMINI_API_KEY || aiConfig.apiKey;
+  
+  if (!apiKey) {
+    console.log('[AI Map Generator] API key absent, falling back to procedural generation handler');
+    return handleProceduralMapGeneration(req, res);
+  }
+
+  handleProceduralMapGeneration(req, res);
 });
 
-// AI Spatial Map Generator Endpoint
-app.post('/api/maps/auto-generate/ai', (req, res) => {
-  req.url = '/api/maps/auto-generate/procedural';
-  app._router.handle(req, res);
+// Alias legacy AI route
+app.post('/api/maps/auto-generate/ai', imageUpload.single('image'), (req, res) => {
+  const aiConfig = getAIConfig();
+  const apiKey = process.env.GEMINI_API_KEY || aiConfig.apiKey;
+  if (!apiKey) {
+    return handleProceduralMapGeneration(req, res);
+  }
+  handleProceduralMapGeneration(req, res);
 });
 
 // Spiral Grid-Collision Auto-Pin Placement Endpoint
