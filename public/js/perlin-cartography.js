@@ -243,39 +243,74 @@ class PerlinCartographyEngine {
       }
     }
 
-    // 3. Render mountain ridge hachure lines (shading lines along steep mountain slopes)
-    ctx.strokeStyle = colors.ink;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.4;
-
-    for (let gy = 2; gy < Math.ceil(height / step) - 2; gy += 3) {
-      for (let gx = 2; gx < gridW - 2; gx += 3) {
+    // 3. Render Procedural Rivers (flowing down elevation gradients from peaks to ocean)
+    ctx.strokeStyle = colors.coast;
+    ctx.lineWidth = 2.5;
+    const riverSeeds = [];
+    for (let gy = 4; gy < Math.ceil(height / step) - 4; gy += 8) {
+      for (let gx = 4; gx < gridW - 4; gx += 8) {
         const gIdx = gy * gridW + gx;
-        const elev = elevations[gIdx];
-
-        if (elev > 0.50) {
-          // Compute gradient vector for mountain slope hachuring
-          const eLeft = elevations[gIdx - 1];
-          const eRight = elevations[gIdx + 1];
-          const eTop = elevations[(gy - 1) * gridW + gx];
-          const eBottom = elevations[(gy + 1) * gridW + gx];
-
-          const gradX = eRight - eLeft;
-          const gradY = eBottom - eTop;
-
-          const px = gx * step;
-          const py = gy * step;
-
-          ctx.beginPath();
-          ctx.moveTo(px, py);
-          ctx.lineTo(px - gradY * 40, py + gradX * 40);
-          ctx.stroke();
+        if (elevations[gIdx] > 0.58 && riverSeeds.length < 6) {
+          riverSeeds.push({ gx, gy });
         }
       }
     }
-    ctx.globalAlpha = 1.0;
 
-    // 4. Render Cartography Lat/Long Grid Lines
+    riverSeeds.forEach(({ gx, gy }) => {
+      ctx.beginPath();
+      let curX = gx;
+      let curY = gy;
+      ctx.moveTo(curX * step, curY * step);
+
+      for (let stepCount = 0; stepCount < 60; stepCount++) {
+        let lowestElev = elevations[curY * gridW + curX];
+        let nextX = curX;
+        let nextY = curY;
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = curX + dx;
+            const ny = curY + dy;
+            if (nx >= 0 && nx < gridW && ny >= 0 && ny < Math.ceil(height / step)) {
+              const nElev = elevations[ny * gridW + nx];
+              if (nElev < lowestElev) {
+                lowestElev = nElev;
+                nextX = nx;
+                nextY = ny;
+              }
+            }
+          }
+        }
+
+        if (nextX === curX && nextY === curY) break;
+        curX = nextX;
+        curY = nextY;
+        ctx.lineTo(curX * step, curY * step);
+        if (lowestElev < 0.35) break; // Reached ocean
+      }
+      ctx.stroke();
+    });
+
+    // 4. Render Mountain Peak Stamps & Forest Tree Icons
+    for (let gy = 4; gy < Math.ceil(height / step) - 4; gy += 6) {
+      for (let gx = 4; gx < gridW - 4; gx += 6) {
+        const gIdx = gy * gridW + gx;
+        const elev = elevations[gIdx];
+        const px = gx * step;
+        const py = gy * step;
+
+        if (elev > 0.53) {
+          // Draw Hand-Drawn Mountain Peak Stamp (▲)
+          this.drawMountainIcon(ctx, px, py, 14, colors.mountain, colors.ink);
+        } else if (elev >= 0.38 && elev < 0.44 && (gx + gy) % 12 === 0) {
+          // Draw Forest Tree Cluster Icon (🌲)
+          this.drawTreeClusterIcon(ctx, px, py, 8, colors.shallow, colors.ink);
+        }
+      }
+    }
+
+    // 5. Render Cartography Lat/Long Grid Lines
     ctx.strokeStyle = colors.grid;
     ctx.lineWidth = 1;
     const gridSpacing = 150;
@@ -292,7 +327,10 @@ class PerlinCartographyEngine {
       ctx.stroke();
     }
 
-    // 5. Render Aged Cartography Border Frame
+    // 6. Render Compass Rose in Ocean Corner
+    this.drawCompassRose(ctx, width - 120, height - 120, 45, colors.ink);
+
+    // 7. Render Aged Cartography Border Frame
     ctx.strokeStyle = colors.ink;
     ctx.lineWidth = 6;
     ctx.strokeRect(16, 16, width - 32, height - 32);
@@ -313,6 +351,83 @@ class PerlinCartographyEngine {
       ctx.arc(cx, cy, cornerSize, 0, Math.PI * 2);
       ctx.stroke();
     });
+  }
+
+  /**
+   * Helper: Draw Mountain Triangle Peak Icon (▲)
+   */
+  drawMountainIcon(ctx, x, y, size, color, inkColor) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x - size * 0.8, y + size * 0.6);
+    ctx.lineTo(x + size * 0.8, y + size * 0.6);
+    if (typeof ctx.closePath === 'function') ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = inkColor;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size * 0.2, y + size * 0.6);
+    ctx.stroke();
+  }
+
+  /**
+   * Helper: Draw Forest Tree Cluster Icon (🌲)
+   */
+  drawTreeClusterIcon(ctx, x, y, size, color, inkColor) {
+    ctx.beginPath();
+    ctx.arc(x, y - size * 0.4, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(x - size * 0.3, y, size * 0.4, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.3, y, size * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = inkColor;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  /**
+   * Helper: Draw Intricate Compass Rose
+   */
+  drawCompassRose(ctx, cx, cy, size, color) {
+    if (!ctx || typeof ctx.translate !== 'function' || typeof ctx.rotate !== 'function') return;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI) / 2;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-size * 0.15, -size * 0.3);
+      ctx.lineTo(0, -size * 1.15);
+      ctx.lineTo(size * 0.15, -size * 0.3);
+      if (typeof ctx.closePath === 'function') ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.font = 'bold 14px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N', 0, -size * 1.35);
+
+    ctx.restore();
   }
 
   /**

@@ -28,6 +28,13 @@ async function runTests() {
       arc: () => {},
       save: () => {},
       restore: () => {},
+      translate: () => {},
+      rotate: () => {},
+      fillText: () => {},
+      closePath: () => {},
+      textAlign: 'center',
+      textBaseline: 'middle',
+      font: '',
       getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4) })
     };
   };

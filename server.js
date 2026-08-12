@@ -3892,11 +3892,31 @@ app.post('/api/maps', imageUpload.single('image'), (req, res) => {
   });
 });
 
-// Delete map and cascade pins
+// Delete map and cascade pins, territories, layers, routes, and unreferenced upload files
 app.delete('/api/maps/:id', (req, res) => {
-  db.run('DELETE FROM maps WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, deleted: this.changes });
+  const mapId = req.params.id;
+  db.get('SELECT image_path FROM maps WHERE id = ?', [mapId], (err, map) => {
+    const imagePath = map ? map.image_path : null;
+
+    db.serialize(() => {
+      db.run('DELETE FROM map_pins WHERE map_id = ?', [mapId]);
+      db.run('DELETE FROM map_territories WHERE map_id = ?', [mapId]);
+      db.run('DELETE FROM map_layers WHERE map_id = ?', [mapId]);
+      db.run('DELETE FROM map_routes WHERE map_id = ?', [mapId]);
+      db.run('DELETE FROM maps WHERE id = ?', [mapId], function(deleteErr) {
+        if (deleteErr) return res.status(500).json({ error: deleteErr.message });
+
+        if (imagePath && imagePath.startsWith('/uploads/images/')) {
+          db.get('SELECT COUNT(*) as count FROM maps WHERE image_path = ?', [imagePath], (countErr, row) => {
+            if (!countErr && row && row.count === 0) {
+              const fullPath = path.join(__dirname, 'public', imagePath);
+              fs.unlink(fullPath, () => {});
+            }
+          });
+        }
+        res.json({ success: true, deleted: this.changes });
+      });
+    });
   });
 });
 
@@ -4057,7 +4077,27 @@ function handleProceduralMapGeneration(req, res) {
   `, [mapId, worldId, mapTitle, `Procedural map (${preset}, ${theme})`, imagePath], function(err) {
     if (err) return res.status(500).json({ error: 'Database insert failed: ' + err.message });
 
-    db.all('SELECT id, title, category FROM articles WHERE (world_id = ? OR world_id = "default") AND category = "Locations"', [worldId], (err2, locations) => {
+    let selectedArticleIds = [];
+    try {
+      if (req.body.selected_article_ids) {
+        selectedArticleIds = Array.isArray(req.body.selected_article_ids)
+          ? req.body.selected_article_ids
+          : JSON.parse(req.body.selected_article_ids);
+      }
+    } catch (e) {
+      selectedArticleIds = [];
+    }
+
+    let articleQuery = 'SELECT id, title, category FROM articles WHERE (world_id = ? OR world_id = "default") AND category = "Locations"';
+    let queryParams = [worldId];
+
+    if (selectedArticleIds && selectedArticleIds.length > 0) {
+      const placeholders = selectedArticleIds.map(() => '?').join(',');
+      articleQuery = `SELECT id, title, category FROM articles WHERE id IN (${placeholders})`;
+      queryParams = selectedArticleIds;
+    }
+
+    db.all(articleQuery, queryParams, (err2, locations) => {
       const locationList = (locations && locations.length) ? locations : [
         { id: null, title: 'Central Citadel', category: 'Locations' },
         { id: null, title: 'Obsidian Harbor', category: 'Locations' },

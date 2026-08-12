@@ -98,6 +98,7 @@ class AtlasView {
           <select id="atlas-map-select" class="toolbar-select">
             ${this.maps.length ? this.maps.map(m => `<option value="${m.id}">${m.title}</option>`).join('') : '<option value="">No Maps Uploaded</option>'}
           </select>
+          <button id="atlas-delete-map-btn" class="tool-btn btn-sm danger" style="padding:6px 10px;" title="Delete current map"><i class="fa-solid fa-trash"></i> 🗑️ Delete Map</button>
           <button id="atlas-add-map-btn" class="tool-btn"><i class="fa-solid fa-plus"></i> Upload Map</button>
           <button id="atlas-auto-gen-btn" class="tool-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Map</button>
           <button id="atlas-auto-pin-btn" class="tool-btn"><i class="fa-solid fa-map-pin"></i> Auto-Place Pins</button>
@@ -611,6 +612,12 @@ class AtlasView {
     const exportBtn = document.getElementById('atlas-export-btn');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => this.exportStandaloneHtml());
+    }
+
+    // Map deletion trigger
+    const deleteMapBtn = document.getElementById('atlas-delete-map-btn');
+    if (deleteMapBtn) {
+      deleteMapBtn.addEventListener('click', () => this.deleteCurrentMap());
     }
 
     // Map upload modal triggers
@@ -1233,6 +1240,39 @@ class AtlasView {
       horseDays: d / 60,
       sailDays: d / 100
     };
+  }
+
+  async deleteCurrentMap() {
+    if (!this.currentMap) {
+      alert('No map currently selected to delete.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete map "${this.currentMap.title}"? This will also remove associated pins, territories, layers, and routes. This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/maps/${this.currentMap.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        await this.fetchMaps();
+        this.renderLayout();
+        if (this.maps.length > 0) {
+          await this.loadMap(this.maps[0].id);
+        } else {
+          this.currentMap = null;
+          const container = document.getElementById('atlas-canvas-container');
+          if (container) {
+            container.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted, #94a3b8); font-size:1.2rem;">No Maps Available. Click [Upload Map] or [Auto-Generate Map] to create one.</div>';
+          }
+        }
+      } else {
+        alert('Failed to delete map: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Delete map error:', err);
+      alert('Failed to delete map: ' + err.message);
+    }
   }
 
   formatTravelTime(days) {
