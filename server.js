@@ -42,6 +42,93 @@ function safeParseTags(tagsRaw) {
   return [];
 }
 
+// --- STANDARDIZED API ERROR & VALIDATION HELPERS ---
+function sendApiError(res, statusCode = 500, code = 'ERR_INTERNAL', message = 'Internal Server Error', err = null) {
+  if (err && err.message) {
+    console.error(`[API Error ${code}]`, err.message);
+  }
+  return res.status(statusCode).json({
+    status: 'error',
+    code,
+    message
+  });
+}
+
+function validateFields(body, requiredKeys = []) {
+  if (!body || typeof body !== 'object') {
+    return 'Invalid request payload body';
+  }
+  for (const key of requiredKeys) {
+    if (body[key] === undefined || body[key] === null || (typeof body[key] === 'string' && body[key].trim() === '')) {
+      return `Missing or empty required field: '${key}'`;
+    }
+  }
+  return null;
+}
+
+function saveArticleWithDiskSync(db, articleData, isUpdate, callback) {
+  const { id, title, content, category, tags, world_id, summary } = articleData;
+
+  const safeFilename = (title || 'untitled').toLowerCase().replace(/[^a-z0-9_-]/gi, '_') + '.md';
+  const diskDir = path.join(__dirname, 'storage');
+  if (!fs.existsSync(diskDir)) {
+    fs.mkdirSync(diskDir, { recursive: true });
+  }
+  const filePath = path.join(diskDir, safeFilename);
+
+  let previousContent = null;
+  if (isUpdate && fs.existsSync(filePath)) {
+    try {
+      previousContent = fs.readFileSync(filePath, 'utf8');
+    } catch (e) {}
+  }
+
+  const tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+  const mdContent = `---
+title: "${title || ''}"
+category: "${category || 'General'}"
+tags: [${tagsStr}]
+world_id: "${world_id || 'default'}"
+---
+
+${content || ''}`;
+
+  try {
+    fs.writeFileSync(filePath, mdContent, 'utf8');
+  } catch (fsErr) {
+    return callback(new Error(`Failed to sync article to disk storage: ${fsErr.message}`));
+  }
+
+  if (isUpdate) {
+    const query = `
+      UPDATE articles 
+      SET title = ?, category = ?, tags = ?, content = ?, summary = ?, world_id = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `;
+    db.run(query, [title, category, JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default', id], function(err) {
+      if (err) {
+        if (previousContent !== null) {
+          try { fs.writeFileSync(filePath, previousContent, 'utf8'); } catch (e) {}
+        }
+        return callback(err);
+      }
+      callback(null, { id, title, category, tags: parseTagsInput(tags), content, summary, world_id, updated_at: new Date().toISOString() });
+    });
+  } else {
+    const query = `
+      INSERT INTO articles (id, title, category, tags, content, summary, world_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `;
+    db.run(query, [id, title, category || 'General', JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default'], function(err) {
+      if (err) {
+        try { fs.unlinkSync(filePath); } catch (e) {}
+        return callback(err);
+      }
+      callback(null, { id, title, category: category || 'General', tags: parseTagsInput(tags), content, summary, world_id, created_at: new Date().toISOString() });
+    });
+  }
+}
+
 // Configure multer disk storage for image uploads
 const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {

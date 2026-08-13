@@ -479,12 +479,12 @@ class AtlasView {
       </div>
 
       <div id="atlas-generate-modal" class="modal-overlay" style="display:none;">
-        <div class="modal-card atlas-gen-modal-card" style="max-width:680px; width:100%;">
-          <div class="modal-header">
+        <div class="modal-card atlas-gen-modal-card" style="max-width:680px; width:100%; max-height:85vh; display:flex; flex-direction:column;">
+          <div class="modal-header" style="flex-shrink:0;">
             <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate World Map</h3>
             <button id="close-gen-modal-btn" class="drawer-close-btn">&times;</button>
           </div>
-          <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="modal-body" style="display:flex; flex-direction:column; gap:16px; overflow-y:auto; padding:16px;">
 
             <!-- Engine Mode Selector Tabs -->
             <div class="form-group">
