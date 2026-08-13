@@ -1094,11 +1094,36 @@ class AtlasView {
     if (!modal) return;
 
     modal.style.display = 'flex';
+    this.genMode = this.genMode || 'procedural';
+
+    // Sync tab UI states
+    const modeTabs = modal.querySelectorAll('.gen-mode-tab');
+    modeTabs.forEach(tab => {
+      const mode = tab.getAttribute('data-mode');
+      if (mode === this.genMode) {
+        tab.classList.add('active', 'primary');
+      } else {
+        tab.classList.remove('active', 'primary');
+      }
+    });
+
+    const procSettings = document.getElementById('gen-procedural-settings');
+    const aiSettings = document.getElementById('gen-ai-settings');
+    if (this.genMode === 'ai') {
+      if (procSettings) procSettings.style.display = 'none';
+      if (aiSettings) aiSettings.style.display = 'flex';
+    } else {
+      if (procSettings) procSettings.style.display = 'block';
+      if (aiSettings) aiSettings.style.display = 'none';
+    }
+
     if (!this.articles || this.articles.length === 0) {
       await this.fetchArticles();
     }
     this.populateArticleChecklist();
-    this.updateGeneratorPreview();
+    if (this.genMode === 'procedural') {
+      this.updateGeneratorPreview();
+    }
   }
 
   populateArticleChecklist() {
@@ -1115,10 +1140,31 @@ class AtlasView {
 
     checklist.innerHTML = articlesToDisplay.map(a => `
       <label class="gen-article-label" data-title="${(a.title || '').toLowerCase()}" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; padding:4px 6px; border-radius:4px; cursor:pointer; background:rgba(255,255,255,0.03);">
-        <input type="checkbox" class="gen-article-checkbox" value="${a.id}" data-title="${a.title}" checked>
+        <input type="checkbox" class="gen-article-checkbox" value="${a.id}" data-title="${a.title}">
         <span><strong>${a.title}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${a.category || 'General'})</span></span>
       </label>
     `).join('');
+
+    const checkboxes = checklist.querySelectorAll('.gen-article-checkbox');
+    if (checkboxes.length > 0) {
+      checkboxes[0].checked = true; // Check first article by default
+      const titleInput = document.getElementById('gen-map-title');
+      if (titleInput && (!titleInput.value || titleInput.value === 'Realm Map')) {
+        titleInput.value = `${checkboxes[0].getAttribute('data-title')} Map`;
+      }
+    }
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const checked = checklist.querySelectorAll('.gen-article-checkbox:checked');
+        if (checked.length === 1) {
+          const titleInput = document.getElementById('gen-map-title');
+          if (titleInput) {
+            titleInput.value = `${checked[0].getAttribute('data-title')} Map`;
+          }
+        }
+      });
+    });
   }
 
   updateGeneratorPreview() {

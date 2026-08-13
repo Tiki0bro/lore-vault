@@ -1540,6 +1540,42 @@ function runLocalAIRefiner(action, title, rawContent, currentCategory) {
   }
 }
 
+async function callGeminiApi(prompt, apiKey, requestedModel = 'gemini-1.5-flash') {
+  const candidateModels = Array.from(new Set([
+    requestedModel,
+    'gemini-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-3.1-pro-preview',
+    'gemini-pro-latest',
+    'gemini-1.5-flash',
+    'gemini-pro'
+  ]));
+
+  for (const targetModel of candidateModels) {
+    if (!targetModel) continue;
+    try {
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+
+      if (geminiRes.ok) {
+        const gData = await geminiRes.json();
+        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return text;
+        }
+      } else {
+        console.log(`[Gemini API] Model ${targetModel} returned status ${geminiRes.status}. Trying next candidate...`);
+      }
+    } catch (e) {
+      console.warn(`[Gemini API] Attempt with ${targetModel} failed:`, e.message);
+    }
+  }
+  return null;
+}
+
 // POST /api/ai/assist - Live AI Assistant Endpoint
 app.post('/api/ai/assist', async (req, res) => {
   const { action, title, content, category, provider, apiKey, model, instructions } = req.body;
@@ -1580,18 +1616,8 @@ ${content}`;
   } 
   // 2. Try Gemini API if key provided
   else if (provider === 'gemini' && apiKey) {
-    try {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      if (geminiRes.ok) {
-        const data = await geminiRes.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return res.json({ result: text });
-      }
-    } catch (e) {}
+    const resultText = await callGeminiApi(prompt, apiKey, model);
+    if (resultText) return res.json({ result: resultText });
   }
   // 3. Try OpenAI API if key provided
   else if (provider === 'openai' && apiKey) {
@@ -2947,30 +2973,11 @@ Lore Text:
 ${row.content.substring(0, 3000)}`;
 
     try {
-      let model = serverCfg.model || 'gemini-flash-latest';
-      let geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      let gData = await geminiRes.json();
-      
-      if (gData.error && gData.error.status === 'NOT_FOUND') {
-         // Fallback to known working model if user configured an invalid one
-         model = 'gemini-flash-latest';
-         geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-         });
-         gData = await geminiRes.json();
+      const model = serverCfg.model || 'gemini-flash-latest';
+      let text = await callGeminiApi(prompt, activeKey, model);
+      if (!text) {
+        throw new Error('Gemini API returned empty response across all candidate models');
       }
-      
-      if (gData.error) {
-        throw new Error(gData.error.message || 'Gemini API Error');
-      }
-      
-      let text = gData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
       const result = JSON.parse(text);
       res.json(result);

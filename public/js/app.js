@@ -1577,7 +1577,6 @@ class LoreApp {
     try {
       const res = await fetch(`/api/categories?world_id=${this.currentWorldId || 'all'}`);
       this.categories = await res.json();
-      this.renderCategoryMenu();
       this.renderCategoryDock();
     } catch (err) {
       console.error('Failed to fetch categories:', err);
@@ -1813,80 +1812,6 @@ class LoreApp {
     });
 
     barEl.innerHTML = html;
-  }
-
-  renderCategoryMenu() {
-    const listEl = document.getElementById('category-list');
-    if (!listEl) return;
-
-    const allCount = this.categories.reduce((acc, c) => acc + c.count, 0);
-
-    let html = `
-      <li class="${!this.selectedCategory ? 'active' : ''}" onclick="window.app.filterByCategory(null)">
-        <span>All Categories</span>
-        <span class="cat-count">${allCount}</span>
-      </li>
-    `;
-
-    const standardCategories = [
-      'Characters',
-      'Locations',
-      'Factions',
-      'Races & Species',
-      'Magic & Tech',
-      'History',
-      'Items'
-    ];
-
-    const subCategoriesMap = {
-      'Characters': ['Rulers & Nobility', 'Mages & Mystics', 'Warriors & Officers', 'Key Figures & Personages'],
-      'Locations': ['Cities & Settlements', 'Fortresses & Strongholds', 'Realms & Territories', 'Geography & Wilderness', 'Landmarks & Ruins'],
-      'Factions': ['Noble Houses & Dynasties', 'Syndicates & Guilds', 'Military Orders', 'Organizations & Societies'],
-      'Races & Species': ['Playable Races & Lineages', 'Beasts & Creatures', 'Monsters & Entities', 'Flora & Ecology'],
-      'Magic & Tech': ['Spells & Incantations', 'Arcane Artifacts & Catalysts', 'Technology & Machinery', 'Magic Systems & Theories'],
-      'History': ['Eras & Ages', 'Wars & Battles', 'Treaties & Accords', 'Chronicles & Key Events'],
-      'Items': ['Weapons & Armaments', 'Armor & Relics', 'Potions & Reagents', 'Trinkets & Valuables']
-    };
-
-    standardCategories.forEach(catName => {
-      const found = this.categories.find(c => c.category === catName);
-      const count = found ? found.count : 0;
-      const isActive = this.selectedCategory === catName;
-      
-      html += `
-        <li class="${isActive ? 'active' : ''}" onclick="window.app.filterByCategory('${catName}')">
-          <span>${catName}</span>
-          <span class="cat-count">${count}</span>
-        </li>
-      `;
-
-      // Render Sub-Category Tree Nodes when Active/Selected
-      if (isActive) {
-        const knownSubs = subCategoriesMap[catName] || [];
-        const dbSubMap = new Map();
-        if (found && Array.isArray(found.subCategories)) {
-          found.subCategories.forEach(s => dbSubMap.set(s.subCategory, s.count));
-        }
-
-        // Combine taxonomy standard subcategories with dynamic DB subcategories
-        const subList = Array.from(new Set([...knownSubs, ...dbSubMap.keys()]));
-
-        html += `<div class="sub-category-list" style="padding-left:1rem; margin:0.3rem 0; display:flex; flex-direction:column; gap:0.2rem;">`;
-        subList.forEach(subName => {
-          const subCount = dbSubMap.get(subName) || 0;
-          const isSubActive = this.selectedTag === subName;
-          html += `
-            <div class="sub-cat-item ${isSubActive ? 'active' : ''}" style="font-size:0.75rem; color:${isSubActive ? 'var(--accent-blue)' : 'var(--text-muted)'}; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px; display:flex; justify-content:space-between;" onclick="event.stopPropagation(); window.app.filterByTag('${subName}')">
-              <span>↳ ${subName}</span>
-              <span style="font-size:0.65rem;">${subCount}</span>
-            </div>
-          `;
-        });
-        html += `</div>`;
-      }
-    });
-
-    listEl.innerHTML = html;
   }
 
   renderTagCloud() {
@@ -2331,7 +2256,6 @@ class LoreApp {
     this.selectedTag = this.selectedTag === tag ? null : tag;
     this.selectedSubCategory = this.selectedTag;
     this.fetchArticles();
-    this.renderCategoryMenu();
     this.renderFilterChips();
     this.renderSubCategoryBar();
   }
@@ -2347,14 +2271,12 @@ class LoreApp {
         this.selectedSubCategory = null;
         this.selectedTag = null;
         this.fetchArticles();
-        this.renderCategoryMenu();
         this.renderFilterChips();
         this.renderSubCategoryBar();
       } else if (this.selectedCategory) {
         this.selectedSubCategory = null;
         this.selectedTag = null;
         this.fetchArticles();
-        this.renderCategoryMenu();
         this.renderFilterChips();
         this.renderSubCategoryBar();
       } else {
@@ -2383,7 +2305,6 @@ class LoreApp {
     this.fetchArticles();
     this.renderCategoryDock();
     this.renderSubCategoryBar();
-    this.renderCategoryMenu();
     this.renderFilterChips();
   }
 

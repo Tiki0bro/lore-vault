@@ -45,15 +45,18 @@
           <button class="tab-btn" id="tab-atlas" onclick="window.switchTab('atlas')"><span class="tab-icon">🗺️</span> World Atlas</button>
           <button class="tab-btn" id="tab-timeline" onclick="window.switchTab('timeline')"><span class="tab-icon">⏳</span> Timeline</button>
           <button class="nav-tab tab-btn" id="tab-relationships" data-view="view-relationships" onclick="window.switchTab('view-relationships')">⚔️ Relationships</button>
-          <button id="narrative-slate-nav-btn" class="nav-tab tab-btn" onclick="switchView('narrative-slate')">📜 Narrative Slate</button>
+          <button id="narrative-slate-nav-btn" class="nav-tab tab-btn" onclick="window.switchTab('narrative-slate')">📜 Narrative Slate</button>
 
           <button class="tab-btn" id="tab-context" onclick="window.switchTab('context')"><span class="tab-icon">⚡</span> Weave Matrix</button>
-          <button class="tab-btn" id="tab-marketing" onclick="switchView('marketing')"><span class="tab-icon">📢</span> Marketing</button>
+          <button class="tab-btn" id="tab-marketing" onclick="window.switchTab('marketing')"><span class="tab-icon">📢</span> Marketing</button>
         </nav>
       </div>
 
       <!-- Zone 3: Right (World & Theme Dropdown, Consolidated Tools Dropdown, Primary CTA) -->
       <div class="navbar-zone-right header-actions">
+        <!-- Weave Matrix Side Drawer Trigger -->
+        <button id="weave-matrix-btn" class="btn btn-secondary" title="Toggle Weave Matrix Context Drawer" onclick="window.toggleWeaveMatrixDrawer()">⚡ Context Drawer</button>
+
         <!-- World & Theme Selector Dropdown -->
         <div class="world-theme-container">
           <span class="world-icon">🌍</span>
