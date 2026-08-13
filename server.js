@@ -4241,7 +4241,7 @@ function handleProceduralMapGeneration(req, res) {
       const seed = Date.now() % 10000;
       let rawPins = locationList.map((loc, idx) => {
         const biome = getBiomeForCategory(loc.category, loc.title);
-        const coords = findBiomeCoordinates(biome, seed + idx);
+        const coords = (locationList.length === 1) ? { x_pct: 0.50, y_pct: 0.50 } : findBiomeCoordinates(biome, seed + idx);
         return {
           id: `pin-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
           map_id: mapId,
@@ -4255,7 +4255,7 @@ function handleProceduralMapGeneration(req, res) {
         };
       });
 
-      const resolvedPins = resolveForceDirectedLayout(rawPins);
+      const resolvedPins = (locationList.length === 1) ? rawPins : resolveForceDirectedLayout(rawPins);
       const insertStmt = db.prepare(`
         INSERT INTO map_pins (id, map_id, article_id, x_pct, y_pct, label, pin_icon, pin_color, is_secret)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

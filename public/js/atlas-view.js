@@ -1220,6 +1220,18 @@ class AtlasView {
         return;
       }
 
+      const modal = document.getElementById('atlas-generate-modal');
+      if (modal) {
+        const activeScope = modal.querySelector('.gen-scope-card.active');
+        if (activeScope) {
+          this.mapScope = activeScope.getAttribute('data-scope') || 'world';
+        }
+        const activeStyle = modal.querySelector('.gen-style-chip.active');
+        if (activeStyle) {
+          this.mapStyle = activeStyle.getAttribute('data-style') || 'sepia';
+        }
+      }
+
       const isAi = (this.genMode === 'ai');
       const endpoint = isAi ? '/api/maps/generate/ai' : '/api/maps/generate/procedural';
 
