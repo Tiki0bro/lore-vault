@@ -786,12 +786,30 @@ class AtlasView {
     const articleSearch = document.getElementById('gen-article-search');
     if (articleSearch) {
       articleSearch.addEventListener('input', (e) => {
-        const q = (e.target.value || '').toLowerCase();
+        const q = (e.target.value || '').trim().toLowerCase();
         const labels = document.querySelectorAll('.gen-article-label');
+        let visibleMatches = [];
+
         labels.forEach(l => {
-          const title = l.getAttribute('data-title') || '';
-          l.style.display = title.includes(q) ? 'flex' : 'none';
+          const title = (l.getAttribute('data-title') || '').toLowerCase();
+          const matches = q === '' || title.includes(q);
+          l.style.display = matches ? 'flex' : 'none';
+          if (q !== '' && matches) {
+            const cb = l.querySelector('.gen-article-checkbox');
+            if (cb) visibleMatches.push({ cb, title: l.querySelector('strong') ? l.querySelector('strong').textContent : '' });
+          }
         });
+
+        if (q !== '' && visibleMatches.length > 0) {
+          document.querySelectorAll('.gen-article-checkbox').forEach(cb => cb.checked = false);
+          visibleMatches.forEach(item => item.cb.checked = true);
+          if (visibleMatches.length === 1) {
+            const titleInput = document.getElementById('gen-map-title');
+            if (titleInput) {
+              titleInput.value = `${visibleMatches[0].title} Map`;
+            }
+          }
+        }
       });
     }
 
@@ -1192,6 +1210,15 @@ class AtlasView {
       // Gather selected target article IDs
       const checkedBoxes = document.querySelectorAll('.gen-article-checkbox:checked');
       const selectedArticleIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+      if (selectedArticleIds.length === 0) {
+        if (statusEl) statusEl.style.display = 'none';
+        if (submitBtn) submitBtn.disabled = false;
+        if (typeof alert === 'function') {
+          alert('Please check at least 1 target article in the "Target Vault Articles" list to focus your map generation.');
+        }
+        return;
+      }
 
       const isAi = (this.genMode === 'ai');
       const endpoint = isAi ? '/api/maps/generate/ai' : '/api/maps/generate/procedural';

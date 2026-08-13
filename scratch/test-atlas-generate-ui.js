@@ -12,6 +12,7 @@ async function runTests() {
   const { window } = dom;
   global.window = window;
   global.document = window.document;
+  global.alert = window.alert = () => {};
 
   // Mock Leaflet window.L
   window.L = {
@@ -193,6 +194,10 @@ async function runTests() {
   console.log('✓ Custom seed input passed');
 
   // 7. Form submission and map loading
+  const checklist = document.getElementById('gen-article-checklist');
+  if (checklist) {
+    checklist.innerHTML = '<label><input type="checkbox" class="gen-article-checkbox" value="test-art-1" checked> Test Article</label>';
+  }
   const submitBtn = document.getElementById('submit-gen-modal-btn');
   console.assert(submitBtn !== null, 'FAIL: Submit generator button missing');
   await atlasView.submitGeneratorModal();
