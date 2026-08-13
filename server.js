@@ -4373,11 +4373,50 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
         console.warn(`[AI Map Generator] Error querying model ${model}: ${modelErr.message}`);
       }
     }
-  } else {
-    aiWarning = 'No GEMINI_API_KEY environment variable or config found. Generated map using local cartography engine.';
   }
 
-  req.aiWarning = aiWarning;
+  // Fallback / Alternative Engine: Pollinations AI Free Image Generation
+  try {
+    const scopePrompts = {
+      world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
+      region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
+      city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
+      town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
+      treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
+      battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
+    };
+
+    const stylePrompts = {
+      sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
+      codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
+      grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
+      blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
+    };
+
+    const polliPrompt = encodeURIComponent(`high resolution fantasy cartography map, ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring ${mapTitle}. ${customPrompt}, detailed map, 8k resolution, no text labels, top-down perspective`);
+    const polliSeed = (req.body.seed || Date.now()) % 100000;
+    const polliUrl = `https://image.pollinations.ai/prompt/${polliPrompt}?width=1920&height=1080&seed=${polliSeed}&model=flux&nologo=true`;
+
+    console.log(`[AI Map Generator] Attempting Pollinations AI image generation: ${polliUrl.substring(0, 120)}...`);
+    const polliRes = await fetch(polliUrl);
+    if (polliRes.ok) {
+      const polliBuffer = Buffer.from(await polliRes.arrayBuffer());
+      if (polliBuffer.length > 5000) {
+        const filename = `pollinations-map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.png`;
+        const savePath = path.join(__dirname, 'public', 'uploads', 'images', filename);
+        fs.writeFileSync(savePath, polliBuffer);
+
+        req.file = { filename };
+        console.log(`[AI Map Generator] Successfully generated & saved Pollinations AI map image: /uploads/images/${filename}`);
+        req.aiNotice = 'Generated using Pollinations AI (Flux Model)';
+        return handleProceduralMapGeneration(req, res);
+      }
+    }
+  } catch (polliErr) {
+    console.warn(`[AI Map Generator] Pollinations AI fetch error: ${polliErr.message}`);
+  }
+
+  req.aiWarning = aiWarning || 'Google Gemini API quota reached and Pollinations AI unreachable. Generated map using local cartography engine.';
   handleProceduralMapGeneration(req, res);
 });
 
