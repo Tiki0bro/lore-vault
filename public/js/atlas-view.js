@@ -479,77 +479,116 @@ class AtlasView {
       </div>
 
       <div id="atlas-generate-modal" class="modal-overlay" style="display:none;">
-        <div class="modal-card atlas-gen-modal-card">
+        <div class="modal-card atlas-gen-modal-card" style="max-width:680px; width:100%;">
           <div class="modal-header">
-            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Procedural Map</h3>
+            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate World Map</h3>
             <button id="close-gen-modal-btn" class="drawer-close-btn">&times;</button>
           </div>
           <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
-            <div class="form-group">
-              <label for="gen-map-title" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Title</label>
-              <input type="text" id="gen-map-title" class="form-control" value="Procedural Realm Map" placeholder="Enter map title...">
-            </div>
 
+            <!-- Engine Mode Selector Tabs -->
             <div class="form-group">
-              <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Geography Preset</label>
-              <div class="gen-preset-grid">
-                <div class="gen-preset-card active" data-preset="pangaea">
-                  <div class="preset-icon">🌋</div>
-                  <div class="preset-details">
-                    <div class="preset-title">Pangaea</div>
-                    <div class="preset-desc">Single massive continent surrounded by ocean</div>
-                  </div>
-                </div>
-                <div class="gen-preset-card" data-preset="archipelago">
-                  <div class="preset-icon">🏝️</div>
-                  <div class="preset-details">
-                    <div class="preset-title">Archipelago</div>
-                    <div class="preset-desc">Scattered island chains & maritime passages</div>
-                  </div>
-                </div>
-                <div class="gen-preset-card" data-preset="inland_sea">
-                  <div class="preset-icon">🌊</div>
-                  <div class="preset-details">
-                    <div class="preset-title">Inland Sea</div>
-                    <div class="preset-desc">Ring of land surrounding a central sea</div>
-                  </div>
-                </div>
-                <div class="gen-preset-card" data-preset="mountain_fjords">
-                  <div class="preset-icon">🏔️</div>
-                  <div class="preset-details">
-                    <div class="preset-title">Mountain Fjords</div>
-                    <div class="preset-desc">Glacial valley coastlines & rugged peaks</div>
-                  </div>
-                </div>
+              <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Generation Engine</label>
+              <div class="segmented-control" style="display:flex; gap:8px; background:rgba(0,0,0,0.2); padding:4px; border-radius:8px; border:1px solid var(--border-color);">
+                <button type="button" class="gen-mode-tab tool-btn primary active" data-mode="procedural" style="flex:1;"><i class="fa-solid fa-bolt"></i> ⚡ Procedural Engine (Instant Canvas)</button>
+                <button type="button" class="gen-mode-tab tool-btn" data-mode="ai" style="flex:1;"><i class="fa-solid fa-robot"></i> 🤖 AI Fantasy Art Engine (Gemini)</button>
               </div>
             </div>
 
             <div class="form-group">
-              <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Cartography Aesthetic Theme</label>
-              <div class="gen-theme-chips">
-                <div class="gen-theme-chip active" data-theme="parchment">
-                  <span>📜 Vintage Parchment</span>
-                </div>
-                <div class="gen-theme-chip" data-theme="void">
-                  <span>🌌 Void Starlight</span>
-                </div>
-                <div class="gen-theme-chip" data-theme="emerald">
-                  <span>🌿 Emerald Realm</span>
-                </div>
-              </div>
+              <label for="gen-map-title" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Title *</label>
+              <input type="text" id="gen-map-title" class="form-control" value="Realm Map" placeholder="Enter map title...">
             </div>
 
+            <!-- Target Article Checklist (Used for Context & Pin Placement) -->
             <div class="form-group">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-weight:600; font-size:0.9rem; margin:0;">Live Map Preview</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <label for="gen-seed-input" style="font-size:0.85rem; color:var(--text-muted);">Seed:</label>
-                  <input type="number" id="gen-seed-input" class="form-control" value="12345" style="width:100px; padding:4px 8px; font-size:0.85rem;">
-                  <button id="gen-reroll-seed-btn" class="tool-btn btn-sm"><i class="fa-solid fa-dice"></i> 🎲 Reroll Seed</button>
+                <label style="font-weight:600; font-size:0.9rem; margin:0;">Target Vault Articles (Context & Pin Placement)</label>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" id="gen-article-select-all" class="tool-btn btn-sm" style="font-size:0.75rem; padding:2px 6px;">Select All</button>
+                  <button type="button" id="gen-article-deselect-all" class="tool-btn btn-sm" style="font-size:0.75rem; padding:2px 6px;">Clear All</button>
                 </div>
               </div>
-              <div class="gen-preview-container" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:8px; display:flex; justify-content:center; align-items:center;">
-                <canvas id="gen-preview-canvas" width="400" height="225" style="width:100%; max-width:400px; height:auto; aspect-ratio:16/9; border-radius:4px; border:1px solid rgba(255,255,255,0.1);"></canvas>
+              <input type="text" id="gen-article-search" class="form-control" placeholder="🔍 Search location articles to include..." style="margin-bottom:6px; font-size:0.85rem;">
+              <div id="gen-article-checklist" style="max-height:130px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px; padding:6px; background:rgba(0,0,0,0.15); display:flex; flex-direction:column; gap:4px;">
+                <!-- Dynamically populated in openGeneratorModal() -->
+              </div>
+            </div>
+
+            <!-- Procedural Engine Options Container -->
+            <div id="gen-procedural-settings">
+              <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Geography Preset</label>
+                <div class="gen-preset-grid">
+                  <div class="gen-preset-card active" data-preset="pangaea">
+                    <div class="preset-icon">🌋</div>
+                    <div class="preset-details">
+                      <div class="preset-title">Pangaea</div>
+                      <div class="preset-desc">Single continent with deep oceans</div>
+                    </div>
+                  </div>
+                  <div class="gen-preset-card" data-preset="archipelago">
+                    <div class="preset-icon">🏝️</div>
+                    <div class="preset-details">
+                      <div class="preset-title">Archipelago</div>
+                      <div class="preset-desc">Scattered island chains</div>
+                    </div>
+                  </div>
+                  <div class="gen-preset-card" data-preset="inland_sea">
+                    <div class="preset-icon">🌊</div>
+                    <div class="preset-details">
+                      <div class="preset-title">Inland Sea</div>
+                      <div class="preset-desc">Ring landmass around sea</div>
+                    </div>
+                  </div>
+                  <div class="gen-preset-card" data-preset="mountain_fjords">
+                    <div class="preset-icon">🏔️</div>
+                    <div class="preset-details">
+                      <div class="preset-title">Mountain Fjords</div>
+                      <div class="preset-desc">Rugged valley coastlines</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Cartography Aesthetic Theme</label>
+                <div class="gen-theme-chips">
+                  <div class="gen-theme-chip active" data-theme="parchment">
+                    <span>📜 Vintage Parchment</span>
+                  </div>
+                  <div class="gen-theme-chip" data-theme="void">
+                    <span>🌌 Void Starlight</span>
+                  </div>
+                  <div class="gen-theme-chip" data-theme="emerald">
+                    <span>🌿 Emerald Realm</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label style="font-weight:600; font-size:0.9rem; margin:0;">Live Map Preview</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <label for="gen-seed-input" style="font-size:0.85rem; color:var(--text-muted);">Seed:</label>
+                    <input type="number" id="gen-seed-input" class="form-control" value="12345" style="width:100px; padding:4px 8px; font-size:0.85rem;">
+                    <button id="gen-reroll-seed-btn" class="tool-btn btn-sm"><i class="fa-solid fa-dice"></i> 🎲 Reroll Seed</button>
+                  </div>
+                </div>
+                <div class="gen-preview-container" style="background:#090d16; border:1px solid var(--border-color); border-radius:8px; padding:8px; display:flex; justify-content:center; align-items:center;">
+                  <canvas id="gen-preview-canvas" width="400" height="225" style="width:100%; max-width:400px; height:auto; aspect-ratio:16/9; border-radius:4px; border:1px solid rgba(255,255,255,0.1);"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Engine Options Container -->
+            <div id="gen-ai-settings" style="display:none; flex-direction:column; gap:12px;">
+              <div class="form-group">
+                <label for="gen-ai-prompt-input" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Custom AI Style & Art Instructions</label>
+                <textarea id="gen-ai-prompt-input" class="form-control" rows="3" placeholder="e.g. High resolution fantasy regional map, vintage sepia parchment paper, hand-drawn ink coastlines, mountain ranges to the north, ocean bay to the south, no text labels..."></textarea>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                  💡 <em>Selected articles above will automatically be injected into the AI context prompt to shape regional features and place map markers.</em>
+                </div>
               </div>
             </div>
 
@@ -667,6 +706,53 @@ class AtlasView {
     const submitGenModalBtn = document.getElementById('submit-gen-modal-btn');
     if (submitGenModalBtn) {
       submitGenModalBtn.addEventListener('click', () => this.submitGeneratorModal());
+    }
+
+    const modeTabs = document.querySelectorAll('.gen-mode-tab');
+    modeTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        modeTabs.forEach(t => t.classList.remove('active', 'primary'));
+        const target = e.currentTarget;
+        target.classList.add('active', 'primary');
+        this.genMode = target.getAttribute('data-mode') || 'procedural';
+
+        const procSettings = document.getElementById('gen-procedural-settings');
+        const aiSettings = document.getElementById('gen-ai-settings');
+        if (this.genMode === 'ai') {
+          if (procSettings) procSettings.style.display = 'none';
+          if (aiSettings) aiSettings.style.display = 'flex';
+        } else {
+          if (procSettings) procSettings.style.display = 'block';
+          if (aiSettings) aiSettings.style.display = 'none';
+          this.updateGeneratorPreview();
+        }
+      });
+    });
+
+    const articleSearch = document.getElementById('gen-article-search');
+    if (articleSearch) {
+      articleSearch.addEventListener('input', (e) => {
+        const q = (e.target.value || '').toLowerCase();
+        const labels = document.querySelectorAll('.gen-article-label');
+        labels.forEach(l => {
+          const title = l.getAttribute('data-title') || '';
+          l.style.display = title.includes(q) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    const selectAllBtn = document.getElementById('gen-article-select-all');
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.gen-article-checkbox').forEach(cb => cb.checked = true);
+      });
+    }
+
+    const deselectAllBtn = document.getElementById('gen-article-deselect-all');
+    if (deselectAllBtn) {
+      deselectAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.gen-article-checkbox').forEach(cb => cb.checked = false);
+      });
     }
 
     const rerollSeedBtn = document.getElementById('gen-reroll-seed-btn');
@@ -931,12 +1017,36 @@ class AtlasView {
     this.renderPinsOnCanvas();
   }
 
-  openGeneratorModal() {
+  async openGeneratorModal() {
     const modal = document.getElementById('atlas-generate-modal');
-    if (modal) {
-      modal.style.display = 'flex';
-      this.updateGeneratorPreview();
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    if (!this.articles || this.articles.length === 0) {
+      await this.fetchArticles();
     }
+    this.populateArticleChecklist();
+    this.updateGeneratorPreview();
+  }
+
+  populateArticleChecklist() {
+    const checklist = document.getElementById('gen-article-checklist');
+    if (!checklist) return;
+
+    if (!this.articles || this.articles.length === 0) {
+      checklist.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); padding:4px;">No vault articles found. Generic map markers will be placed.</div>';
+      return;
+    }
+
+    const locationArticles = this.articles.filter(a => a.category === 'Locations' || !a.category);
+    const articlesToDisplay = locationArticles.length ? locationArticles : this.articles;
+
+    checklist.innerHTML = articlesToDisplay.map(a => `
+      <label class="gen-article-label" data-title="${(a.title || '').toLowerCase()}" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; padding:4px 6px; border-radius:4px; cursor:pointer; background:rgba(255,255,255,0.03);">
+        <input type="checkbox" class="gen-article-checkbox" value="${a.id}" data-title="${a.title}" checked>
+        <span><strong>${a.title}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${a.category || 'General'})</span></span>
+      </label>
+    `).join('');
   }
 
   updateGeneratorPreview() {
@@ -954,13 +1064,20 @@ class AtlasView {
 
   async submitGeneratorModal() {
     const titleInput = document.getElementById('gen-map-title');
-    const title = titleInput ? titleInput.value.trim() : 'Procedural Realm Map';
+    const title = titleInput ? titleInput.value.trim() : 'Realm Map';
     const statusEl = document.getElementById('gen-modal-status');
     const submitBtn = document.getElementById('submit-gen-modal-btn');
     if (statusEl) statusEl.style.display = 'flex';
     if (submitBtn) submitBtn.disabled = true;
 
     try {
+      // Gather selected target article IDs
+      const checkedBoxes = document.querySelectorAll('.gen-article-checkbox:checked');
+      const selectedArticleIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+      const isAi = (this.genMode === 'ai');
+      const endpoint = isAi ? '/api/maps/generate/ai' : '/api/maps/generate/procedural';
+
       const engine = this.getCartographyEngine();
       let offscreenCanvas = null;
       if (typeof document !== 'undefined' && document.createElement) {
@@ -987,13 +1104,20 @@ class AtlasView {
 
       const formData = new FormData();
       formData.append('world_id', this.worldId);
-      formData.append('title', title || 'Procedural Realm Map');
+      formData.append('title', title || (isAi ? 'AI Realm Map' : 'Procedural Realm Map'));
       formData.append('preset', this.genPreset);
       formData.append('theme', this.genTheme);
       formData.append('seed', this.genSeed);
-      formData.append('image', blob, 'procedural-map.png');
+      formData.append('selected_article_ids', JSON.stringify(selectedArticleIds));
 
-      const res = await fetch('/api/maps/generate/procedural', {
+      const aiPromptInput = document.getElementById('gen-ai-prompt-input');
+      if (aiPromptInput && aiPromptInput.value.trim()) {
+        formData.append('custom_prompt', aiPromptInput.value.trim());
+      }
+
+      formData.append('image', blob, 'map.png');
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         body: formData
       });
@@ -1012,7 +1136,7 @@ class AtlasView {
       }
     } catch (err) {
       console.error('Error submitting generator modal:', err);
-      alert('Error generating map.');
+      alert('Error generating map: ' + err.message);
     } finally {
       if (statusEl) statusEl.style.display = 'none';
       if (submitBtn) submitBtn.disabled = false;
