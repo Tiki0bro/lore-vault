@@ -4061,9 +4061,11 @@ function resolveForceDirectedLayout(pins, iterations = 20) {
 
 function handleProceduralMapGeneration(req, res) {
   const worldId = req.body.world_id || 'default';
-  const mapTitle = req.body.title || 'Procedural World Map';
+  const mapTitle = req.body.title || 'Realm Map';
   const preset = req.body.preset || 'pangaea';
   const theme = req.body.theme || 'parchment';
+  const mapScope = req.body.map_scope || 'world';
+  const mapStyle = req.body.map_style || 'sepia';
   const mapId = `map-proc-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
   
   let imagePath = '/uploads/images/default-map.png';
@@ -4071,10 +4073,48 @@ function handleProceduralMapGeneration(req, res) {
     imagePath = `/uploads/images/${req.file.filename}`;
   }
 
+  let scalePixels = 100;
+  let scaleDistance = 100;
+  let scaleUnit = 'miles';
+
+  switch (mapScope) {
+    case 'battlemap':
+      scalePixels = 100;
+      scaleDistance = 5;
+      scaleUnit = 'feet';
+      break;
+    case 'city':
+      scalePixels = 100;
+      scaleDistance = 500;
+      scaleUnit = 'feet';
+      break;
+    case 'town':
+      scalePixels = 100;
+      scaleDistance = 100;
+      scaleUnit = 'feet';
+      break;
+    case 'region':
+      scalePixels = 100;
+      scaleDistance = 25;
+      scaleUnit = 'miles';
+      break;
+    case 'treasure':
+      scalePixels = 100;
+      scaleDistance = 5;
+      scaleUnit = 'miles';
+      break;
+    case 'world':
+    default:
+      scalePixels = 100;
+      scaleDistance = 100;
+      scaleUnit = 'miles';
+      break;
+  }
+
   db.run(`
     INSERT INTO maps (id, world_id, parent_map_id, title, description, image_path, width, height, scale_pixels, scale_distance, scale_unit)
-    VALUES (?, ?, NULL, ?, ?, ?, 1920, 1080, 100, 10, 'miles')
-  `, [mapId, worldId, mapTitle, `Procedural map (${preset}, ${theme})`, imagePath], function(err) {
+    VALUES (?, ?, NULL, ?, ?, ?, 1920, 1080, ?, ?, ?)
+  `, [mapId, worldId, mapTitle, `Map (${mapScope}, ${mapStyle}, ${preset}, ${theme})`, imagePath, scalePixels, scaleDistance, scaleUnit], function(err) {
     if (err) return res.status(500).json({ error: 'Database insert failed: ' + err.message });
 
     let selectedArticleIds = [];

@@ -582,12 +582,66 @@ class AtlasView {
             </div>
 
             <!-- AI Engine Options Container -->
-            <div id="gen-ai-settings" style="display:none; flex-direction:column; gap:12px;">
+            <div id="gen-ai-settings" style="display:none; flex-direction:column; gap:14px;">
               <div class="form-group">
-                <label for="gen-ai-prompt-input" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Custom AI Style & Art Instructions</label>
-                <textarea id="gen-ai-prompt-input" class="form-control" rows="3" placeholder="e.g. High resolution fantasy regional map, vintage sepia parchment paper, hand-drawn ink coastlines, mountain ranges to the north, ocean bay to the south, no text labels..."></textarea>
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Scope & Scale Preset</label>
+                <div class="gen-scope-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                  <div class="gen-scope-card active" data-scope="world" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">🌍</div>
+                    <div style="font-weight:600; font-size:0.85rem;">World Map</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Continental atlas</div>
+                  </div>
+                  <div class="gen-scope-card" data-scope="region" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">🗺️</div>
+                    <div style="font-weight:600; font-size:0.85rem;">Region Map</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Kingdom / Province</div>
+                  </div>
+                  <div class="gen-scope-card" data-scope="city" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">🏰</div>
+                    <div style="font-weight:600; font-size:0.85rem;">City Map</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Urban districts</div>
+                  </div>
+                  <div class="gen-scope-card" data-scope="town" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">🏘️</div>
+                    <div style="font-weight:600; font-size:0.85rem;">Town / Village</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Farmlands & street</div>
+                  </div>
+                  <div class="gen-scope-card" data-scope="treasure" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">📜</div>
+                    <div style="font-weight:600; font-size:0.85rem;">Treasure Map</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">X-marks trail</div>
+                  </div>
+                  <div class="gen-scope-card" data-scope="battlemap" style="border:1px solid var(--border-color); border-radius:6px; padding:8px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div style="font-size:1.2rem; margin-bottom:2px;">⚔️</div>
+                    <div style="font-weight:600; font-size:0.85rem;">Battlemap</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Tactical 5ft grid</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">AI Art Style</label>
+                <div class="gen-style-chips" style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <div class="gen-style-chip active tool-btn btn-sm primary" data-style="sepia">
+                    <span>📜 Vintage Sepia Parchment</span>
+                  </div>
+                  <div class="gen-style-chip tool-btn btn-sm" data-style="codex">
+                    <span>🎨 Full-Color Codex</span>
+                  </div>
+                  <div class="gen-style-chip tool-btn btn-sm" data-style="grimdark">
+                    <span>🗡️ Grimdark Fantasy</span>
+                  </div>
+                  <div class="gen-style-chip tool-btn btn-sm" data-style="blueprint">
+                    <span>📐 Architect Blueprint</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="gen-ai-prompt-input" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Custom AI Directives & Style Tweaks</label>
+                <textarea id="gen-ai-prompt-input" class="form-control" rows="2" placeholder="e.g. Snow-capped peaks to the north, obsidian harbor to the south, intricate border frame..."></textarea>
                 <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
-                  💡 <em>Selected articles above will automatically be injected into the AI context prompt to shape regional features and place map markers.</em>
+                  💡 <em>Selected Scope + Style + Articles are automatically compiled into the AI context prompt and scale metrics.</em>
                 </div>
               </div>
             </div>
@@ -781,6 +835,24 @@ class AtlasView {
           card.classList.add('active');
           this.genPreset = card.getAttribute('data-preset') || 'pangaea';
           this.updateGeneratorPreview();
+        });
+      });
+
+      const scopeCards = modalGen.querySelectorAll('.gen-scope-card');
+      scopeCards.forEach(card => {
+        card.addEventListener('click', () => {
+          scopeCards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          this.mapScope = card.getAttribute('data-scope') || 'world';
+        });
+      });
+
+      const styleChips = modalGen.querySelectorAll('.gen-style-chip');
+      styleChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          styleChips.forEach(c => c.classList.remove('active', 'primary'));
+          chip.classList.add('active', 'primary');
+          this.mapStyle = chip.getAttribute('data-style') || 'sepia';
         });
       });
 
@@ -1106,6 +1178,8 @@ class AtlasView {
       formData.append('world_id', this.worldId);
       formData.append('title', title || (isAi ? 'AI Realm Map' : 'Procedural Realm Map'));
       formData.append('preset', this.genPreset);
+      formData.append('map_scope', this.mapScope || 'world');
+      formData.append('map_style', this.mapStyle || 'sepia');
       formData.append('theme', this.genTheme);
       formData.append('seed', this.genSeed);
       formData.append('selected_article_ids', JSON.stringify(selectedArticleIds));
