@@ -1223,6 +1223,25 @@ class AtlasView {
       const isAi = (this.genMode === 'ai');
       const endpoint = isAi ? '/api/maps/generate/ai' : '/api/maps/generate/procedural';
 
+      let effectivePreset = this.genPreset || 'pangaea';
+      let effectiveTheme = this.genTheme || 'parchment';
+
+      if (this.mapScope === 'battlemap' || this.mapScope === 'city' || this.mapScope === 'town') {
+        effectivePreset = 'mountain_fjords';
+      } else if (this.mapScope === 'treasure' || this.mapScope === 'region') {
+        effectivePreset = 'archipelago';
+      }
+
+      if (this.mapStyle === 'grimdark') {
+        effectiveTheme = 'void';
+      } else if (this.mapStyle === 'blueprint') {
+        effectiveTheme = 'blueprint';
+      } else if (this.mapStyle === 'codex') {
+        effectiveTheme = 'emerald';
+      } else if (this.mapStyle === 'sepia') {
+        effectiveTheme = 'parchment';
+      }
+
       const engine = this.getCartographyEngine();
       let offscreenCanvas = null;
       if (typeof document !== 'undefined' && document.createElement) {
@@ -1234,8 +1253,8 @@ class AtlasView {
       if (engine && offscreenCanvas) {
         engine.renderToCanvas(offscreenCanvas, {
           seed: this.genSeed,
-          preset: this.genPreset,
-          theme: this.genTheme
+          preset: effectivePreset,
+          theme: effectiveTheme
         });
       }
 
@@ -1250,10 +1269,10 @@ class AtlasView {
       const formData = new FormData();
       formData.append('world_id', this.worldId);
       formData.append('title', title || (isAi ? 'AI Realm Map' : 'Procedural Realm Map'));
-      formData.append('preset', this.genPreset);
+      formData.append('preset', effectivePreset);
       formData.append('map_scope', this.mapScope || 'world');
       formData.append('map_style', this.mapStyle || 'sepia');
-      formData.append('theme', this.genTheme);
+      formData.append('theme', effectiveTheme);
       formData.append('seed', this.genSeed);
       formData.append('selected_article_ids', JSON.stringify(selectedArticleIds));
 

@@ -4193,13 +4193,67 @@ app.post('/api/maps/generate/procedural', imageUpload.single('image'), handlePro
 app.post('/api/maps/auto-generate/procedural', imageUpload.single('image'), handleProceduralMapGeneration);
 
 // POST /api/maps/generate/ai - AI Spatial Map Generator Endpoint
-app.post('/api/maps/generate/ai', imageUpload.single('image'), (req, res) => {
+app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) => {
   const aiConfig = getAIConfig();
   const apiKey = process.env.GEMINI_API_KEY || aiConfig.apiKey;
-  
-  if (!apiKey) {
-    console.log('[AI Map Generator] API key absent, falling back to procedural generation handler');
-    return handleProceduralMapGeneration(req, res);
+  const mapTitle = req.body.title || 'AI Fantasy Realm Map';
+  const mapScope = req.body.map_scope || 'world';
+  const mapStyle = req.body.map_style || 'sepia';
+  const customPrompt = req.body.custom_prompt || '';
+
+  if (apiKey) {
+    try {
+      const scopePrompts = {
+        world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
+        region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
+        city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
+        town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
+        treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
+        battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
+      };
+
+      const stylePrompts = {
+        sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
+        codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
+        grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
+        blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
+      };
+
+      const promptText = `High resolution ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, no 3D perspective.`;
+
+      console.log(`[AI Map Generator] Querying Imagen 3 API with prompt: "${promptText.substring(0, 100)}..."`);
+
+      const imagenRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptText,
+          config: {
+            numberOfImages: 1,
+            outputMimeType: 'image/png',
+            aspectRatio: '16:9'
+          }
+        })
+      });
+
+      if (imagenRes.ok) {
+        const imagenData = await imagenRes.json();
+        if (imagenData.generatedImages && imagenData.generatedImages.length > 0 && imagenData.generatedImages[0].image && imagenData.generatedImages[0].image.imageBytes) {
+          const imgBuffer = Buffer.from(imagenData.generatedImages[0].image.imageBytes, 'base64');
+          const filename = `ai-map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.png`;
+          const savePath = path.join(__dirname, 'public', 'uploads', 'images', filename);
+          fs.writeFileSync(savePath, imgBuffer);
+
+          req.file = { filename };
+          console.log(`[AI Map Generator] Successfully generated & saved AI map image: /uploads/images/${filename}`);
+          return handleProceduralMapGeneration(req, res);
+        }
+      } else {
+        console.warn(`[AI Map Generator] Imagen 3 API returned status ${imagenRes.status}, falling back to local engine`);
+      }
+    } catch (aiErr) {
+      console.warn(`[AI Map Generator] Error calling Gemini Imagen API: ${aiErr.message}, falling back to local engine`);
+    }
   }
 
   handleProceduralMapGeneration(req, res);
@@ -4207,12 +4261,7 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), (req, res) => {
 
 // Alias legacy AI route
 app.post('/api/maps/auto-generate/ai', imageUpload.single('image'), (req, res) => {
-  const aiConfig = getAIConfig();
-  const apiKey = process.env.GEMINI_API_KEY || aiConfig.apiKey;
-  if (!apiKey) {
-    return handleProceduralMapGeneration(req, res);
-  }
-  handleProceduralMapGeneration(req, res);
+  res.redirect(307, '/api/maps/generate/ai');
 });
 
 // Spiral Grid-Collision Auto-Pin Placement Endpoint

@@ -169,6 +169,19 @@ class PerlinCartographyEngine {
         grid: 'rgba(52, 211, 153, 0.12)'
       };
     }
+    if (theme === 'blueprint') {
+      return {
+        ocean: '#0f172a',
+        shallow: '#1e293b',
+        coast: '#38bdf8',
+        land: '#1e293b',
+        highland: '#334155',
+        mountain: '#475569',
+        snow: '#e2e8f0',
+        ink: '#38bdf8',
+        grid: 'rgba(56, 189, 248, 0.25)'
+      };
+    }
     // Default: Vintage Parchment
     return {
       ocean: '#d8c5aa',
