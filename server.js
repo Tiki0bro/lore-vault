@@ -4279,7 +4279,7 @@ app.post('/api/maps/generate/procedural', imageUpload.single('image'), handlePro
 // Alias legacy route to new procedural generator
 app.post('/api/maps/auto-generate/procedural', imageUpload.single('image'), handleProceduralMapGeneration);
 
-// POST /api/maps/generate/ai - AI Spatial Map Generator Endpoint
+// POST /api/maps/generate/ai - AI Spatial Map Generator Endpoint (Google Interactions API)
 app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) => {
   const aiConfig = getAIConfig();
   const apiKey = process.env.GEMINI_API_KEY || aiConfig.apiKey;
@@ -4292,11 +4292,11 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
 
   if (apiKey) {
     const candidateModels = [
-      'imagen-3.0-generate-002',
-      'imagen-3.0-fast-generate-001',
+      'gemini-3.1-flash-image',
+      'nano-banana-pro-preview',
+      'gemini-3-pro-image',
       'imagen-4.0-generate-001',
-      'imagen-4.0-fast-generate-001',
-      'gemini-2.5-flash-image'
+      'imagen-4.0-fast-generate-001'
     ];
 
     const scopePrompts = {
@@ -4315,53 +4315,58 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
       blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
     };
 
-    const promptText = `High resolution ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, no 3D perspective.`;
+    const promptText = `Create a high resolution fantasy map picture: ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, top-down perspective.`;
 
     for (const model of candidateModels) {
       try {
-        console.log(`[AI Map Generator] Attempting Google AI Image Model: ${model}`);
-        let endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${apiKey}`;
-        let bodyData = {
-          prompt: promptText,
-          config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/png',
-            aspectRatio: '16:9'
-          }
-        };
+        console.log(`[AI Map Generator] Querying Google Interactions API with model: ${model}`);
 
-        if (model.includes('flash-image')) {
-          endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-          bodyData = {
-            contents: [{ parts: [{ text: promptText }] }]
-          };
-        }
-
-        const imagenRes = await fetch(endpointUrl, {
+        // Try 1: Google Interactions API endpoint (/v1beta/interactions)
+        const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyData)
+          headers: {
+            'x-goog-api-key': apiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: model,
+            input: [
+              { type: 'text', text: promptText }
+            ]
+          })
         });
 
-        if (imagenRes.ok) {
-          const imagenData = await imagenRes.json();
-          if (imagenData.generatedImages && imagenData.generatedImages.length > 0 && imagenData.generatedImages[0].image && imagenData.generatedImages[0].image.imageBytes) {
-            const imgBuffer = Buffer.from(imagenData.generatedImages[0].image.imageBytes, 'base64');
+        if (interactionsRes.ok) {
+          const data = await interactionsRes.json();
+          let b64Bytes = null;
+          if (data.outputs && data.outputs.length > 0) {
+            for (const out of data.outputs) {
+              if (out.data) { b64Bytes = out.data; break; }
+              if (out.image && out.image.bytes) { b64Bytes = out.image.bytes; break; }
+            }
+          } else if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+            for (const part of data.candidates[0].content.parts) {
+              if (part.inlineData && part.inlineData.data) { b64Bytes = part.inlineData.data; break; }
+            }
+          }
+
+          if (b64Bytes) {
+            const imgBuffer = Buffer.from(b64Bytes, 'base64');
             const filename = `ai-map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.png`;
             const savePath = path.join(__dirname, 'public', 'uploads', 'images', filename);
             fs.writeFileSync(savePath, imgBuffer);
 
             req.file = { filename };
-            console.log(`[AI Map Generator] Successfully generated & saved AI map image using model ${model}: /uploads/images/${filename}`);
+            console.log(`[AI Map Generator] Successfully generated & saved AI map image via /v1beta/interactions using model ${model}: /uploads/images/${filename}`);
             return handleProceduralMapGeneration(req, res);
           }
         } else {
-          const errText = await imagenRes.text();
-          console.warn(`[AI Map Generator] Model ${model} returned HTTP ${imagenRes.status}: ${errText.substring(0, 200)}`);
-          if (imagenRes.status === 429) {
+          const errText = await interactionsRes.text();
+          console.warn(`[AI Map Generator] Interactions API model ${model} returned HTTP ${interactionsRes.status}: ${errText.substring(0, 200)}`);
+          if (interactionsRes.status === 429) {
             aiWarning = 'Google Gemini API key rate limit / daily free tier quota exceeded (HTTP 429). Generated map using local cartography engine.';
-          } else if (imagenRes.status === 404 || imagenRes.status === 403) {
-            aiWarning = `Google AI model ${model} returned HTTP ${imagenRes.status}. Check API Key billing permissions. Generated map using local cartography engine.`;
+          } else if (interactionsRes.status === 404 || interactionsRes.status === 403) {
+            aiWarning = `Google AI model ${model} returned HTTP ${interactionsRes.status}. Check API Key billing permissions. Generated map using local cartography engine.`;
           }
         }
       } catch (modelErr) {
