@@ -1292,13 +1292,23 @@ class AtlasView {
       if (data.success && data.map) {
         const modal = document.getElementById('atlas-generate-modal');
         if (modal) modal.style.display = 'none';
+
         await this.fetchMaps();
-        this.renderLayout();
+
+        const mapSelect = document.getElementById('atlas-map-select');
+        if (mapSelect && this.maps.length) {
+          mapSelect.innerHTML = this.maps.map(m => `<option value="${m.id}" ${m.id === data.map.id ? 'selected' : ''}>${m.title}</option>`).join('');
+          mapSelect.value = data.map.id;
+        }
+
         if (data.map.id) {
           await this.loadMap(data.map.id);
         }
+
         if (data.warning && typeof alert === 'function') {
           alert(`⚠️ AI Generation Notice:\n\n${data.warning}`);
+        } else if (data.notice && typeof alert === 'function') {
+          alert(`✨ AI Map Generated:\n\n${data.notice}`);
         }
       } else {
         alert((data && data.error) ? data.error : 'Failed to generate map.');

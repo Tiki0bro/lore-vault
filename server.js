@@ -4267,7 +4267,7 @@ function handleProceduralMapGeneration(req, res) {
       insertStmt.finalize();
 
       db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err3, map) => {
-        res.status(201).json({ success: true, map, pins: resolvedPins, warning: req.aiWarning || null });
+        res.status(201).json({ success: true, map, pins: resolvedPins, warning: req.aiWarning || null, notice: req.aiNotice || null });
       });
     });
   });
