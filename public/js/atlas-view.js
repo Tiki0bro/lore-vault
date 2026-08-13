@@ -490,8 +490,8 @@ class AtlasView {
             <div class="form-group">
               <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Map Generation Engine</label>
               <div class="segmented-control" style="display:flex; gap:8px; background:rgba(0,0,0,0.2); padding:4px; border-radius:8px; border:1px solid var(--border-color);">
-                <button type="button" class="gen-mode-tab tool-btn primary active" data-mode="procedural" style="flex:1;"><i class="fa-solid fa-bolt"></i> ⚡ Procedural Engine (Instant Canvas)</button>
-                <button type="button" class="gen-mode-tab tool-btn" data-mode="ai" style="flex:1;"><i class="fa-solid fa-robot"></i> 🤖 AI Fantasy Art Engine (Gemini)</button>
+                <button type="button" class="gen-mode-tab tool-btn primary active" data-mode="ai" style="flex:1;"><i class="fa-solid fa-robot"></i> 🤖 AI Fantasy Art Engine (Gemini / Pollinations)</button>
+                <button type="button" class="gen-mode-tab tool-btn" data-mode="procedural" style="flex:1;"><i class="fa-solid fa-bolt"></i> ⚡ Procedural Engine (Instant Canvas)</button>
               </div>
             </div>
 
@@ -1112,7 +1112,7 @@ class AtlasView {
     if (!modal) return;
 
     modal.style.display = 'flex';
-    this.genMode = this.genMode || 'procedural';
+    this.genMode = this.genMode || 'ai';
 
     // Sync tab UI states
     const modeTabs = modal.querySelectorAll('.gen-mode-tab');
@@ -1242,30 +1242,6 @@ class AtlasView {
         effectiveTheme = 'parchment';
       }
 
-      const engine = this.getCartographyEngine();
-      let offscreenCanvas = null;
-      if (typeof document !== 'undefined' && document.createElement) {
-        offscreenCanvas = document.createElement('canvas');
-        offscreenCanvas.width = 1920;
-        offscreenCanvas.height = 1080;
-      }
-
-      if (engine && offscreenCanvas) {
-        engine.renderToCanvas(offscreenCanvas, {
-          seed: this.genSeed,
-          preset: effectivePreset,
-          theme: effectiveTheme
-        });
-      }
-
-      let blob = null;
-      if (engine && offscreenCanvas) {
-        blob = await engine.exportToBlob(offscreenCanvas);
-      }
-      if (!blob) {
-        blob = new Blob(['mock-image-data'], { type: 'image/png' });
-      }
-
       const formData = new FormData();
       formData.append('world_id', this.worldId);
       formData.append('title', title || (isAi ? 'AI Realm Map' : 'Procedural Realm Map'));
@@ -1281,7 +1257,31 @@ class AtlasView {
         formData.append('custom_prompt', aiPromptInput.value.trim());
       }
 
-      formData.append('image', blob, 'map.png');
+      if (!isAi) {
+        const engine = this.getCartographyEngine();
+        let offscreenCanvas = null;
+        if (typeof document !== 'undefined' && document.createElement) {
+          offscreenCanvas = document.createElement('canvas');
+          offscreenCanvas.width = 1920;
+          offscreenCanvas.height = 1080;
+        }
+
+        if (engine && offscreenCanvas) {
+          engine.renderToCanvas(offscreenCanvas, {
+            seed: this.genSeed,
+            preset: effectivePreset,
+            theme: effectiveTheme
+          });
+        }
+
+        let blob = null;
+        if (engine && offscreenCanvas) {
+          blob = await engine.exportToBlob(offscreenCanvas);
+        }
+        if (blob) {
+          formData.append('image', blob, 'map.png');
+        }
+      }
 
       const res = await fetch(endpoint, {
         method: 'POST',

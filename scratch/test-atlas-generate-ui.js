@@ -110,7 +110,7 @@ async function runTests() {
         json: async () => ([])
       };
     }
-    if (url === '/api/maps/generate/procedural') {
+    if (url === '/api/maps/generate/procedural' || url === '/api/maps/generate/ai') {
       postedFormData = options.body;
       return {
         ok: true,
