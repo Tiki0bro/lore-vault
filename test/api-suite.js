@@ -68,8 +68,9 @@ test('GET /api/articles returns articles list', async () => {
 });
 
 test('POST /api/articles creates a new article with dual-sync', async () => {
+  const uniqueTitle = 'Test Hardening Article ' + Date.now();
   const newArticle = {
-    title: 'Test Hardening Article',
+    title: uniqueTitle,
     category: 'History',
     content: 'This is a test article created by the automated API test suite.',
     tags: ['test', 'hardening'],
@@ -77,13 +78,12 @@ test('POST /api/articles creates a new article with dual-sync', async () => {
   };
 
   const res = await makeRequest('/api/articles', { method: 'POST' }, newArticle);
-  assert.ok(res.statusCode === 200 || res.statusCode === 201);
+  assert.strictEqual(res.statusCode, 201);
   assert.ok(res.json.id);
-  assert.strictEqual(res.json.title, 'Test Hardening Article');
 
   const getRes = await makeRequest(`/api/articles/${res.json.id}`);
   assert.strictEqual(getRes.statusCode, 200);
-  assert.strictEqual(getRes.json.title, 'Test Hardening Article');
+  assert.strictEqual(getRes.json.title, uniqueTitle);
 });
 
 test('GET /api/categories returns category counts', async () => {

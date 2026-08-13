@@ -4267,7 +4267,7 @@ function handleProceduralMapGeneration(req, res) {
       insertStmt.finalize();
 
       db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err3, map) => {
-        res.status(201).json({ success: true, map, pins: resolvedPins });
+        res.status(201).json({ success: true, map, pins: resolvedPins, warning: req.aiWarning || null });
       });
     });
   });
@@ -4288,61 +4288,91 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
   const mapStyle = req.body.map_style || 'sepia';
   const customPrompt = req.body.custom_prompt || '';
 
+  let aiWarning = null;
+
   if (apiKey) {
-    try {
-      const scopePrompts = {
-        world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
-        region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
-        city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
-        town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
-        treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
-        battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
-      };
+    const candidateModels = [
+      'imagen-3.0-generate-002',
+      'imagen-3.0-fast-generate-001',
+      'imagen-4.0-generate-001',
+      'imagen-4.0-fast-generate-001',
+      'gemini-2.5-flash-image'
+    ];
 
-      const stylePrompts = {
-        sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
-        codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
-        grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
-        blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
-      };
+    const scopePrompts = {
+      world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
+      region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
+      city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
+      town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
+      treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
+      battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
+    };
 
-      const promptText = `High resolution ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, no 3D perspective.`;
+    const stylePrompts = {
+      sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
+      codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
+      grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
+      blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
+    };
 
-      console.log(`[AI Map Generator] Querying Imagen 3 API with prompt: "${promptText.substring(0, 100)}..."`);
+    const promptText = `High resolution ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, no 3D perspective.`;
 
-      const imagenRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    for (const model of candidateModels) {
+      try {
+        console.log(`[AI Map Generator] Attempting Google AI Image Model: ${model}`);
+        let endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${apiKey}`;
+        let bodyData = {
           prompt: promptText,
           config: {
             numberOfImages: 1,
             outputMimeType: 'image/png',
             aspectRatio: '16:9'
           }
-        })
-      });
+        };
 
-      if (imagenRes.ok) {
-        const imagenData = await imagenRes.json();
-        if (imagenData.generatedImages && imagenData.generatedImages.length > 0 && imagenData.generatedImages[0].image && imagenData.generatedImages[0].image.imageBytes) {
-          const imgBuffer = Buffer.from(imagenData.generatedImages[0].image.imageBytes, 'base64');
-          const filename = `ai-map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.png`;
-          const savePath = path.join(__dirname, 'public', 'uploads', 'images', filename);
-          fs.writeFileSync(savePath, imgBuffer);
-
-          req.file = { filename };
-          console.log(`[AI Map Generator] Successfully generated & saved AI map image: /uploads/images/${filename}`);
-          return handleProceduralMapGeneration(req, res);
+        if (model.includes('flash-image')) {
+          endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          bodyData = {
+            contents: [{ parts: [{ text: promptText }] }]
+          };
         }
-      } else {
-        console.warn(`[AI Map Generator] Imagen 3 API returned status ${imagenRes.status}, falling back to local engine`);
+
+        const imagenRes = await fetch(endpointUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+
+        if (imagenRes.ok) {
+          const imagenData = await imagenRes.json();
+          if (imagenData.generatedImages && imagenData.generatedImages.length > 0 && imagenData.generatedImages[0].image && imagenData.generatedImages[0].image.imageBytes) {
+            const imgBuffer = Buffer.from(imagenData.generatedImages[0].image.imageBytes, 'base64');
+            const filename = `ai-map-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.png`;
+            const savePath = path.join(__dirname, 'public', 'uploads', 'images', filename);
+            fs.writeFileSync(savePath, imgBuffer);
+
+            req.file = { filename };
+            console.log(`[AI Map Generator] Successfully generated & saved AI map image using model ${model}: /uploads/images/${filename}`);
+            return handleProceduralMapGeneration(req, res);
+          }
+        } else {
+          const errText = await imagenRes.text();
+          console.warn(`[AI Map Generator] Model ${model} returned HTTP ${imagenRes.status}: ${errText.substring(0, 200)}`);
+          if (imagenRes.status === 429) {
+            aiWarning = 'Google Gemini API key rate limit / daily free tier quota exceeded (HTTP 429). Generated map using local cartography engine.';
+          } else if (imagenRes.status === 404 || imagenRes.status === 403) {
+            aiWarning = `Google AI model ${model} returned HTTP ${imagenRes.status}. Check API Key billing permissions. Generated map using local cartography engine.`;
+          }
+        }
+      } catch (modelErr) {
+        console.warn(`[AI Map Generator] Error querying model ${model}: ${modelErr.message}`);
       }
-    } catch (aiErr) {
-      console.warn(`[AI Map Generator] Error calling Gemini Imagen API: ${aiErr.message}, falling back to local engine`);
     }
+  } else {
+    aiWarning = 'No GEMINI_API_KEY environment variable or config found. Generated map using local cartography engine.';
   }
 
+  req.aiWarning = aiWarning;
   handleProceduralMapGeneration(req, res);
 });
 

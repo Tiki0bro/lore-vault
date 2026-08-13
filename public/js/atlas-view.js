@@ -1297,6 +1297,9 @@ class AtlasView {
         if (data.map.id) {
           await this.loadMap(data.map.id);
         }
+        if (data.warning && typeof alert === 'function') {
+          alert(`⚠️ AI Generation Notice:\n\n${data.warning}`);
+        }
       } else {
         alert((data && data.error) ? data.error : 'Failed to generate map.');
       }
