@@ -63,6 +63,11 @@
         <!-- Weave Matrix Side Drawer Trigger -->
         <button id="weave-matrix-btn" class="btn btn-secondary" title="Toggle Weave Matrix Context Drawer" onclick="window.toggleWeaveMatrixDrawer()">⚡ Context Drawer <span class="kbd-hint">Ctrl+Shift+M</span></button>
 
+        <!-- AI Model Status Chip Trigger -->
+        <button id="ai-status-chip" class="ai-status-chip" title="AI Model Settings (Click to configure)" onclick="window.app.openAISettingsModal()">
+          <span class="ai-status-dot">⚡</span> <span id="ai-status-label">AI: Hosted Base</span>
+        </button>
+
         <!-- World & Theme Selector Dropdown -->
         <div class="world-theme-container">
           <span class="world-icon">🌍</span>
@@ -84,7 +89,7 @@
             <button class="dropdown-item" onclick="window.openDoctorModal(); window.closeToolsMenu();">🩺 World Doctor</button>
             <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">🖼️ Media Vault</button>
             <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">💬 Ask AI Assistant</button>
-            <button class="dropdown-item" onclick="window.app.openAISettings(); window.closeToolsMenu();">⚙️ AI Settings</button>
+            <button class="dropdown-item" onclick="window.app.openAISettingsModal(); window.closeToolsMenu();">⚙️ AI Settings</button>
             <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">📥 Import World</button>
           </div>
         </div>
@@ -873,7 +878,7 @@
                 <span class="sub-label" style="color:var(--accent-purple); font-weight:600;">🤖 Live AI Assistant:</span>
                 <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('format_worldanvil')">✨ Auto-Format Notes</button>
                 <button type="button" class="tool-btn btn-ai" onclick="window.app.runAIAssist('expand_lore')">🪄 Expand Lore</button>
-                <button type="button" class="tool-btn" onclick="window.app.openAISettings()">⚙️ AI Settings</button>
+                <button type="button" class="tool-btn" onclick="window.app.openAISettingsModal()">⚙️ AI Settings</button>
               </div>
             </div>
             <div class="wa-toolbar" style="margin-top:0.35rem;">
@@ -1045,55 +1050,7 @@
       </div>
     </div>
 
-    <!-- AI SETTINGS MODAL -->
-    <div id="ai-settings-modal" class="modal hidden">
-      <div class="modal-backdrop" onclick="window.app.closeAISettings()"></div>
-      <div class="modal-card" style="max-width: 520px;">
-        <div class="modal-header">
-          <h2>⚙️ Live LLM Assistant Settings</h2>
-          <button class="close-btn" onclick="window.app.closeAISettings()">✕</button>
-        </div>
-        
-        <div class="modal-body">
-          <p style="color:var(--text-secondary); font-size:0.85rem;">
-            Choose your preferred LLM provider for live lore formatting, unstructured notes cleanup, and lore expansion.
-          </p>
 
-          <div class="form-group" style="margin-top:1rem;">
-            <label>LLM Provider</label>
-            <select id="ai-provider-select" onchange="window.app.toggleAIFields(this.value)">
-              <option value="offline">LoreWeaver Local Engine (100% Offline & Free)</option>
-              <option value="ollama">Ollama (Local LLM - localhost:11434)</option>
-              <option value="gemini">Google Gemini API</option>
-              <option value="openai">OpenAI API (GPT-4o)</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="ai-key-group" style="display:none; margin-top:0.75rem;">
-            <label>API Key</label>
-            <input type="password" id="ai-api-key" placeholder="Enter API Key...">
-          </div>
-
-          <div class="form-group" id="ai-model-group" style="display:none; margin-top:0.75rem;">
-            <label>AI Model</label>
-            <select id="ai-model-select" onchange="window.app.handleModelSelectChange(this.value)">
-              <option value="gemini-2.5-flash">🚀 Gemini 2.5 Flash</option>
-              <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro</option>
-              <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
-              <option value="gemini-flash-latest" selected>⚡ Gemini Flash Latest (Fast & High Quality - Recommended)</option>
-              <option value="gemini-pro-latest">🧠 Gemini Pro Latest (Deep Reasoning & Complex Lore)</option>
-              <option value="custom">Custom Model Name...</option>
-            </select>
-            <input type="text" id="ai-custom-model" placeholder="Enter custom model identifier..." style="display:none; margin-top:0.4rem;">
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="window.app.closeAISettings()">Cancel</button>
-          <button class="btn btn-primary" onclick="window.app.saveAISettings()">Save AI Settings</button>
-        </div>
-      </div>
-    </div>
 
     <!-- CANON GUARD & AI AUDITOR MODAL -->
     <div id="doctor-modal" class="modal hidden">
@@ -2007,6 +1964,76 @@
         </label>
         <button class="btn btn-secondary btn-sm" onclick="window.app.closeConciergeModal()">Skip & Close <span class="kbd-hint">Esc</span></button>
       </div>
+    </div>
+  </div>
+
+  <!-- AI Model & Provider Settings Modal -->
+  <div id="ai-settings-modal" class="modal-backdrop hidden" onclick="if(event.target===this) window.app.closeAISettingsModal()">
+    <div class="ai-settings-container">
+      <div class="ai-settings-header">
+        <div class="ai-settings-badge">⚙️ AI CONFIGURATION</div>
+        <h2>AI Model & Provider Settings</h2>
+        <p class="ai-settings-subtitle">Choose between LoreVault's default hosted base model or bring your own API keys/local LLM engine.</p>
+      </div>
+
+      <!-- Tier Selection Radio Buttons -->
+      <div class="ai-tier-selection">
+        <label class="ai-tier-card" id="tier-card-hosted">
+          <input type="radio" name="ai_tier" value="hosted" id="ai-tier-hosted" onchange="window.app.handleAITierToggle('hosted')">
+          <div class="tier-card-content">
+            <div class="tier-card-title">⚡ Built-in LoreVault Base Model (Default)</div>
+            <div class="tier-card-desc">Zero-config hosted AI powered by Gemini 2.0 Flash. No API key required.</div>
+          </div>
+        </label>
+
+        <label class="ai-tier-card" id="tier-card-custom">
+          <input type="radio" name="ai_tier" value="custom" id="ai-tier-custom" onchange="window.app.handleAITierToggle('custom')">
+          <div class="tier-card-content">
+            <div class="tier-card-title">⚙️ Custom AI Provider & API Key</div>
+            <div class="tier-card-desc">Configure custom Gemini keys, local Ollama, OpenAI, or OpenRouter.</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Custom Options Section -->
+      <div id="ai-custom-controls" class="ai-custom-controls hidden">
+        <div class="form-group">
+          <label>Provider</label>
+          <select id="ai-provider-select" class="form-control" onchange="window.app.handleAIProviderChange(this.value)">
+            <option value="gemini">Google Gemini (Custom Key)</option>
+            <option value="ollama">Ollama (Local LLM)</option>
+            <option value="openai">OpenAI / OpenRouter Compatible</option>
+          </select>
+        </div>
+
+        <div id="group-api-key" class="form-group">
+          <label>API Key</label>
+          <div class="input-with-action">
+            <input type="password" id="ai-key-input" class="form-control" placeholder="Paste custom API key...">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.toggleAPIKeyVisibility()">👁️</button>
+          </div>
+        </div>
+
+        <div id="group-model-name" class="form-group">
+          <label>Model Name</label>
+          <input type="text" id="ai-model-input" class="form-control" placeholder="e.g. gemini-2.0-flash or llama3:8b">
+        </div>
+
+        <div id="group-ollama-url" class="form-group hidden">
+          <label>Ollama Server URL</label>
+          <input type="text" id="ai-ollama-input" class="form-control" placeholder="http://localhost:11434">
+        </div>
+      </div>
+
+      <!-- Status & Actions Footer -->
+      <div class="ai-settings-footer">
+        <button type="button" id="ai-test-btn" class="btn btn-secondary" onclick="window.app.testAIConnection()">⚡ Test Connection</button>
+        <div class="ai-footer-right">
+          <button type="button" class="btn btn-secondary" onclick="window.app.closeAISettingsModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="window.app.saveAISettings()">💾 Save Settings</button>
+        </div>
+      </div>
+      <div id="ai-test-feedback" class="ai-test-feedback hidden"></div>
     </div>
   </div>
 
