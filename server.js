@@ -4472,6 +4472,23 @@ app.get('/api/narrative/slates', (req, res) => {
   }
 });
 
+// POST /api/ai/travel-encounter - Synthesizes narrative random encounter seeds for travel routes
+app.post('/api/ai/travel-encounter', async (req, res) => {
+  const { map_title, route_title, distance, unit, landmark_names } = req.body || {};
+  const routeName = route_title || 'Expedition Highway';
+  const landmarks = Array.isArray(landmark_names) ? landmark_names.join(', ') : (landmark_names || 'surrounding wilderness');
+  const distText = distance ? `${distance} ${unit || 'miles'}` : 'a long distance';
+
+  const encounterText = `While traveling along the ${routeName} across ${distText} near ${landmarks}, the party notices ominous tracks cutting through the brush. A sudden chill settles over the trail as shadows stretch across the terrain.`;
+
+  res.json({
+    success: true,
+    encounter_title: `Encounter on ${routeName}`,
+    narrative_text: encounterText,
+    check_dc: 14
+  });
+});
+
 // POST /api/marketing/generate
 app.post('/api/marketing/generate', async (req, res) => {
   try {

@@ -3176,6 +3176,26 @@ class AtlasView {
     }
 
     this.syncMinimapViewport();
+    this.renderMinimapPinDots();
+  }
+
+  renderMinimapPinDots() {
+    const minimapContainer = document.getElementById('atlas-minimap');
+    if (!minimapContainer || !Array.isArray(this.pins)) return;
+
+    let svgEl = minimapContainer.querySelector('.minimap-pin-svg');
+    if (!svgEl && typeof document !== 'undefined' && document.createElementNS) {
+      svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgEl.setAttribute('class', 'minimap-pin-svg');
+      svgEl.setAttribute('style', 'position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;');
+      minimapContainer.appendChild(svgEl);
+    }
+
+    if (svgEl) {
+      svgEl.innerHTML = this.pins.map(pin => `
+        <circle cx="${(pin.x_pct || 0) * 100}%" cy="${(pin.y_pct || 0) * 100}%" r="3" fill="${pin.pin_color || '#d97706'}" stroke="#000" stroke-width="0.5" />
+      `).join('');
+    }
   }
 
   syncMinimapViewport() {
@@ -3203,6 +3223,10 @@ class AtlasView {
     rectEl.style.height = `${heightPct}%`;
   }
 
+  setExpeditionSpeed(multiplier) {
+    this.travelSpeedMultiplier = parseFloat(multiplier) || 1.0;
+  }
+
   animateRouteExpedition(route) {
     if (!route || !Array.isArray(route.points) || route.points.length < 2) {
       alert('Invalid route for expedition animation.');
@@ -3220,6 +3244,7 @@ class AtlasView {
       this._travelPartyMarker = null;
     }
 
+    const multiplier = this.travelSpeedMultiplier || 1.0;
     const w = this.currentMap.width || 1920;
     const h = this.currentMap.height || 1080;
     const pointsPx = route.points.map(pt => [pt[1] * h, pt[0] * w]);
@@ -3234,7 +3259,8 @@ class AtlasView {
     this._travelPartyMarker = L.marker(pointsPx[0], { icon: partyIcon }).addTo(this.mapInstance);
 
     let startTime = null;
-    const durationMs = Math.max(3000, pointsPx.length * 1500);
+    const baseDuration = Math.max(3000, pointsPx.length * 1500);
+    const durationMs = baseDuration / multiplier;
 
     const animateStep = (timestamp) => {
       if (!startTime) startTime = timestamp;
