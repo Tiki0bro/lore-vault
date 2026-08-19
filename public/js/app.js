@@ -5636,28 +5636,147 @@ Overview paragraph describing the location, faction, or character.
       modifier = parseInt(cleanExpr.replace('+', '')) || 0;
     }
 
-    const rolls = [];
-    let total = 0;
-    for (let i = 0; i < numDice; i++) {
-      const roll = Math.floor(Math.random() * dieSides) + 1;
-      rolls.push(roll);
-      total += roll;
-    }
-    total += modifier;
+    const isAdv = this.diceAdvantage && dieSides === 20;
+    const isDis = this.diceDisadvantage && dieSides === 20;
 
+    const getRandomRoll = (sides) => {
+      const array = new Uint32Array(1);
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(array);
+        return (array[0] % sides) + 1;
+      }
+      return Math.floor(Math.random() * sides) + 1;
+    };
+
+    const rolls = [];
+    let effectiveRoll = 0;
+    let isNat20 = false;
+    let isNat1 = false;
+
+    if (isAdv || isDis) {
+      const roll1 = getRandomRoll(20);
+      const roll2 = getRandomRoll(20);
+      rolls.push(roll1, roll2);
+      effectiveRoll = isAdv ? Math.max(roll1, roll2) : Math.min(roll1, roll2);
+      isNat20 = effectiveRoll === 20;
+      isNat1 = effectiveRoll === 1;
+    } else {
+      for (let i = 0; i < numDice; i++) {
+        const r = getRandomRoll(dieSides);
+        rolls.push(r);
+      }
+      effectiveRoll = rolls.reduce((a, b) => a + b, 0);
+      if (dieSides === 20 && numDice === 1) {
+        isNat20 = rolls[0] === 20;
+        isNat1 = rolls[0] === 1;
+      }
+    }
+
+    const total = effectiveRoll + modifier;
     const modifierStr = modifier !== 0 ? (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`) : '';
     const rollBreakdown = `[${rolls.join(', ')}]${modifierStr}`;
     
-    let isCrit = dieSides === 20 && rolls.includes(20);
-    let isFumble = dieSides === 20 && rolls.includes(1);
-    
     let msg = `🎲 <strong>${label}</strong>: <strong>${total}</strong> <span style="font-size:0.8em; opacity:0.8;">(${rollBreakdown})</span>`;
-    if (isCrit) msg += ` <span style="color:#22c55e; font-weight:bold;">🎯 CRITICAL HIT!</span>`;
-    if (isFumble) msg += ` <span style="color:#ef4444; font-weight:bold;">💥 NATURAL 1!</span>`;
+    if (isNat20) msg += ` <span style="color:#f59e0b; font-weight:bold;">✨ CRITICAL HIT!</span>`;
+    if (isNat1) msg += ` <span style="color:#ef4444; font-weight:bold;">💥 NATURAL 1!</span>`;
+    if (this.diceSecretMode) msg += ` <span style="color:#a855f7;">🔒 (GM Secret)</span>`;
 
     if (typeof window.showToast === 'function') {
-      window.showToast(msg, isCrit ? 'success' : isFumble ? 'error' : 'info');
+      window.showToast(msg, isNat20 ? 'success' : isNat1 ? 'error' : 'info');
     }
+
+    if (!this.diceHistory) this.diceHistory = [];
+    this.diceHistory.unshift({
+      id: Date.now(),
+      label: label,
+      expression: cleanExpr,
+      total: total,
+      rolls: rolls,
+      modifier: modifier,
+      breakdown: rollBreakdown,
+      isNat20: isNat20,
+      isNat1: isNat1,
+      isSecret: this.diceSecretMode,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    });
+
+    this.updateDiceHistoryUI();
+    return total;
+  }
+
+  toggleDiceAdvantage() {
+    this.diceAdvantage = !this.diceAdvantage;
+    if (this.diceAdvantage) this.diceDisadvantage = false;
+    const advBtn = document.getElementById('dice-adv-btn');
+    const disBtn = document.getElementById('dice-dis-btn');
+    if (advBtn) advBtn.classList.toggle('active', this.diceAdvantage);
+    if (disBtn) disBtn.classList.toggle('active', false);
+  }
+
+  toggleDiceDisadvantage() {
+    this.diceDisadvantage = !this.diceDisadvantage;
+    if (this.diceDisadvantage) this.diceAdvantage = false;
+    const advBtn = document.getElementById('dice-adv-btn');
+    const disBtn = document.getElementById('dice-dis-btn');
+    if (advBtn) advBtn.classList.toggle('active', false);
+    if (disBtn) disBtn.classList.toggle('active', this.diceDisadvantage);
+  }
+
+  toggleDiceSecretMode() {
+    this.diceSecretMode = !this.diceSecretMode;
+    const btn = document.getElementById('dice-secret-btn');
+    if (btn) btn.classList.toggle('active', this.diceSecretMode);
+  }
+
+  rollPolyhedral(sides) {
+    this.rollDiceExpression(`1d${sides}`, `d${sides} Roll`);
+  }
+
+  rollCustomDiceInput() {
+    const input = document.getElementById('quick-dice-input');
+    if (!input || !input.value.trim()) return;
+    this.rollDiceExpression(input.value.trim(), 'Custom Roll');
+    input.value = '';
+  }
+
+  toggleDiceHistoryDrawer() {
+    const drawer = document.getElementById('dice-history-drawer');
+    if (drawer) {
+      drawer.classList.toggle('hidden');
+    }
+  }
+
+  clearDiceHistory() {
+    this.diceHistory = [];
+    this.updateDiceHistoryUI();
+  }
+
+  updateDiceHistoryUI() {
+    const countBadge = document.getElementById('dice-history-count');
+    const list = document.getElementById('dice-history-list');
+    if (countBadge) countBadge.textContent = (this.diceHistory || []).length;
+    if (!list) return;
+
+    if (!this.diceHistory || this.diceHistory.length === 0) {
+      list.innerHTML = '<div class="dice-history-empty">No dice rolled yet in this session. Tap any d20, weapon attack, or statblock modifier to roll!</div>';
+      return;
+    }
+
+    list.innerHTML = this.diceHistory.map(item => `
+      <div class="dice-history-card ${item.isNat20 ? 'nat20-pulse' : item.isNat1 ? 'nat1-fumble' : ''}">
+        <div class="dice-card-header">
+          <span>${item.label} (${item.expression}) ${item.isSecret ? '🔒 GM' : ''}</span>
+          <span>${item.timestamp}</span>
+        </div>
+        <div class="dice-card-total">
+          🎲 ${item.total}
+          ${item.isNat20 ? '<span style="font-size:0.8rem; color:#f59e0b;">✨ CRIT</span>' : ''}
+          ${item.isNat1 ? '<span style="font-size:0.8rem; color:#ef4444;">💥 FUMBLE</span>' : ''}
+        </div>
+        <div class="dice-card-breakdown">Rolls: ${item.breakdown}</div>
+      </div>
+    `).join('');
+  }
   }
 
   async saveStatBlockForm(e) {

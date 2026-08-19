@@ -2850,6 +2850,37 @@ class AtlasView {
     }
   }
 
+  filterPinsByChapter(chapterNum) {
+    this.selectedChapterNum = chapterNum !== undefined ? chapterNum : null;
+    this.renderPinsOnCanvas();
+    this.renderChapterSequencePath();
+  }
+
+  renderChapterSequencePath() {
+    if (this.chapterPolyline && this.mapInstance) {
+      this.mapInstance.removeLayer(this.chapterPolyline);
+      this.chapterPolyline = null;
+    }
+
+    if (!this.selectedChapterNum || !Array.isArray(this.pins) || !this.currentMap) return;
+
+    const chapterPins = this.pins.filter(p => p.chapter_num === parseInt(this.selectedChapterNum, 10));
+    if (chapterPins.length < 2) return;
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const latlngs = chapterPins.map(p => [(p.y_pct || 0) * h, (p.x_pct || 0) * w]);
+
+    if (typeof L !== 'undefined' && this.mapInstance) {
+      this.chapterPolyline = L.polyline(latlngs, {
+        color: '#f59e0b',
+        weight: 4,
+        dashArray: '8, 8',
+        opacity: 0.8
+      }).addTo(this.mapInstance);
+    }
+  }
+
   async loadMapPins(mapId) {
     try {
       const res = await fetch(`/api/maps/${mapId}/pins?mode=${this.viewMode}`);
@@ -2926,6 +2957,8 @@ class AtlasView {
       const isDraggable = (this.viewMode === 'dm');
       const markerOpts = { draggable: isDraggable };
       if (markerIcon) markerOpts.icon = markerIcon;
+
+      const marker = L.marker(latlng, markerOpts).addTo(this.mapInstance);
 
       const targetSubMapId = pin.target_sub_map_id || pin.sub_map_id;
       const targetArticle = this.articles ? this.articles.find(a => a.id === pin.article_id) : null;

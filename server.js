@@ -396,8 +396,11 @@ db.serialize(() => {
     )
   `);
 
+  db.run("ALTER TABLE map_pins ADD COLUMN sub_map_id TEXT", (err) => {});
   db.run("ALTER TABLE map_pins ADD COLUMN target_sub_map_id TEXT", (err) => {});
   db.run("ALTER TABLE map_pins ADD COLUMN category TEXT DEFAULT 'Location'", (err) => {});
+  db.run("ALTER TABLE map_pins ADD COLUMN chapter_num INTEGER DEFAULT NULL", (err) => {});
+  db.run("ALTER TABLE map_pins ADD COLUMN scene_id TEXT DEFAULT NULL", (err) => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS map_routes (
@@ -4417,6 +4420,34 @@ app.post('/api/maps/:mapId/tokens', (req, res) => {
     db.get('SELECT * FROM map_character_tokens WHERE id = ?', [tokenId], (err2, token) => {
       res.status(201).json({ success: true, token });
     });
+  });
+});
+
+// GET /api/maps/:mapId/storyboard - Fetch map pins grouped by chapter with scene metadata
+app.get('/api/maps/:mapId/storyboard', (req, res) => {
+  db.all(`
+    SELECT p.*, a.title as article_title, a.category as article_category, s.title as scene_title 
+    FROM map_pins p 
+    LEFT JOIN articles a ON p.article_id = a.id
+    LEFT JOIN scenes s ON p.scene_id = s.id
+    WHERE p.map_id = ?
+    ORDER BY p.chapter_num ASC, p.created_at ASC
+  `, [req.params.mapId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, pins: rows || [] });
+  });
+});
+
+// PUT /api/map-pins/:pinId/storyboard - Update pin chapter tag and scene link
+app.put('/api/map-pins/:pinId/storyboard', (req, res) => {
+  const { chapter_num, scene_id } = req.body;
+  db.run(`
+    UPDATE map_pins
+    SET chapter_num = ?, scene_id = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `, [chapter_num ? parseInt(chapter_num, 10) : null, scene_id || null, req.params.pinId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
