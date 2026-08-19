@@ -19,6 +19,15 @@ const WAParser = {
     // Sanitize basic script injection
     html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
+    // 0. Collapsible Spoilers & Stat Boxes
+    html = html.replace(/\[spoiler=(.*?)\]([\s\S]*?)\[\/spoiler\]/gi, (match, title, content) => {
+      return `<details class="wa-spoiler"><summary class="wa-spoiler-summary">🔒 ${title}</summary><div class="wa-spoiler-body">${content}</div></details>`;
+    });
+
+    html = html.replace(/\[box=(.*?)\]([\s\S]*?)\[\/box\]/gi, (match, title, content) => {
+      return `<div class="wa-box"><h4 class="wa-box-title">📜 ${title}</h4><div class="wa-box-body">${content}</div></div>`;
+    });
+
     // 1. [quote]“Quote” | — Source[/quote]
     html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, (match, content) => {
       const parts = content.split('|');

@@ -2902,12 +2902,51 @@ class AtlasView {
         });
       }
 
-      const markerOpts = markerIcon ? { icon: markerIcon } : {};
+      const isDraggable = (this.viewMode === 'dm');
+      const markerOpts = { draggable: isDraggable };
+      if (markerIcon) markerOpts.icon = markerIcon;
+
       const marker = L.marker(latlng, markerOpts).addTo(this.mapInstance);
       const targetSubMapId = pin.target_sub_map_id || pin.sub_map_id;
       const tooltipLabel = targetSubMapId ? `🗺️ ${pin.label}` : pin.label;
       marker.bindTooltip(tooltipLabel, { permanent: false, direction: 'top' });
-      marker.on('click', () => this.openArticleDrawer(pin.article_id, pin.label, pin));
+
+      let isDraggingThisPin = false;
+      if (isDraggable) {
+        marker.on('dragstart', () => {
+          isDraggingThisPin = true;
+        });
+
+        marker.on('dragend', async (e) => {
+          const newLatLng = e.target.getLatLng();
+          const newX = Math.max(0, Math.min(1, newLatLng.lng / w));
+          const newY = Math.max(0, Math.min(1, newLatLng.lat / h));
+
+          pin.x_pct = newX;
+          pin.y_pct = newY;
+
+          try {
+            const res = await fetch(`/api/map-pins/${pin.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ x_pct: newX, y_pct: newY })
+            });
+            const data = await res.json();
+            if (data.success) {
+              console.log(`[Atlas Pin Drag] Pin ${pin.id} updated coordinates to (${newX.toFixed(3)}, ${newY.toFixed(3)})`);
+            }
+          } catch (err) {
+            console.error('Failed to update pin location:', err);
+          }
+
+          setTimeout(() => { isDraggingThisPin = false; }, 200);
+        });
+      }
+
+      marker.on('click', () => {
+        if (isDraggingThisPin) return;
+        this.openArticleDrawer(pin.article_id, pin.label, pin);
+      });
 
       marker._pinData = pin;
       marker._isHighlighted = isHighlighted;

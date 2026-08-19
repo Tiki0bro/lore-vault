@@ -6804,6 +6804,51 @@ a.breadcrumb-item:hover {
   font-weight: 600;
 }
 
+/* --- SPOILER & STAT BOX CALLOUT STYLES --- */
+.wa-spoiler {
+  margin: 1rem 0;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.wa-spoiler-summary {
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  color: var(--accent-secondary, #fbbf24);
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wa-spoiler-body {
+  padding: 0.85rem 1rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.wa-box {
+  margin: 1.2rem 0;
+  border: 1px solid var(--accent-primary);
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.05);
+  overflow: hidden;
+}
+
+.wa-box-title {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-primary);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.wa-box-body {
+  padding: 0.85rem 1rem;
+}
+
 
 
 

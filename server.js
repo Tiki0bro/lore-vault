@@ -410,6 +410,14 @@ db.serialize(() => {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS map_fog_states (
+      map_id TEXT PRIMARY KEY,
+      fog_data_url TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS character_history (
       id TEXT PRIMARY KEY,
       character_id TEXT,
@@ -4329,11 +4337,53 @@ app.post('/api/map-pins', (req, res) => {
   });
 });
 
+// Update map pin (e.g. coordinates on dragend)
+app.put('/api/map-pins/:id', (req, res) => {
+  const pinId = req.params.id;
+  const { x_pct, y_pct } = req.body;
+  const clampedX = Math.max(0, Math.min(1, parseFloat(x_pct) || 0.5));
+  const clampedY = Math.max(0, Math.min(1, parseFloat(y_pct) || 0.5));
+
+  db.run(`
+    UPDATE map_pins 
+    SET x_pct = ?, y_pct = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `, [clampedX, clampedY, pinId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_pins WHERE id = ?', [pinId], (err2, pin) => {
+      res.json({ success: true, pin });
+    });
+  });
+});
+
 // Delete map pin
 app.delete('/api/map-pins/:id', (req, res) => {
   db.run('DELETE FROM map_pins WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// GET /api/maps/:mapId/fog - Fetch Fog of War mask state
+app.get('/api/maps/:mapId/fog', (req, res) => {
+  db.get('SELECT * FROM map_fog_states WHERE map_id = ?', [req.params.mapId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, fog_data_url: row ? row.fog_data_url : null });
+  });
+});
+
+// PUT /api/maps/:mapId/fog - Save Fog of War mask state
+app.put('/api/maps/:mapId/fog', (req, res) => {
+  const { fog_data_url } = req.body;
+  db.run(`
+    INSERT INTO map_fog_states (map_id, fog_data_url, updated_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(map_id) DO UPDATE SET
+      fog_data_url = excluded.fog_data_url,
+      updated_at = CURRENT_TIMESTAMP
+  `, [req.params.mapId, fog_data_url], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
