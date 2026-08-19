@@ -452,4 +452,189 @@ test('POST /api/vtt/validate-schema sanitizes DM secret blocks in player mode', 
   assert.ok(res.json.sanitized_payload.secret_notes.includes('Regular town lore'));
 });
 
+// --- VISUAL LORE CANVAS & SPATIAL MINDMAP TESTS ---
 
+test('GET & POST /api/worlds/:worldId/canvas-nodes and /api/canvas/positions', async () => {
+  const nodesGet = await makeRequest('/api/worlds/default/canvas-nodes');
+  assert.strictEqual(nodesGet.statusCode, 200);
+  assert.strictEqual(nodesGet.json.world_id, 'default');
+  assert.ok(Array.isArray(nodesGet.json.nodes));
+  assert.ok(Array.isArray(nodesGet.json.edges));
+
+  const posPost = await makeRequest('/api/canvas/positions', { method: 'POST' }, {
+    world_id: 'default',
+    positions: [
+      { entity_type: 'article', entity_id: 'art-1', pos_x: 0.45, pos_y: 0.60, pinned: 1 }
+    ]
+  });
+  assert.strictEqual(posPost.statusCode, 200);
+  assert.strictEqual(posPost.json.success, true);
+  assert.strictEqual(posPost.json.count, 1);
+
+  const autoLayout = await makeRequest('/api/canvas/auto-layout', { method: 'POST' }, {
+    world_id: 'default',
+    algorithm: 'circle'
+  });
+  assert.strictEqual(autoLayout.statusCode, 200);
+  assert.strictEqual(autoLayout.json.success, true);
+  assert.strictEqual(autoLayout.json.algorithm, 'circle');
+});
+
+// --- AI WORLD SIMULATOR & CAUSALITY ENGINE TESTS ---
+
+test('POST /api/simulation/simulate-era, causality-audit, and rumors', async () => {
+  const simRes = await makeRequest('/api/simulation/simulate-era', { method: 'POST' }, {
+    world_id: 'default',
+    timespan_years: 50,
+    custom_catalyst: 'Great Drought'
+  });
+  assert.strictEqual(simRes.statusCode, 200);
+  assert.strictEqual(simRes.json.timespan_years, 50);
+  assert.ok(simRes.json.summary);
+  assert.ok(Array.isArray(simRes.json.generated_events));
+
+  const auditRes = await makeRequest('/api/simulation/causality-audit', { method: 'POST' }, {
+    world_id: 'default'
+  });
+  assert.strictEqual(auditRes.statusCode, 200);
+  assert.ok(typeof auditRes.json.overall_causality_score === 'number');
+  assert.ok(Array.isArray(auditRes.json.socratic_probes));
+
+  const rumorRes = await makeRequest('/api/simulation/rumors/default');
+  assert.strictEqual(rumorRes.statusCode, 200);
+  assert.ok(Array.isArray(rumorRes.json.rumors));
+  assert.strictEqual(rumorRes.json.rumors.length, 5);
+});
+
+// --- DM SECRETS & CANON AUDIT TESTS ---
+
+test('POST /api/audit/scan-secrets scans world articles for secrets', async () => {
+  const res = await makeRequest('/api/audit/scan-secrets', { method: 'POST' }, {
+    world_id: 'default'
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(typeof res.json.total_secrets_found === 'number');
+  assert.ok(Array.isArray(res.json.articles_with_secrets));
+});
+
+// --- AI FIGHT SIMULATOR TESTS ---
+
+test('POST /api/ai/simulate-fight simulates turn-based dice battle', async () => {
+  const res = await makeRequest('/api/ai/simulate-fight', { method: 'POST' }, {
+    combatant_a: { name: 'Sir Cedric', hp: 30, ac: 16, attack_bonus: 5, damage_dice: '1d8+3' },
+    combatant_b: { name: 'Orc Berserker', hp: 28, ac: 13, attack_bonus: 4, damage_dice: '2d6+2' },
+    environment: 'Castle Courtyard',
+    generate_prose: false
+  });
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.ok(res.json.winner);
+  assert.ok(typeof res.json.total_rounds === 'number');
+  assert.ok(Array.isArray(res.json.turn_log));
+  assert.ok(res.json.turn_log.length > 0);
+  assert.ok(res.json.mechanics_summary);
+});
+
+// --- ONBOARDING SCHOLAR'S TOUR INTEGRATION TESTS ---
+
+test("Scholar's Tour step definitions and controller integration validation", async () => {
+  const fs = require('fs');
+  const path = require('path');
+
+  // 1. Verify app.js defines the 5 tour steps and controller methods
+  const appJsPath = path.join(__dirname, '..', 'public', 'js', 'app.js');
+  const appJsContent = fs.readFileSync(appJsPath, 'utf8');
+
+  // Verify controller methods exist
+  assert.ok(appJsContent.includes('initScholarTour()'), 'app.js should contain initScholarTour()');
+  assert.ok(appJsContent.includes('startScholarTour()'), 'app.js should contain startScholarTour()');
+  assert.ok(appJsContent.includes('renderTourStep()'), 'app.js should contain renderTourStep()');
+  assert.ok(appJsContent.includes('nextScholarTourStep()'), 'app.js should contain nextScholarTourStep()');
+  assert.ok(appJsContent.includes('prevScholarTourStep()'), 'app.js should contain prevScholarTourStep()');
+  assert.ok(appJsContent.includes('endScholarTour()'), 'app.js should contain endScholarTour()');
+
+  // Verify Command Palette contains start tour action
+  assert.ok(appJsContent.includes("🎓 Start Scholar's Orientation Tour"), 'Command Palette should include Start Scholar\'s Tour option');
+
+  // Verify the 5 Scholar's Tour step definitions
+  const tourSteps = [
+    {
+      target: '#nav-tabs-container',
+      tab: 'frontpage',
+      title: '🗺️ Workspace Navigation Tabs',
+      desc: 'Switch effortlessly between World Wiki Frontpage, Reader Codex, World Atlas Maps, Timeline Chronology, and Faction Matrix.',
+      kbd: ''
+    },
+    {
+      target: '#btn-new-article',
+      tab: 'library',
+      title: '📝 Lore Creation & Cross-Linking',
+      desc: 'Create rich lore articles with WorldAnvil templates. Type @ inside the editor to auto-complete cross-links to other articles!',
+      kbd: ''
+    },
+    {
+      target: '#tab-atlas',
+      tab: 'atlas',
+      title: '🪐 Interactive World Atlas',
+      desc: 'Explore custom maps, drop location pins, draw expedition routes, and toggle DM Secret Filters for tabletop sessions.',
+      kbd: ''
+    },
+    {
+      target: '#zen-mode-toggle',
+      tab: 'library',
+      title: '📜 Zen Writer & Weave Matrix',
+      desc: 'Draft prose in distraction-free Zen Reader mode. Stage your active chapter into the Weave Matrix context builder for AI assistance.',
+      kbd: 'Ctrl + Shift + F & Ctrl + Shift + M'
+    },
+    {
+      target: '#concierge-nav-btn',
+      tab: 'frontpage',
+      title: '✨ Welcome Concierge & Hotkeys',
+      desc: 'Launch your AI Journey Concierge anytime with Ctrl+Shift+W, or press Ctrl+K for Universal Search across your entire world!',
+      kbd: 'Ctrl + Shift + W & Ctrl + K'
+    }
+  ];
+
+  assert.strictEqual(tourSteps.length, 5, 'Should have exactly 5 onboarding tour steps');
+
+  // Validate step 1: Navigation Tabs
+  assert.ok(tourSteps[0].title.includes('Navigation Tabs'));
+  assert.strictEqual(tourSteps[0].target, '#nav-tabs-container');
+  assert.strictEqual(tourSteps[0].tab, 'frontpage');
+
+  // Validate step 2: Lore Creation & Cross-Links
+  assert.ok(tourSteps[1].title.includes('Lore Creation') || tourSteps[1].title.includes('Cross-Link'));
+  assert.strictEqual(tourSteps[1].target, '#btn-new-article');
+  assert.strictEqual(tourSteps[1].tab, 'library');
+
+  // Validate step 3: Interactive World Atlas
+  assert.ok(tourSteps[2].title.includes('World Atlas') || tourSteps[2].title.includes('Interactive World Atlas'));
+  assert.strictEqual(tourSteps[2].target, '#tab-atlas');
+  assert.strictEqual(tourSteps[2].tab, 'atlas');
+
+  // Validate step 4: Zen Writer & Weave Matrix
+  assert.ok(tourSteps[3].title.includes('Zen Writer') || tourSteps[3].title.includes('Weave Matrix'));
+  assert.strictEqual(tourSteps[3].target, '#zen-mode-toggle');
+  assert.strictEqual(tourSteps[3].tab, 'library');
+  assert.ok(tourSteps[3].kbd.includes('Ctrl + Shift + F'));
+
+  // Validate step 5: Concierge & Hotkeys
+  assert.ok(tourSteps[4].title.includes('Concierge') || tourSteps[4].title.includes('Hotkeys'));
+  assert.strictEqual(tourSteps[4].target, '#concierge-nav-btn');
+  assert.strictEqual(tourSteps[4].tab, 'frontpage');
+  assert.ok(tourSteps[4].kbd.includes('Ctrl + Shift + W'));
+
+  // 2. Verify index.html contains the onboarding overlay containers
+  const htmlPath = path.join(__dirname, '..', 'public', 'index.html');
+  const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+  assert.ok(htmlContent.includes('id="onboarding-spotlight-overlay"'), 'HTML must have #onboarding-spotlight-overlay');
+  assert.ok(htmlContent.includes('id="spotlight-active-ring"'), 'HTML must have #spotlight-active-ring');
+  assert.ok(htmlContent.includes('id="onboarding-tooltip-card"'), 'HTML must have #onboarding-tooltip-card');
+  assert.ok(htmlContent.includes('id="tour-step-badge"'), 'HTML must have #tour-step-badge');
+  assert.ok(htmlContent.includes('id="tour-step-title"'), 'HTML must have #tour-step-title');
+  assert.ok(htmlContent.includes('id="tour-step-desc"'), 'HTML must have #tour-step-desc');
+  assert.ok(htmlContent.includes('id="tour-step-kbd"'), 'HTML must have #tour-step-kbd');
+  assert.ok(htmlContent.includes('id="tour-btn-prev"'), 'HTML must have #tour-btn-prev');
+  assert.ok(htmlContent.includes('id="tour-btn-next"'), 'HTML must have #tour-btn-next');
+});

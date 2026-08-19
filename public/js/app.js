@@ -59,6 +59,8 @@ class LoreApp {
     this.searchResults = [];
     this.selectedIndex = -1;
     this.aiConfig = null;
+    this.tourSteps = [];
+    this.currentTourStepIndex = 0;
 
     this.init();
   }
@@ -95,6 +97,7 @@ class LoreApp {
     this.setupWeaveMatrix();
     this.setupCrosslinkPopover();
     this.initConcierge();
+    this.initScholarTour();
   }
 
   initThemeMode() {
@@ -247,6 +250,10 @@ class LoreApp {
     if (window.relationshipView) {
       if (typeof window.relationshipView.init === 'function') window.relationshipView.init(activeWorld);
     }
+    if (window.canvasView) {
+      window.canvasView.worldId = activeWorld;
+      if (typeof window.canvasView.init === 'function') window.canvasView.init();
+    }
     if (window.ContextBuilder) {
       if (typeof window.ContextBuilder.init === 'function') window.ContextBuilder.init(this.articles);
     }
@@ -374,6 +381,7 @@ class LoreApp {
     const narrativeSlateView = document.getElementById('narrative-slate-view');
     const marketingView = document.getElementById('marketing-view');
     const atlasView = document.getElementById('view-atlas');
+    const canvasView = document.getElementById('view-canvas');
     const frontpageView = document.getElementById('view-frontpage');
     const timelineView = document.getElementById('view-timeline');
     const relationshipsView = document.getElementById('view-relationships');
@@ -384,19 +392,31 @@ class LoreApp {
     const narrativeSlateBtn = document.getElementById('narrative-slate-nav-btn');
     const tabMarketing = document.getElementById('tab-marketing');
     const tabAtlas = document.getElementById('tab-atlas');
+    const tabCanvas = document.getElementById('tab-canvas');
     const tabFrontpage = document.getElementById('tab-frontpage');
     const tabTimeline = document.getElementById('tab-timeline');
     const tabRelationships = document.getElementById('tab-relationships') || document.querySelector('button[data-view="view-relationships"]');
 
-    [libraryView, studioView, contextView, marketingView, atlasView, frontpageView, timelineView, relationshipsView].forEach(v => v && v.classList.remove('active'));
+    [libraryView, studioView, contextView, marketingView, atlasView, canvasView, frontpageView, timelineView, relationshipsView].forEach(v => v && v.classList.remove('active'));
     if (narrativeSlateView) {
       narrativeSlateView.classList.remove('active');
       narrativeSlateView.classList.add('hidden');
     }
 
-    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabFrontpage, tabTimeline, tabRelationships].forEach(t => t && t.classList.remove('active'));
+    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabCanvas, tabFrontpage, tabTimeline, tabRelationships].forEach(t => t && t.classList.remove('active'));
 
-    if (tabName === 'relationships' || tabName === 'view-relationships') {
+    if (tabName === 'canvas') {
+      if (canvasView) canvasView.classList.add('active');
+      if (tabCanvas) tabCanvas.classList.add('active');
+      if (!window.canvasView) {
+        window.canvasView = new CanvasView('canvas-app-root');
+        window.canvasView.worldId = this.currentWorldId || 'default';
+        window.canvasView.init();
+      } else {
+        window.canvasView.worldId = this.currentWorldId || 'default';
+        window.canvasView.init();
+      }
+    } else if (tabName === 'relationships' || tabName === 'view-relationships') {
       if (relationshipsView) relationshipsView.classList.add('active');
       if (tabRelationships) tabRelationships.classList.add('active');
       if (window.relationshipView) {
@@ -3444,6 +3464,147 @@ Overview paragraph describing the location, faction, or character.
     if (modal) modal.classList.add('hidden');
   }
 
+  // --- FEATURE 3: DM MODE TOGGLE ---
+  toggleDMMode() {
+    const currentIsPlayer = localStorage.getItem('lorevault_mode_player') === 'true';
+    const newIsPlayer = !currentIsPlayer;
+    localStorage.setItem('lorevault_mode_player', newIsPlayer ? 'true' : 'false');
+
+    const iconEl = document.getElementById('dm-toggle-icon');
+    const labelEl = document.getElementById('dm-toggle-label');
+    const btnEl = document.getElementById('dm-mode-toggle');
+
+    if (newIsPlayer) {
+      if (iconEl) iconEl.textContent = '👁️';
+      if (labelEl) labelEl.textContent = 'Player Mode';
+      if (btnEl) btnEl.classList.add('btn-warning');
+      this.showToast('Switched to Player Mode (DM secrets hidden)', 'info');
+    } else {
+      if (iconEl) iconEl.textContent = '🔒';
+      if (labelEl) labelEl.textContent = 'DM Mode';
+      if (btnEl) btnEl.classList.remove('btn-warning');
+      this.showToast('Switched to DM Mode (Full access)', 'success');
+    }
+
+    this.fetchArticles();
+    if (window.canvasView) window.canvasView.loadNodes(this.currentWorldId || 'default');
+  }
+
+  // --- FEATURE 2: AI WORLD SIMULATOR METHODS ---
+  openSimulatorModal() {
+    const modal = document.getElementById('world-simulator-modal');
+    if (modal) modal.classList.remove('hidden');
+    this.simTimespan = 10;
+  }
+
+  closeSimulatorModal() {
+    const modal = document.getElementById('world-simulator-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  switchSimulatorTab(tab) {
+    ['era', 'causality', 'rumors'].forEach(t => {
+      const btn = document.getElementById(`sim-tab-${t}`);
+      const sec = document.getElementById(`sim-section-${t}`);
+      if (btn) btn.classList.toggle('active', t === tab);
+      if (sec) sec.classList.toggle('hidden', t !== tab);
+    });
+  }
+
+  setSimTimespan(years, btn) {
+    this.simTimespan = years;
+    const parent = btn.parentElement;
+    if (parent) {
+      Array.from(parent.children).forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  }
+
+  async runEraSimulation() {
+    const catalystInput = document.getElementById('sim-catalyst-input');
+    const summaryEl = document.getElementById('sim-era-summary');
+    const eventsEl = document.getElementById('sim-era-events');
+    const resultsBox = document.getElementById('sim-era-results');
+
+    if (summaryEl) summaryEl.textContent = 'Simulating era progression across world lore...';
+    if (resultsBox) resultsBox.classList.remove('hidden');
+
+    try {
+      const res = await fetch('/api/simulation/simulate-era', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          timespan_years: this.simTimespan || 50,
+          custom_catalyst: catalystInput ? catalystInput.value : ''
+        })
+      });
+      const data = await res.json();
+      if (summaryEl) summaryEl.textContent = data.summary || 'Simulation completed.';
+
+      if (eventsEl && Array.isArray(data.generated_events)) {
+        eventsEl.innerHTML = data.generated_events.map(ev => `
+          <div class="socratic-probe-card">
+            <strong>${ev.year || ''}: ${ev.title || 'Event'}</strong>
+            <p style="margin-top:0.25rem; font-size:0.85rem; color:#cbd5e1;">${ev.description || ''}</p>
+          </div>
+        `).join('');
+      }
+      this.showToast('Era simulation complete!', 'success');
+    } catch (err) {
+      if (summaryEl) summaryEl.textContent = 'Simulation failed: ' + err.message;
+    }
+  }
+
+  async runCausalityAudit() {
+    const scoreEl = document.getElementById('sim-causality-score');
+    const probesEl = document.getElementById('sim-causality-probes');
+    const resultsBox = document.getElementById('sim-causality-results');
+
+    if (resultsBox) resultsBox.classList.remove('hidden');
+    if (probesEl) probesEl.innerHTML = '<p>Evaluating causality probes...</p>';
+
+    try {
+      const res = await fetch('/api/simulation/causality-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: this.currentWorldId || 'default' })
+      });
+      const data = await res.json();
+
+      if (scoreEl) scoreEl.textContent = `${data.overall_causality_score || 90}/100`;
+      if (probesEl && Array.isArray(data.socratic_probes)) {
+        probesEl.innerHTML = data.socratic_probes.map(p => `
+          <div class="socratic-probe-card">
+            <span class="badge" style="background:#0284c7;">${p.category}</span>
+            <p style="margin-top:0.4rem; font-weight:700; color:#f8fafc;">❓ ${p.question}</p>
+            <p style="margin-top:0.25rem; font-size:0.8rem; color:#f59e0b;">💡 Remedy: ${p.suggested_fix}</p>
+          </div>
+        `).join('');
+      }
+    } catch (err) {
+      if (probesEl) probesEl.innerHTML = '<p>Audit failed: ' + err.message + '</p>';
+    }
+  }
+
+  async loadWorldRumors() {
+    const listEl = document.getElementById('sim-rumors-list');
+    if (!listEl) return;
+    listEl.innerHTML = '<p>Fetching rumors...</p>';
+
+    try {
+      const res = await fetch(`/api/simulation/rumors/${this.currentWorldId || 'default'}`);
+      const data = await res.json();
+      if (Array.isArray(data.rumors)) {
+        listEl.innerHTML = data.rumors.map(r => `
+          <div class="sim-rumor-chip">🍺 "${r}"</div>
+        `).join('');
+      }
+    } catch (err) {
+      listEl.innerHTML = '<p>Failed to load rumors.</p>';
+    }
+  }
+
   openAISettings() {
     this.openAISettingsModal();
   }
@@ -5180,6 +5341,7 @@ Overview paragraph describing the location, faction, or character.
     let html = '';
 
     const navItems = [
+      { label: "🎓 Start Scholar's Orientation Tour", action: 'tour' },
       { label: '📖 Open Lore Codex', tab: 'library' },
       { label: '🗺️ Open World Atlas', tab: 'atlas' },
       { label: '⏳ Open Timeline Chronology', tab: 'timeline' },
@@ -5191,9 +5353,13 @@ Overview paragraph describing the location, faction, or character.
 
     const matchingNav = navItems.filter(n => !q || n.label.toLowerCase().includes(q));
     if (matchingNav.length > 0) {
-      html += '<div class="cmd-section-title">Navigation Views</div>';
+      html += '<div class="cmd-section-title">Navigation Views & Actions</div>';
       matchingNav.forEach(n => {
-        html += `<div class="cmd-item" onclick="window.switchTab('${n.tab}'); window.app.toggleCommandPalette();">${n.label}</div>`;
+        if (n.action === 'tour') {
+          html += `<div class="cmd-item" onclick="if (window.app && typeof window.app.startScholarTour === 'function') window.app.startScholarTour(); window.app.toggleCommandPalette();">${n.label}</div>`;
+        } else {
+          html += `<div class="cmd-item" onclick="window.switchTab('${n.tab}'); window.app.toggleCommandPalette();">${n.label}</div>`;
+        }
       });
     }
 
@@ -5777,7 +5943,6 @@ Overview paragraph describing the location, faction, or character.
       </div>
     `).join('');
   }
-  }
 
   async saveStatBlockForm(e) {
     if (e) e.preventDefault();
@@ -6026,6 +6191,264 @@ Overview paragraph describing the location, faction, or character.
     a.click();
     this.showToast(`💾 Downloaded ${a.download}`);
   }
+
+  // --- AI FIGHT SIMULATOR CONTROLLER METHODS ---
+  openFightSimulatorModal() {
+    const modal = document.getElementById('fight-simulator-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      if (this.currentStatBlock) {
+        const nameInput = document.getElementById('fight-a-name');
+        const hpInput = document.getElementById('fight-a-hp');
+        const acInput = document.getElementById('fight-a-ac');
+        const atkInput = document.getElementById('fight-a-atk');
+        const dmgInput = document.getElementById('fight-a-dmg');
+
+        let stats = {};
+        try { stats = typeof this.currentStatBlock.stats_json === 'string' ? JSON.parse(this.currentStatBlock.stats_json) : (this.currentStatBlock.stats_json || {}); } catch(e) {}
+
+        if (nameInput) nameInput.value = this.currentStatBlock.name || 'Combatant A';
+        if (hpInput) hpInput.value = stats.hp || 30;
+        if (acInput) acInput.value = stats.ac || 14;
+        if (atkInput) atkInput.value = stats.cr ? Math.round(stats.cr * 1.5) : 4;
+        if (dmgInput) dmgInput.value = stats.damage_dice || '1d8+2';
+      }
+    }
+  }
+
+  closeFightSimulatorModal() {
+    const modal = document.getElementById('fight-simulator-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+
+  async runFightSimulation() {
+    const runBtn = document.getElementById('run-fight-btn');
+    const resultsContainer = document.getElementById('fight-results-container');
+    const winnerBanner = document.getElementById('fight-winner-banner');
+    const storyBox = document.getElementById('fight-story-box');
+    const logBox = document.getElementById('fight-log-box');
+    const copyBtn = document.getElementById('copy-fight-log-btn');
+
+    if (!runBtn) return;
+
+    const payload = {
+      combatant_a: {
+        name: document.getElementById('fight-a-name')?.value || 'Combatant A',
+        hp: document.getElementById('fight-a-hp')?.value || 30,
+        ac: document.getElementById('fight-a-ac')?.value || 14,
+        attack_bonus: document.getElementById('fight-a-atk')?.value || 4,
+        damage_dice: document.getElementById('fight-a-dmg')?.value || '1d8+2'
+      },
+      combatant_b: {
+        name: document.getElementById('fight-b-name')?.value || 'Combatant B',
+        hp: document.getElementById('fight-b-hp')?.value || 30,
+        ac: document.getElementById('fight-b-ac')?.value || 14,
+        attack_bonus: document.getElementById('fight-b-atk')?.value || 4,
+        damage_dice: document.getElementById('fight-b-dmg')?.value || '1d8+2'
+      },
+      environment: document.getElementById('fight-env-select')?.value || 'Midnight Castle Ramparts',
+      tone_preset: document.getElementById('fight-tone-select')?.value || 'high_fantasy',
+      generate_prose: document.getElementById('fight-tone-select')?.value !== 'analytical_audit'
+    };
+
+    try {
+      runBtn.disabled = true;
+      runBtn.textContent = '⚔️ Simulating Dice Combat...';
+
+      const res = await fetch('/api/ai/simulate-fight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+
+      if (res.ok && json.success) {
+        if (resultsContainer) resultsContainer.classList.remove('hidden');
+        if (winnerBanner) winnerBanner.textContent = `🏆 VICTORY: ${json.winner} (${json.mechanics_summary})`;
+        if (storyBox) {
+          if (window.parseWorldAnvil) {
+            storyBox.innerHTML = window.parseWorldAnvil(json.narrative_prose);
+          } else {
+            storyBox.textContent = json.narrative_prose;
+          }
+        }
+        if (logBox) logBox.textContent = JSON.stringify(json.turn_log, null, 2);
+        if (copyBtn) copyBtn.classList.remove('hidden');
+        this.lastFightLog = json;
+        if (typeof window.showToast === 'function') window.showToast(`⚔️ Fight completed! ${json.winner} won in ${json.total_rounds} rounds.`, 'success');
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(`Fight simulation error: ${json.error || 'Failed'}`, 'error');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Error running fight simulation: ${err.message}`, 'error');
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = '⚔️ Simulate Battle';
+    }
+  }
+
+  async copyFightLog() {
+    if (!this.lastFightLog) return;
+    const text = `⚔️ LOREVAULT FIGHT SIMULATION RESULT ⚔️\n${this.lastFightLog.mechanics_summary}\n\nCINEMATIC NARRATIVE:\n${this.lastFightLog.narrative_prose}\n\nTACTICAL LOG:\n${JSON.stringify(this.lastFightLog.turn_log, null, 2)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      if (typeof window.showToast === 'function') window.showToast('📋 Tactical fight log copied to clipboard!', 'success');
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast('Error copying to clipboard: ' + err.message, 'error');
+    }
+  }
+
+  showToast(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, type);
+    }
+  }
+
+  // --- SCHOLAR'S ORIENTATION TOUR ENGINE ---
+  initScholarTour() {
+    this.tourSteps = [
+      {
+        target: '#nav-tabs-container',
+        tab: 'frontpage',
+        title: '🗺️ Workspace Navigation Tabs',
+        desc: 'Switch effortlessly between World Wiki Frontpage, Reader Codex, World Atlas Maps, Timeline Chronology, and Faction Matrix.',
+        kbd: ''
+      },
+      {
+        target: '#btn-new-article',
+        tab: 'library',
+        title: '📝 Lore Creation & Cross-Linking',
+        desc: 'Create rich lore articles with WorldAnvil templates. Type @ inside the editor to auto-complete cross-links to other articles!',
+        kbd: ''
+      },
+      {
+        target: '#tab-atlas',
+        tab: 'atlas',
+        title: '🪐 Interactive World Atlas',
+        desc: 'Explore custom maps, drop location pins, draw expedition routes, and toggle DM Secret Filters for tabletop sessions.',
+        kbd: ''
+      },
+      {
+        target: '#zen-mode-toggle',
+        tab: 'library',
+        title: '📜 Zen Writer & Weave Matrix',
+        desc: 'Draft prose in distraction-free Zen Reader mode. Stage your active chapter into the Weave Matrix context builder for AI assistance.',
+        kbd: 'Ctrl + Shift + F & Ctrl + Shift + M'
+      },
+      {
+        target: '#concierge-nav-btn',
+        tab: 'frontpage',
+        title: '✨ Welcome Concierge & Hotkeys',
+        desc: 'Launch your AI Journey Concierge anytime with Ctrl+Shift+W, or press Ctrl+K for Universal Search across your entire world!',
+        kbd: 'Ctrl + Shift + W & Ctrl + K'
+      }
+    ];
+    this.currentTourStepIndex = 0;
+  }
+
+  startScholarTour() {
+    if (typeof this.closeConciergeModal === 'function') {
+      this.closeConciergeModal();
+    }
+    if (!this.tourSteps || this.tourSteps.length === 0) {
+      this.initScholarTour();
+    }
+    this.currentTourStepIndex = 0;
+    const overlay = document.getElementById('onboarding-spotlight-overlay');
+    if (overlay) overlay.classList.remove('hidden');
+    this.renderTourStep();
+  }
+
+  renderTourStep() {
+    if (!this.tourSteps || this.tourSteps.length === 0) {
+      this.initScholarTour();
+    }
+    if (this.currentTourStepIndex < 0) this.currentTourStepIndex = 0;
+    if (this.currentTourStepIndex >= this.tourSteps.length) {
+      this.endScholarTour();
+      return;
+    }
+
+    const step = this.tourSteps[this.currentTourStepIndex];
+    if (step.tab && typeof window.switchTab === 'function') {
+      window.switchTab(step.tab);
+    }
+
+    const badge = document.getElementById('tour-step-badge');
+    const title = document.getElementById('tour-step-title');
+    const desc = document.getElementById('tour-step-desc');
+    const kbd = document.getElementById('tour-step-kbd');
+    const btnPrev = document.getElementById('tour-btn-prev');
+    const btnNext = document.getElementById('tour-btn-next');
+
+    if (badge) badge.textContent = `🎓 SCHOLAR'S TOUR — STEP ${this.currentTourStepIndex + 1} OF ${this.tourSteps.length}`;
+    if (title) title.textContent = step.title;
+    if (desc) desc.textContent = step.desc;
+    if (kbd) kbd.innerHTML = step.kbd ? `<span class="kbd-hint">${step.kbd}</span>` : '';
+
+    if (btnPrev) btnPrev.disabled = this.currentTourStepIndex === 0;
+    if (btnNext) btnNext.textContent = this.currentTourStepIndex === this.tourSteps.length - 1 ? '🎉 Finish Tour' : 'Next ➔';
+
+    // Position spotlight ring and tooltip card
+    setTimeout(() => {
+      const targetEl = document.querySelector(step.target);
+      const ring = document.getElementById('spotlight-active-ring');
+      const card = document.getElementById('onboarding-tooltip-card');
+
+      if (targetEl && ring && card) {
+        const rect = targetEl.getBoundingClientRect();
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        const scrollX = window.scrollX || window.pageXOffset || 0;
+
+        ring.style.top = `${rect.top - 4 + scrollY}px`;
+        ring.style.left = `${rect.left - 4 + scrollX}px`;
+        ring.style.width = `${rect.width + 8}px`;
+        ring.style.height = `${rect.height + 8}px`;
+
+        // Position card under or above target
+        let cardTop = rect.bottom + 12 + scrollY;
+        if (rect.bottom + 220 > window.innerHeight) {
+          cardTop = rect.top - 210 + scrollY;
+        }
+        let cardLeft = Math.max(16, Math.min(window.innerWidth - 360, rect.left + (rect.width / 2) - 170));
+
+        card.style.top = `${Math.max(16, cardTop)}px`;
+        card.style.left = `${cardLeft}px`;
+      }
+    }, 150);
+  }
+
+  nextScholarTourStep() {
+    this.currentTourStepIndex++;
+    if (this.currentTourStepIndex >= (this.tourSteps ? this.tourSteps.length : 5)) {
+      this.endScholarTour();
+    } else {
+      this.renderTourStep();
+    }
+  }
+
+  prevScholarTourStep() {
+    if (this.currentTourStepIndex > 0) {
+      this.currentTourStepIndex--;
+      this.renderTourStep();
+    }
+  }
+
+  endScholarTour() {
+    const overlay = document.getElementById('onboarding-spotlight-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('lorevault_onboarding_completed', 'true');
+    }
+    if (typeof window.showToast === 'function') {
+      window.showToast("🎓 Scholar's Orientation Tour completed! Re-launch anytime via Ctrl+K.", 'info');
+    } else if (typeof this.showToast === 'function') {
+      this.showToast("🎓 Scholar's Orientation Tour completed! Re-launch anytime via Ctrl+K.", 'info');
+    }
+  }
 }
 
 // Global initialization
@@ -6254,6 +6677,13 @@ window.switchTab = function(tabName) {
 // --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    const fightModal = document.getElementById('fight-simulator-modal');
+    if (fightModal && !fightModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeFightSimulatorModal === 'function') {
+        window.app.closeFightSimulatorModal();
+      }
+      return;
+    }
     const vttModal = document.getElementById('vtt-export-modal');
     if (vttModal && !vttModal.classList.contains('hidden')) {
       if (window.app && typeof window.app.closeVttExportModal === 'function') {
