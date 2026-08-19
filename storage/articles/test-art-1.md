@@ -1,0 +1,1 @@
+The sanctuary of @[Aethelgard](template:test-art-2). [box=secret]The ancient altar lies beneath.[/box] Hidden truth.

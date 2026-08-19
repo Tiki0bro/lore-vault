@@ -1122,9 +1122,21 @@
               </div>
               <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                 <button id="start-guided-repair-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); border:none;" onclick="window.app.startGuidedSession()">⚡ Start Guided Repair Session</button>
+                <button class="btn btn-primary" style="font-size:0.8rem; background:#10b981; color:#fff; border:none;" onclick="window.app.batchRepairWorldDoctor()">🪄 Batch Auto-Fix All</button>
+                <button class="btn btn-secondary" style="font-size:0.8rem; background:#d97706; color:#fff; border:none;" onclick="window.app.copyWorldDoctorSummary()">📋 Copy Summary</button>
+                <button class="btn btn-secondary" style="font-size:0.8rem; background:#475569; color:#fff;" onclick="window.app.exportWorldDoctorReport()">📄 Export Report</button>
                 <button class="btn btn-secondary" style="font-size:0.8rem; background:#0284c7; color:#fff;" onclick="window.app.runDeepAIAudit()">🤖 Deep AI Audit</button>
                 <button class="btn btn-primary" style="font-size:0.8rem;" onclick="window.app.runWorldAudit()">🔍 Run Vault Scan</button>
               </div>
+            </div>
+
+            <!-- TOP 3 QUICK-FIXES HERO CARD CONTAINER -->
+            <div id="doctor-quick-fixes-hero" class="doctor-quick-fixes-container" style="margin-top:1rem; padding:0.75rem 1rem; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); border-radius:8px; display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <h4 style="margin:0; font-size:0.85rem; color:#d8b4fe; display:flex; align-items:center; gap:0.4rem;">⚡ Top Priority Quick Fixes (High Value Actions)</h4>
+                <span style="font-size:0.7rem; color:var(--text-muted);">Fix highest-impact issues 1-by-1 to boost health score</span>
+              </div>
+              <div id="doctor-quick-fixes-list" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:0.6rem;"></div>
             </div>
 
             <!-- METRIC CARDS OVERVIEW ROW -->
@@ -1174,6 +1186,7 @@
               <button class="doctor-tab-btn" data-tab="stubs" onclick="window.app.switchDoctorTab('stubs')">🧹 Stubs</button>
               <button class="doctor-tab-btn" data-tab="ai" onclick="window.app.switchDoctorTab('ai')">🤖 AI Conflicts</button>
               <button class="doctor-tab-btn" data-tab="orphans" onclick="window.app.switchDoctorTab('orphans')">🏝️ Orphans</button>
+              <button class="doctor-tab-btn" data-tab="ignored" onclick="window.app.switchDoctorTab('ignored')">👁️ Ignored (<span id="doctor-metric-ignored">0</span>)</button>
             </div>
 
             <!-- TAB PANELS -->
@@ -1246,6 +1259,16 @@
                 </div>
                 <div id="doctor-orphan-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
                   <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">Click 'Run Vault Scan' to check cross-link health.</div>
+                </div>
+              </div>
+
+              <!-- Panel 7: Ignored / Suppressed Issues -->
+              <div id="doctor-panel-ignored" class="doctor-tab-panel hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <h3 style="font-size:0.9rem; color:var(--text-muted); margin:0;">👁️ Ignored & Suppressed Issues</h3>
+                </div>
+                <div id="doctor-ignored-list" style="max-height:260px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem;">
+                  <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:0.75rem;">No audit issues currently ignored.</div>
                 </div>
               </div>
             </div>

@@ -13,3 +13,9 @@
    - When a user generates a map focused on 1 location article (`selectedArticleIds.length === 1`), pin placement MUST lock to `(0.50, 0.50)` centered on the canvas, eliminating random pin scatter across local maps.
 3. **Dedicated Scope Prompt Directives**:
    - `battlemap` scope requires explicit `Top-down 2D tactical combat battlemap grid, overhead 90-degree angle view` keywords to prevent AI models from rendering macro geographical continents.
+
+---
+
+## ✅ Release Sign-Off
+- **Status**: RELEASED & COMMITTED TO MAIN (`4757d01`)
+- **Product Owner Approval**: Granted by Ethen on 2026-08-20.

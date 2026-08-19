@@ -52,7 +52,9 @@ All generated worldbuilding articles and templates MUST follow these exact rules
 ## 4. World Doctor & Audit Suite
 - **Narrative Audit**: `POST /api/audit/deep-ai` evaluates cross-article timeline consistency, contradiction detection, and calculates a 0–100 World Health Score.
 - **AI Harmonization**: `POST /api/audit/harmonize` resolves contradictions with side-by-side diff previews.
-- **Stub Auto-Cure**: `POST /api/audit/flesh-out-stub` generates genre-tailored (High Fantasy, Dark Fantasy, Sci-Fi, Gothic) 2-paragraph WorldAnvil articles.
+- **Stub Auto-Cure & Craft Purist Guardrails**: `POST /api/audit/flesh-out-stub` generates genre-tailored articles, respecting `no_generate_mode` by returning structured WorldAnvil outlines without AI prose generation when enabled.
+- **Multi-Factor Canon Audit & 1-Click Batch Repair**: Extended `/api/audit/run` to scan dead cross-links (`@[Title]` / `[[Title]]`) and circular relations (`source_id -> target_id`). Added `POST /api/audit/batch-repair` for 1-click multi-action vault fixes and `GET /api/audit/export-report` for downloadable Markdown health reports.
+- **UX Ease-of-Use & Issue Dismissal Suite**: Created SQLite `ignored_audit_issues` table with `POST /api/audit/dismiss` to suppress penalty scoring for intentional stubs/orphans. Added **Top 3 Quick-Fixes Hero Card** (`#doctor-quick-fixes-hero`) and 1-click **Copy Summary Badge** (`copyWorldDoctorSummary()`).
 
 ---
 

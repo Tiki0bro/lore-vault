@@ -168,3 +168,19 @@ test('GET /api/audit/export-report generates markdown health report', async () =
   assert.ok(res.json.markdownContent.includes('# 🏥 World Health & Canon Diagnostic Report'));
 });
 
+test('POST /api/audit/dismiss toggles issue suppression', async () => {
+  const dismissRes = await makeRequest('/api/audit/dismiss', { method: 'POST' }, { issue_key: 'stub:test-123' });
+  assert.strictEqual(dismissRes.statusCode, 200);
+  assert.strictEqual(dismissRes.json.success, true);
+  assert.strictEqual(dismissRes.json.isIgnored, true);
+
+  const ignoredRes = await makeRequest('/api/audit/ignored');
+  assert.strictEqual(ignoredRes.statusCode, 200);
+  assert.ok(Array.isArray(ignoredRes.json.ignoredKeys));
+  assert.ok(ignoredRes.json.ignoredKeys.includes('stub:test-123'));
+
+  const restoreRes = await makeRequest('/api/audit/dismiss', { method: 'POST' }, { issue_key: 'stub:test-123' });
+  assert.strictEqual(restoreRes.statusCode, 200);
+  assert.strictEqual(restoreRes.json.isIgnored, false);
+});
+

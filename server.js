@@ -486,6 +486,13 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ignored_audit_issues (
+      issue_key TEXT PRIMARY KEY,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Check if DB is empty and seed default WorldAnvil articles
   db.get('SELECT COUNT(*) as count FROM articles', (err, row) => {
     if (!err && row.count === 0) {
@@ -2022,6 +2029,35 @@ ${question}`;
     return res.json({ answer: extractedAnswer, sources: contextArticles.map(r => ({ id: r.id, title: r.title })) });
 }
 
+// POST /api/audit/dismiss - Toggle Audit Issue Dismissal (Ignore/Unignore)
+app.post('/api/audit/dismiss', (req, res) => {
+  const { issue_key } = req.body;
+  if (!issue_key) return res.status(400).json({ error: 'Missing issue_key' });
+
+  db.get('SELECT issue_key FROM ignored_audit_issues WHERE issue_key = ?', [issue_key], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) {
+      db.run('DELETE FROM ignored_audit_issues WHERE issue_key = ?', [issue_key], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, isIgnored: false, message: 'Issue restored to active status.' });
+      });
+    } else {
+      db.run('INSERT INTO ignored_audit_issues (issue_key) VALUES (?)', [issue_key], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, isIgnored: true, message: 'Issue dismissed successfully.' });
+      });
+    }
+  });
+});
+
+// GET /api/audit/ignored - Get Ignored Audit Issues List
+app.get('/api/audit/ignored', (req, res) => {
+  db.all('SELECT issue_key FROM ignored_audit_issues', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ignoredKeys: (rows || []).map(r => r.issue_key) });
+  });
+});
+
 // ALL /api/audit/run & /api/audit/scan - Canon Guard AI Audit Scanner (Supports GET & POST with world_id scoping)
 app.all(['/api/audit/run', '/api/audit/scan'], (req, res) => {
   const world_id = req.body?.world_id || req.query?.world_id;
@@ -2035,97 +2071,187 @@ app.all(['/api/audit/run', '/api/audit/scan'], (req, res) => {
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
 
-    db.all('SELECT source_id, target_id FROM relations', [], (err, rels) => {
-      const activeRelationIds = new Set();
-      if (!err && rels) {
-        rels.forEach(r => {
-          activeRelationIds.add(r.source_id);
-          activeRelationIds.add(r.target_id);
+    db.all('SELECT issue_key FROM ignored_audit_issues', [], (err, ignoredRows) => {
+      const ignoredSet = new Set((ignoredRows || []).map(r => r.issue_key));
+
+      db.all('SELECT source_id, target_id FROM relations', [], (err, rels) => {
+        const activeRelationIds = new Set();
+        const relationGraph = new Map();
+        if (!err && rels) {
+          rels.forEach(r => {
+            activeRelationIds.add(r.source_id);
+            activeRelationIds.add(r.target_id);
+            if (!relationGraph.has(r.source_id)) relationGraph.set(r.source_id, new Set());
+            relationGraph.get(r.source_id).add(r.target_id);
+          });
+        }
+
+        const stubArticles = [];
+        const misclassifiedArticles = [];
+        const duplicateArticles = [];
+        const orphanArticles = [];
+        const deadCrossLinks = [];
+        const circularRelations = [];
+        const ignoredArticles = [];
+
+        const seenTitles = new Map();
+        const validTitlesSet = new Set(rows.map(r => r.title.toLowerCase().trim()));
+
+        // Detect Circular Relations (Cycle Check)
+        const checkedPairs = new Set();
+        relationGraph.forEach((targets, srcId) => {
+          targets.forEach(tgtId => {
+            if (relationGraph.has(tgtId) && relationGraph.get(tgtId).has(srcId)) {
+              const pairKey = [srcId, tgtId].sort().join('::');
+              if (!checkedPairs.has(pairKey)) {
+                checkedPairs.add(pairKey);
+                const srcArt = rows.find(r => r.id === srcId);
+                const tgtArt = rows.find(r => r.id === tgtId);
+                if (srcArt && tgtArt) {
+                  const issueKey = `circ:${srcId}:${tgtId}`;
+                  const item = {
+                    issueKey,
+                    sourceId: srcId,
+                    sourceTitle: srcArt.title,
+                    targetId: tgtId,
+                    targetTitle: tgtArt.title,
+                    description: `Circular relation loop detected between "${srcArt.title}" and "${tgtArt.title}".`,
+                    isIgnored: ignoredSet.has(issueKey)
+                  };
+                  if (item.isIgnored) ignoredArticles.push(item);
+                  else circularRelations.push(item);
+                }
+              }
+            }
+          });
         });
-      }
 
-      const stubArticles = [];
-      const misclassifiedArticles = [];
-      const duplicateArticles = [];
-      const orphanArticles = [];
+        rows.forEach(art => {
+          const rawContent = art.content || '';
+          const cleanContent = rawContent.replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
+          const isBoilerplate = /welcome to world anvil|describe a predator|read me first/i.test(cleanContent + ' ' + art.title);
+          const isStub = cleanContent.length < 50 || isBoilerplate;
 
-      const seenTitles = new Map();
+          // 1. Stub Check
+          if (isStub) {
+            const issueKey = `stub:${art.id}`;
+            const item = {
+              issueKey,
+              id: art.id,
+              title: art.title,
+              category: art.category,
+              world_id: art.world_id,
+              reason: isBoilerplate ? 'Default Template Boilerplate' : 'Empty / Stub Article (< 50 chars)',
+              isIgnored: ignoredSet.has(issueKey)
+            };
+            if (item.isIgnored) ignoredArticles.push(item);
+            else stubArticles.push(item);
+          }
 
-      rows.forEach(art => {
-        const cleanContent = (art.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
-        const isBoilerplate = /welcome to world anvil|describe a predator|read me first/i.test(cleanContent + ' ' + art.title);
-        const isStub = cleanContent.length < 50 || isBoilerplate;
+          // 2. Category Misclassification Check
+          const smart = smartCategorizeArticle(art.title, art.content);
+          if (smart.category !== art.category) {
+            const issueKey = `misc:${art.id}`;
+            const item = {
+              issueKey,
+              id: art.id,
+              title: art.title,
+              currentCategory: art.category,
+              suggestedCategory: smart.category,
+              suggestedSubCategory: smart.subCategory,
+              summary: art.summary || smart.summary,
+              reasoning: `Title/Content match '${smart.category}' pattern`,
+              isIgnored: ignoredSet.has(issueKey)
+            };
+            if (item.isIgnored) ignoredArticles.push(item);
+            else misclassifiedArticles.push(item);
+          }
 
-        // 1. Stub Check
-        if (isStub) {
-          stubArticles.push({
-            id: art.id,
-            title: art.title,
-            category: art.category,
-            world_id: art.world_id,
-            reason: isBoilerplate ? 'Default Template Boilerplate' : 'Empty / Stub Article (< 50 chars)'
-          });
-        }
+          // 3. Duplicate Article Check (Identical / Double-up Titles)
+          const normTitle = art.title.toLowerCase().trim();
+          if (seenTitles.has(normTitle)) {
+            const issueKey = `dup:${art.id}`;
+            const item = {
+              issueKey,
+              id: art.id,
+              originalId: seenTitles.get(normTitle).id,
+              title: art.title,
+              category: art.category,
+              originalCategory: seenTitles.get(normTitle).category,
+              isIgnored: ignoredSet.has(issueKey)
+            };
+            if (item.isIgnored) ignoredArticles.push(item);
+            else duplicateArticles.push(item);
+          } else {
+            seenTitles.set(normTitle, { id: art.id, category: art.category });
+          }
 
-        // 2. Category Misclassification Check
-        const smart = smartCategorizeArticle(art.title, art.content);
-        if (smart.category !== art.category) {
-          misclassifiedArticles.push({
-            id: art.id,
-            title: art.title,
-            currentCategory: art.category,
-            suggestedCategory: smart.category,
-            suggestedSubCategory: smart.subCategory,
-            summary: art.summary || smart.summary,
-            reasoning: `Title/Content match '${smart.category}' pattern`
-          });
-        }
+          // 4. Orphaned Article Check (0 Cross-Links / Unlinked Lore)
+          if (!activeRelationIds.has(art.id) && !rawContent.includes('@[') && !rawContent.includes('[[')) {
+            const issueKey = `orphan:${art.id}`;
+            const item = {
+              issueKey,
+              id: art.id,
+              title: art.title,
+              category: art.category,
+              isIgnored: ignoredSet.has(issueKey)
+            };
+            if (item.isIgnored) ignoredArticles.push(item);
+            else orphanArticles.push(item);
+          }
 
-        // 3. Duplicate Article Check (Identical / Double-up Titles)
-        const normTitle = art.title.toLowerCase().trim();
-        if (seenTitles.has(normTitle)) {
-          duplicateArticles.push({
-            id: art.id,
-            originalId: seenTitles.get(normTitle).id,
-            title: art.title,
-            category: art.category,
-            originalCategory: seenTitles.get(normTitle).category
-          });
-        } else {
-          seenTitles.set(normTitle, { id: art.id, category: art.category });
-        }
+          // 5. Dead Cross-Link Check
+          const crossLinkRegex = /@\[([^\]]+)\]|\[\[([^\]]+)\]\]/g;
+          let match;
+          while ((match = crossLinkRegex.exec(rawContent)) !== null) {
+            const targetTitle = (match[1] || match[2] || '').trim();
+            if (targetTitle && !validTitlesSet.has(targetTitle.toLowerCase())) {
+              const issueKey = `dead:${art.id}:${targetTitle.toLowerCase()}`;
+              const item = {
+                issueKey,
+                sourceId: art.id,
+                sourceTitle: art.title,
+                deadTargetTitle: targetTitle,
+                rawMatch: match[0],
+                isIgnored: ignoredSet.has(issueKey)
+              };
+              if (item.isIgnored) ignoredArticles.push(item);
+              else deadCrossLinks.push(item);
+            }
+          }
+        });
 
-        // 4. Orphaned Article Check (0 Cross-Links / Unlinked Lore)
-        if (!activeRelationIds.has(art.id) && !art.content.includes('@[') && !art.content.includes('[[')) {
-          orphanArticles.push({
-            id: art.id,
-            title: art.title,
-            category: art.category
-          });
-        }
-      });
+        const penalties = (deadCrossLinks.length * 12) + (duplicateArticles.length * 10) + (circularRelations.length * 8) + (misclassifiedArticles.length * 5) + (stubArticles.length * 3) + (orphanArticles.length * 2);
+        const healthScore = Math.max(0, Math.min(100, 100 - penalties));
 
-      const penalties = (duplicateArticles.length * 10) + (misclassifiedArticles.length * 5) + (stubArticles.length * 3) + (orphanArticles.length * 2);
-      const healthScore = Math.max(0, Math.min(100, 100 - penalties));
-
-      res.json({
-        world_id: world_id || 'all',
-        totalAudited: rows.length,
-        healthScore,
-        counts: {
-          duplicates: duplicateArticles.length,
-          misclassified: misclassifiedArticles.length,
-          stubs: stubArticles.length,
-          orphans: orphanArticles.length
-        },
-        stubCount: stubArticles.length,
-        misclassifiedCount: misclassifiedArticles.length,
-        duplicateCount: duplicateArticles.length,
-        orphanCount: orphanArticles.length,
-        stubArticles,
-        misclassifiedArticles,
-        duplicateArticles,
-        orphanArticles
+        res.json({
+          world_id: world_id || 'all',
+          totalAudited: rows.length,
+          healthScore,
+          counts: {
+            duplicates: duplicateArticles.length,
+            misclassified: misclassifiedArticles.length,
+            stubs: stubArticles.length,
+            orphans: orphanArticles.length,
+            deadLinks: deadCrossLinks.length,
+            circularRelations: circularRelations.length,
+            ignored: ignoredArticles.length
+          },
+          stubCount: stubArticles.length,
+          misclassifiedCount: misclassifiedArticles.length,
+          duplicateCount: duplicateArticles.length,
+          orphanCount: orphanArticles.length,
+          deadLinkCount: deadCrossLinks.length,
+          circularRelCount: circularRelations.length,
+          ignoredCount: ignoredArticles.length,
+          stubArticles,
+          misclassifiedArticles,
+          duplicateArticles,
+          orphanArticles,
+          deadCrossLinks,
+          circularRelations,
+          ignoredArticles
+        });
       });
     });
   });
@@ -2148,131 +2274,187 @@ app.get('/api/audit/guided-session', (req, res) => {
 
     rows.forEach(art => {
       const normTitle = art.title.toLowerCase().trim();
-      if (seenTitles.has(normTitle)) {
-        const orig = seenTitles.get(normTitle);
-        queue.push({
-          id: 'dup-' + art.id,
-          type: 'duplicate',
-          articleId: art.id,
-          title: art.title,
-          category: art.category,
-          originalId: orig.id,
-          originalCategory: orig.category,
-          content: art.content,
-          originalContent: orig.content
-        });
-      } else {
-        seenTitles.set(normTitle, art);
-      }
+      const cleanContent = (art.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
 
+      // Misclassification item
       const smart = smartCategorizeArticle(art.title, art.content);
       if (smart.category !== art.category) {
         queue.push({
-          id: 'misc-' + art.id,
-          type: 'misclassification',
+          type: 'misclassified',
           articleId: art.id,
           title: art.title,
           currentCategory: art.category,
           suggestedCategory: smart.category,
           suggestedSubCategory: smart.subCategory,
-          reasoning: `Contains strong signals for ${smart.category}`,
-          excerpt: (art.summary || art.content).substring(0, 180)
+          description: `Current category '${art.category}' does not match content pattern. Recommend updating to '${smart.category}'.`
         });
       }
 
-      const clean = (art.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
-      const isBoilerplate = /welcome to world anvil|describe a predator|read me first/i.test(clean + ' ' + art.title);
-      if (clean.length < 50 || isBoilerplate) {
+      // Duplicate item
+      if (seenTitles.has(normTitle)) {
         queue.push({
-          id: 'stub-' + art.id,
+          type: 'duplicate',
+          articleId: art.id,
+          originalId: seenTitles.get(normTitle).id,
+          title: art.title,
+          category: art.category,
+          description: `Duplicate title found matching "${art.title}". Recommend merging or removing redundant entry.`
+        });
+      } else {
+        seenTitles.set(normTitle, { id: art.id });
+      }
+
+      // Stub item
+      if (cleanContent.length < 50) {
+        queue.push({
           type: 'stub',
           articleId: art.id,
           title: art.title,
           category: art.category,
-          excerpt: clean || 'Empty Article'
+          description: `Article content is less than 50 characters. Recommend auto-curing or deleting stub.`
         });
       }
     });
 
-    res.json({ totalItems: queue.length, queue });
+    res.json({ total: queue.length, queue });
   });
 });
 
 // POST /api/audit/apply-action - Execute Individual Guided Session Repair Action
 app.post('/api/audit/apply-action', (req, res) => {
-  const { action, articleId, params } = req.body;
-  if (!action || !articleId) return res.status(400).json({ error: 'action and articleId are required' });
+  const { action, articleId, suggestedCategory, suggestedSubCategory } = req.body;
+  if (!articleId) return res.status(400).json({ error: 'Missing articleId' });
 
-  if (action === 'recategorize') {
-    const newCat = params?.newCategory || 'General';
-    const newSubCat = params?.newSubCategory || 'General';
-    db.run('UPDATE articles SET category = ?, sub_category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [newCat, newSubCat, articleId], (err) => {
+  if (action === 'reclassify') {
+    db.run(
+      'UPDATE articles SET category = ?, sub_category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [suggestedCategory || 'General', suggestedSubCategory || '', articleId],
+      function(err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, message: `Re-categorized ${articleId} to ${newCat}` });
-      });
-  } else if (action === 'delete_article') {
-    db.run('DELETE FROM articles WHERE id = ?', [articleId], (err) => {
+        db.get('SELECT content FROM articles WHERE id = ?', [articleId], (err, row) => {
+          if (row) syncFileToStorage(articleId, row.content);
+          res.json({ success: true, message: `Reclassified article ${articleId} to ${suggestedCategory}` });
+        });
+      }
+    );
+  } else if (action === 'delete') {
+    db.run('DELETE FROM articles WHERE id = ?', [articleId], function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      const filePath = path.join(storageDir, `${articleId}.md`);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      deleteArticleFile(articleId);
       res.json({ success: true, message: `Deleted article ${articleId}` });
     });
-  } else if (action === 'merge_duplicates') {
-    const targetMasterId = params?.targetMasterId;
-    if (!targetMasterId) return res.status(400).json({ error: 'targetMasterId is required for merge_duplicates' });
-
-    db.get('SELECT content FROM articles WHERE id = ?', [articleId], (err, row1) => {
-      db.get('SELECT content FROM articles WHERE id = ?', [targetMasterId], (err, row2) => {
-        if (row1 && row2) {
-          const mergedContent = (row2.content + '\n\n' + row1.content).trim();
-          db.run('UPDATE articles SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [mergedContent, targetMasterId]);
-          db.run('DELETE FROM articles WHERE id = ?', [articleId]);
-          const filePath = path.join(storageDir, `${articleId}.md`);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          syncFileToStorage(targetMasterId, mergedContent);
-        }
-        res.json({ success: true, message: `Merged duplicate into master ${targetMasterId}` });
-      });
-    });
   } else {
-    res.json({ success: true, message: 'Action processed' });
+    res.status(400).json({ error: 'Invalid action type' });
   }
 });
 
-// POST /api/audit/apply-fixes - Batch Fix Misclassifications & Clean Stubs
-app.post('/api/audit/apply-fixes', (req, res) => {
-  const { fixes } = req.body;
-  if (!fixes || !Array.isArray(fixes) || fixes.length === 0) {
-    return res.status(400).json({ error: 'No fixes provided.' });
+// POST /api/audit/batch-repair - 1-Click Multi-Action Vault Repair
+app.post('/api/audit/batch-repair', (req, res) => {
+  const { world_id, actions } = req.body;
+  const targetActions = Array.isArray(actions) ? actions : ['fix_misclassified', 'crosslink_orphans'];
+
+  let sql = 'SELECT id, title, category, sub_category, world_id, summary, content FROM articles WHERE 1=1';
+  const params = [];
+  if (world_id && world_id !== 'all') {
+    sql += ' AND (world_id = ? OR world_id IS NULL)';
+    params.push(world_id);
   }
 
-  let fixedCount = 0;
-  let deletedCount = 0;
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    let processedCount = 0;
+    const updatedIds = [];
 
-  fixes.forEach(fix => {
-    if (fix.action === 'recategorize' && fix.newCategory) {
-      db.run('UPDATE articles SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [fix.newCategory, fix.id], (err) => {
-        if (!err) fixedCount++;
-      });
-    } else if (fix.action === 'delete_stub') {
-      db.run('DELETE FROM articles WHERE id = ?', [fix.id], (err) => {
-        if (!err) {
-          deletedCount++;
-          const filePath = path.join(storageDir, `${fix.id}.md`);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    rows.forEach(art => {
+      let modified = false;
+      let newCategory = art.category;
+      let newSubCategory = art.sub_category;
+      let newContent = art.content || '';
+
+      // Action 1: Fix Misclassified
+      if (targetActions.includes('fix_misclassified')) {
+        const smart = smartCategorizeArticle(art.title, art.content);
+        if (smart.category !== art.category) {
+          newCategory = smart.category;
+          newSubCategory = smart.subCategory;
+          modified = true;
         }
-      });
-    }
-  });
+      }
 
-  setTimeout(() => {
-    res.json({
-      message: `Audit complete! Re-categorized ${fixedCount} articles and removed ${deletedCount} empty stubs.`,
-      fixedCount,
-      deletedCount
+      // Action 2: Auto-Crosslink Orphans
+      if (targetActions.includes('crosslink_orphans')) {
+        const cleanContent = newContent.replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim();
+        if (cleanContent.length >= 50 && !newContent.includes('@[') && !newContent.includes('[[')) {
+          rows.forEach(other => {
+            if (other.id !== art.id && other.title.length > 3 && newContent.includes(other.title) && !newContent.includes(`@[${other.title}]`)) {
+              newContent = newContent.replace(new RegExp(`\\b${other.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), `@[${other.title}](template:article)`);
+              modified = true;
+            }
+          });
+        }
+      }
+
+      if (modified) {
+        processedCount++;
+        updatedIds.push(art.id);
+        db.run('UPDATE articles SET category = ?, sub_category = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [newCategory, newSubCategory, newContent, art.id]
+        );
+        syncFileToStorage(art.id, newContent);
+      }
     });
-  }, 500);
+
+    res.json({ success: true, processedCount, updatedArticleIds: updatedIds, message: `Batch repair executed successfully across ${processedCount} articles.` });
+  });
+});
+
+// GET /api/audit/export-report - Export World Health & Diagnostic Report in Markdown
+app.get('/api/audit/export-report', (req, res) => {
+  const world_id = req.query.world_id || 'default';
+  let sql = 'SELECT id, title, category, sub_category, world_id, summary, content FROM articles WHERE 1=1';
+  const params = [];
+  if (world_id && world_id !== 'all') {
+    sql += ' AND (world_id = ? OR world_id IS NULL)';
+    params.push(world_id);
+  }
+
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const catCounts = {};
+    let totalWords = 0;
+    rows.forEach(r => {
+      catCounts[r.category] = (catCounts[r.category] || 0) + 1;
+      const plainText = (r.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '');
+      totalWords += plainText.split(/\s+/).filter(Boolean).length;
+    });
+
+    const stubs = rows.filter(r => (r.content || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').trim().length < 50);
+    const healthScore = Math.max(0, Math.min(100, 100 - (stubs.length * 4)));
+
+    let markdown = `# 🏥 World Health & Canon Diagnostic Report\n`;
+    markdown += `**World Scope**: ${world_id}  \n`;
+    markdown += `**Audit Date**: ${new Date().toISOString().split('T')[0]}  \n`;
+    markdown += `**World Health Score**: **${healthScore} / 100**  \n\n`;
+    markdown += `---\n\n`;
+    markdown += `## 📊 Vault Overview\n`;
+    markdown += `- **Total Articles**: ${rows.length}\n`;
+    markdown += `- **Total Word Count**: ${totalWords.toLocaleString()} words\n`;
+    markdown += `- **Flagged Stubs**: ${stubs.length}\n\n`;
+    markdown += `### Category Breakdown\n`;
+    Object.entries(catCounts).forEach(([cat, count]) => {
+      markdown += `- **${cat}**: ${count} articles\n`;
+    });
+    markdown += `\n---\n\n## 🛠️ Audit Findings & Remediation\n`;
+    if (stubs.length > 0) {
+      markdown += `### ⚠️ Stub Articles (< 50 words)\n`;
+      stubs.forEach(s => markdown += `- [${s.title}](file:///${s.id}) (Category: ${s.category})\n`);
+    } else {
+      markdown += `✅ No stub articles detected.\n`;
+    }
+
+    res.json({ filename: `World_Health_Report_${world_id}.md`, markdownContent: markdown });
+  });
 });
 
 // POST /api/audit/deep-ai - Deep Gemini AI Audit Scanner & Health Score Calculator
@@ -2363,12 +2545,19 @@ Return a valid JSON object ONLY matching this schema:
 
 // POST /api/audit/flesh-out-stub - Generate Genre-Aware Lore Entry for Empty Stub
 app.post('/api/audit/flesh-out-stub', async (req, res) => {
-  const { stubId, title, category, genre } = req.body;
+  const { stubId, title, category, genre, tone_preset, no_generate_mode: requestNoGen } = req.body;
   const serverCfg = getAIConfig();
-  const activeKey = serverCfg.apiKey || process.env.GEMINI_API_KEY || '';
 
-  const genreTone = genre || 'High Fantasy';
-  const prompt = `Write a rich 2-paragraph world lore article for "${title}" (Category: ${category}) in the genre style "${genreTone}".
+  // Craft Purist No-Generate Guardrail Check
+  if (requestNoGen === true || serverCfg.no_generate_mode === true) {
+    const genreTone = genre || 'High Fantasy';
+    const structuredOutline = `[quote]“A cornerstone of ${genreTone} lore.” | — Imperial Archives[/quote]\n\n[row]\n[col]\n[h1]${title}[/h1]\n[b]Overview:[/b] Detailed structural overview outline for ${title} (${category})...\n[/col]\n[col]\n[h3]Overview[/h3]\n[table]\n[tr][th]Field[/th][th]Detail[/th][/tr]\n[tr][td][b]Category:[/b][/td][td]${category}[/td][/tr]\n[tr][td][b]Status:[/b][/td][td]Draft Scaffolding[/td][/tr]\n[/table]\n[/col]\n[/row]\n[hr]\n[h2]I. Historical Lore & Key Details[/h2]\n[b]Record:[/b] Highlighting significance in ${genreTone} lore.`;
+    return res.json({ id: stubId, title, content: structuredOutline, no_generate_mode: true });
+  }
+
+  const activeKey = serverCfg.apiKey || process.env.GEMINI_API_KEY || '';
+  const genreTone = tone_preset || genre || 'High Fantasy';
+  const prompt = `Write a rich 2-paragraph world lore article for "${title}" (Category: ${category}) in the style tone "${genreTone}".
 STRICTLY use WorldAnvil Simplified Standard syntax:
 [quote]“A classic lore entry.” | — Imperial Chronicle[/quote]
 
