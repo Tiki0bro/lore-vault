@@ -57,7 +57,21 @@ class AtlasView {
     return this.cartographyEngine;
   }
 
+  destroy() {
+    if (this.mapInstance) {
+      try {
+        this.mapInstance.off();
+        this.mapInstance.remove();
+      } catch (e) {}
+      this.mapInstance = null;
+    }
+    this.pins = [];
+    this.territories = [];
+    this.routes = [];
+  }
+
   async init() {
+    this.destroy();
     await this.fetchMaps();
     await this.fetchArticles();
     this.renderLayout();
@@ -638,10 +652,29 @@ class AtlasView {
               </div>
 
               <div class="form-group">
-                <label for="gen-ai-prompt-input" style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Custom AI Directives & Style Tweaks</label>
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">AI Synthesis Engine Provider</label>
+                <div class="gen-provider-chips" style="display:flex; gap:8px;">
+                  <div class="gen-provider-chip active tool-btn btn-sm primary" data-provider="pollinations" style="flex:1;">
+                    <span>🌸 Pollinations AI (Flux - Free)</span>
+                  </div>
+                  <div class="gen-provider-chip tool-btn btn-sm" data-provider="gemini" style="flex:1;">
+                    <span>🤖 Google Gemini AI</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight:600; font-size:0.9rem; margin-bottom:6px; display:block;">Custom AI Directives & Style Tweaks</label>
                 <textarea id="gen-ai-prompt-input" class="form-control" rows="2" placeholder="e.g. Snow-capped peaks to the north, obsidian harbor to the south, intricate border frame..."></textarea>
                 <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
                   💡 <em>Selected Scope + Style + Articles are automatically compiled into the AI context prompt and scale metrics.</em>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight:600; font-size:0.85rem; color:var(--accent-gold, #f59e0b); margin-bottom:4px; display:block;">👁️ AI Prompt Synthesis Preview</label>
+                <div id="gen-prompt-preview" style="font-family:monospace; font-size:0.78rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:8px; color:var(--text-muted); max-height:80px; overflow-y:auto; word-break:break-word;">
+                  Loading prompt preview...
                 </div>
               </div>
             </div>
@@ -862,6 +895,7 @@ class AtlasView {
           scopeCards.forEach(c => c.classList.remove('active'));
           card.classList.add('active');
           this.mapScope = card.getAttribute('data-scope') || 'world';
+          this.updateAIPromptPreview();
         });
       });
 
@@ -871,6 +905,17 @@ class AtlasView {
           styleChips.forEach(c => c.classList.remove('active', 'primary'));
           chip.classList.add('active', 'primary');
           this.mapStyle = chip.getAttribute('data-style') || 'sepia';
+          this.updateAIPromptPreview();
+        });
+      });
+
+      const providerChips = modalGen.querySelectorAll('.gen-provider-chip');
+      providerChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          providerChips.forEach(c => c.classList.remove('active', 'primary'));
+          chip.classList.add('active', 'primary');
+          this.aiProvider = chip.getAttribute('data-provider') || 'pollinations';
+          this.updateAIPromptPreview();
         });
       });
 
@@ -883,6 +928,15 @@ class AtlasView {
           this.updateGeneratorPreview();
         });
       });
+
+      const genTitleInput = document.getElementById('gen-map-title');
+      if (genTitleInput) {
+        genTitleInput.addEventListener('input', () => this.updateAIPromptPreview());
+      }
+      const genAiPromptInput = document.getElementById('gen-ai-prompt-input');
+      if (genAiPromptInput) {
+        genAiPromptInput.addEventListener('input', () => this.updateAIPromptPreview());
+      }
     }
 
     const autoPinBtn = document.getElementById('atlas-auto-pin-btn');
@@ -1142,6 +1196,53 @@ class AtlasView {
     if (this.genMode === 'procedural') {
       this.updateGeneratorPreview();
     }
+    this.updateAIPromptPreview();
+  }
+
+  updateAIPromptPreview() {
+    const previewEl = document.getElementById('gen-prompt-preview');
+    if (!previewEl) return;
+
+    const titleInput = document.getElementById('gen-map-title');
+    const title = titleInput ? titleInput.value.trim() : 'Realm Map';
+    const modal = document.getElementById('atlas-generate-modal');
+
+    let scope = 'world';
+    let style = 'sepia';
+    let provider = this.aiProvider || 'pollinations';
+
+    if (modal) {
+      const activeScope = modal.querySelector('.gen-scope-card.active');
+      if (activeScope) scope = activeScope.getAttribute('data-scope') || 'world';
+      const activeStyle = modal.querySelector('.gen-style-chip.active');
+      if (activeStyle) style = activeStyle.getAttribute('data-style') || 'sepia';
+      const activeProvider = modal.querySelector('.gen-provider-chip.active');
+      if (activeProvider) provider = activeProvider.getAttribute('data-provider') || 'pollinations';
+    }
+
+    const customPromptInput = document.getElementById('gen-ai-prompt-input');
+    const customPrompt = customPromptInput ? customPromptInput.value.trim() : '';
+
+    const scopePrompts = {
+      world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
+      region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
+      city: 'Top-down urban city map plan, stone perimeter walls, cobblestone streets, district buildings, docks',
+      town: 'Top-down village settlement map, rural farmlands, tavern, blacksmith, surrounding woodland glade',
+      treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
+      battlemap: 'Top-down 2D tactical combat battlemap grid, overhead 90-degree angle view, encounter map layout, stone ruins, tactical terrain features'
+    };
+
+    const stylePrompts = {
+      sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
+      codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
+      grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
+      blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
+    };
+
+    const providerTag = (provider === 'pollinations') ? '[Provider: Pollinations AI (Flux)]' : '[Provider: Google Gemini AI]';
+    const promptText = `${providerTag} High resolution fantasy cartography map: ${scopePrompts[scope] || scopePrompts.world}, ${stylePrompts[style] || stylePrompts.sepia}, featuring ${title}. ${customPrompt ? customPrompt + '. ' : ''}No text labels, top-down perspective.`;
+
+    previewEl.textContent = promptText;
   }
 
   populateArticleChecklist() {
@@ -1260,6 +1361,7 @@ class AtlasView {
       formData.append('preset', effectivePreset);
       formData.append('map_scope', this.mapScope || 'world');
       formData.append('map_style', this.mapStyle || 'sepia');
+      formData.append('ai_provider', this.aiProvider || 'pollinations');
       formData.append('theme', effectiveTheme);
       formData.append('seed', this.genSeed);
       formData.append('selected_article_ids', JSON.stringify(selectedArticleIds));

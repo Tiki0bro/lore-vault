@@ -54,8 +54,11 @@
 
       <!-- Zone 3: Right (World & Theme Dropdown, Consolidated Tools Dropdown, Primary CTA) -->
       <div class="navbar-zone-right header-actions">
+        <!-- Universal Command Palette Trigger -->
+        <button id="cmd-palette-btn" class="btn btn-secondary" title="Open Universal Command Palette" onclick="window.app.toggleCommandPalette()">🔍 <span class="kbd-hint">Ctrl+K</span></button>
+
         <!-- Weave Matrix Side Drawer Trigger -->
-        <button id="weave-matrix-btn" class="btn btn-secondary" title="Toggle Weave Matrix Context Drawer" onclick="window.toggleWeaveMatrixDrawer()">⚡ Context Drawer</button>
+        <button id="weave-matrix-btn" class="btn btn-secondary" title="Toggle Weave Matrix Context Drawer" onclick="window.toggleWeaveMatrixDrawer()">⚡ Context Drawer <span class="kbd-hint">Ctrl+Shift+M</span></button>
 
         <!-- World & Theme Selector Dropdown -->
         <div class="world-theme-container">
@@ -139,8 +142,9 @@
                     <span id="view-updated-date" class="meta-date">Updated: --</span>
                   </div>
                   <div class="article-viewer-toolbar">
+                    <button id="article-back-btn" class="btn btn-secondary toolbar-btn" onclick="window.app.navigateHistoryBack()" disabled title="Go back to previous article">↩ Back</button>
                     <button id="add-to-slate-btn" class="add-to-slate-btn toolbar-btn" title="Add to Scene Slate">+ Add to Slate</button>
-                    <button id="zen-mode-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleZenMode()">📖 Focus Mode</button>
+                    <button id="zen-mode-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleZenMode()" title="Toggle Focus Reader Mode">📖 Focus Mode <span class="kbd-hint">Ctrl+Shift+F</span></button>
                     <select id="move-world-select" class="toolbar-select" onchange="window.app.moveCurrentArticleToWorld(this.value)">
                       <option value="" disabled selected>🌍 Move to World...</option>
                     </select>
@@ -149,6 +153,9 @@
                     <button class="btn btn-danger toolbar-btn" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
                   </div>
                 </div>
+
+                <!-- Recent Articles Quick-Jump Dock -->
+                <div id="recent-articles-dock" class="recent-articles-dock hidden"></div>
 
                 <!-- WorldAnvil Article Render Target -->
                 <div id="wa-article-render" class="wa-article-body">
@@ -1797,11 +1804,24 @@
     </div>
   </div>
 
+  <!-- Command Palette Modal Overlay -->
+  <div id="command-palette-modal" class="modal-backdrop hidden" onclick="if(event.target===this) window.app.toggleCommandPalette()">
+    <div class="cmd-palette-container">
+      <div class="cmd-palette-header">
+        <span class="cmd-palette-icon">🔍</span>
+        <input type="text" id="cmd-palette-input" class="cmd-palette-input" placeholder="Type to search articles, maps, timeline, relationships... (Press Esc to close)" autocomplete="off">
+        <span class="kbd-hint">Esc</span>
+      </div>
+      <div id="cmd-palette-results" class="cmd-palette-results"></div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="js/event-bus.js?v=13"></script>
   <script src="js/badges.js?v=13"></script>
   <script src="js/wa-parser.js?v=13"></script>
   <script src="js/context-builder.js?v=13"></script>

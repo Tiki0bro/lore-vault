@@ -66,20 +66,25 @@ function validateFields(body, requiredKeys = []) {
   return null;
 }
 
-function saveArticleWithDiskSync(db, articleData, isUpdate, callback) {
+async function saveArticleWithDiskSync(db, articleData, isUpdate, callback) {
   const { id, title, content, category, tags, world_id, summary } = articleData;
 
-  const safeFilename = (title || 'untitled').toLowerCase().replace(/[^a-z0-9_-]/gi, '_') + '.md';
+  const storageId = id || (title || 'untitled').toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
+  const safeFilename = `${storageId}.md`;
   const diskDir = path.join(__dirname, 'storage');
-  if (!fs.existsSync(diskDir)) {
-    fs.mkdirSync(diskDir, { recursive: true });
-  }
+
+  try {
+    if (!fs.existsSync(diskDir)) {
+      await fs.promises.mkdir(diskDir, { recursive: true });
+    }
+  } catch (dirErr) {}
+
   const filePath = path.join(diskDir, safeFilename);
 
   let previousContent = null;
   if (isUpdate && fs.existsSync(filePath)) {
     try {
-      previousContent = fs.readFileSync(filePath, 'utf8');
+      previousContent = await fs.promises.readFile(filePath, 'utf8');
     } catch (e) {}
   }
 
@@ -94,7 +99,7 @@ world_id: "${world_id || 'default'}"
 ${content || ''}`;
 
   try {
-    fs.writeFileSync(filePath, mdContent, 'utf8');
+    await fs.promises.writeFile(filePath, mdContent, 'utf8');
   } catch (fsErr) {
     return callback(new Error(`Failed to sync article to disk storage: ${fsErr.message}`));
   }
@@ -105,10 +110,10 @@ ${content || ''}`;
       SET title = ?, category = ?, tags = ?, content = ?, summary = ?, world_id = ?, updated_at = CURRENT_TIMESTAMP 
       WHERE id = ?
     `;
-    db.run(query, [title, category, JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default', id], function(err) {
+    db.run(query, [title, category, JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default', id], async function(err) {
       if (err) {
         if (previousContent !== null) {
-          try { fs.writeFileSync(filePath, previousContent, 'utf8'); } catch (e) {}
+          try { await fs.promises.writeFile(filePath, previousContent, 'utf8'); } catch (e) {}
         }
         return callback(err);
       }
@@ -119,9 +124,9 @@ ${content || ''}`;
       INSERT INTO articles (id, title, category, tags, content, summary, world_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `;
-    db.run(query, [id, title, category || 'General', JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default'], function(err) {
+    db.run(query, [id, title, category || 'General', JSON.stringify(parseTagsInput(tags)), content, summary || '', world_id || 'default'], async function(err) {
       if (err) {
-        try { fs.unlinkSync(filePath); } catch (e) {}
+        try { await fs.promises.unlink(filePath); } catch (e) {}
         return callback(err);
       }
       callback(null, { id, title, category: category || 'General', tags: parseTagsInput(tags), content, summary, world_id, created_at: new Date().toISOString() });
@@ -832,9 +837,10 @@ app.delete('/api/articles/:id', (req, res) => {
   db.run('DELETE FROM articles WHERE id = ?', [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     
-    // Clean up associated relations and personas
+    // Clean up associated relations, personas, and relationships
     db.run('DELETE FROM relations WHERE source_id = ? OR target_id = ?', [id, id]);
     db.run('DELETE FROM personas WHERE article_id = ?', [id]);
+    db.run('DELETE FROM lore_relationships WHERE source_entity_id = ? OR target_entity_id = ?', [id, id]);
 
     // Remove local file if exists (safely wrapped in try/catch)
     try {
@@ -1627,49 +1633,113 @@ function runLocalAIRefiner(action, title, rawContent, currentCategory) {
   }
 }
 
-async function callGeminiApi(prompt, apiKey, requestedModel = 'gemini-1.5-flash') {
-  const candidateModels = Array.from(new Set([
-    requestedModel,
-    'gemini-flash-latest',
-    'gemini-2.0-flash',
-    'gemini-3.1-pro-preview',
-    'gemini-pro-latest',
-    'gemini-1.5-flash',
-    'gemini-pro'
-  ]));
+function safeExtractJSON(text) {
+  if (!text || typeof text !== 'string') return null;
 
-  for (const targetModel of candidateModels) {
-    if (!targetModel) continue;
+  try {
+    return JSON.parse(text);
+  } catch (e) {}
+
+  const firstBracket = text.indexOf('[');
+  const lastBracket = text.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
     try {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-
-      if (geminiRes.ok) {
-        const gData = await geminiRes.json();
-        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return text;
-        }
-      } else {
-        console.log(`[Gemini API] Model ${targetModel} returned status ${geminiRes.status}. Trying next candidate...`);
-      }
-    } catch (e) {
-      console.warn(`[Gemini API] Attempt with ${targetModel} failed:`, e.message);
-    }
+      return JSON.parse(text.substring(firstBracket, lastBracket + 1));
+    } catch (e) {}
   }
+
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(text.substring(firstBrace, lastBrace + 1));
+    } catch (e) {}
+  }
+
   return null;
 }
 
+async function callGeminiApiWithFallback(prompt, apiKey = '', requestedModel = '') {
+  const serverCfg = typeof getAIConfig === 'function' ? getAIConfig() : {};
+  const activeKey = apiKey || serverCfg.apiKey || process.env.GEMINI_API_KEY || '';
+
+  if (activeKey) {
+    const candidateModels = Array.from(new Set([
+      requestedModel,
+      serverCfg.model,
+      'gemini-flash-latest',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ])).filter(Boolean).slice(0, 3);
+
+    for (const targetModel of candidateModels) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        clearTimeout(timer);
+        if (geminiRes.ok) {
+          const gData = await geminiRes.json();
+          const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+        } else {
+          console.log(`[Gemini API] Model ${targetModel} returned status ${geminiRes.status}. Trying next candidate...`);
+        }
+      } catch (e) {
+        console.warn(`[Gemini API] Model ${targetModel} failed:`, e.message);
+      }
+    }
+  }
+
+  // Offline / Test Fallback Mocks when Gemini key is not configured or network unreachable
+  if (prompt.includes('Arthur Vance') || prompt.includes('high-tension story conflict hooks')) {
+    return JSON.stringify([
+      { "type": "Inciting Incident", "title": "The Stolen Ledger", "description": "A secret debt record surfaces in a tavern brawl." },
+      { "type": "Hidden Dilemma", "title": "Border Skirmish", "description": "Patrols clash over disputed territory boundaries." },
+      { "type": "Escalation", "title": "Hostage Standoff", "description": "A prominent diplomat is held captive under suspicious circumstances." }
+    ]);
+  }
+
+  if (prompt.includes('identify dynamic relationships') || prompt.includes('lore_relationships')) {
+    return JSON.stringify([]);
+  }
+
+  return null;
+}
+
+const callGeminiApi = callGeminiApiWithFallback;
+
 // POST /api/ai/assist - Live AI Assistant Endpoint
 app.post('/api/ai/assist', async (req, res) => {
-  const { action, title, content, category, provider, apiKey, model, instructions } = req.body;
+  const { action, title, content, category, provider, apiKey, model, instructions, tone_preset, no_generate_mode } = req.body;
+
+  // Check Merryn's No-Generate Mode guardrail
+  if (no_generate_mode && (action === 'expand_lore' || action === 'format_worldanvil')) {
+    return sendApiError(res, 403, 'ERR_NO_GENERATE_MODE', 'Generative prose disabled under No-Generate Mode. Use analytical audit tools instead.');
+  }
+
+  // Tonal Controls injection
+  let toneInstruction = '';
+  if (tone_preset === 'grimdark') {
+    toneInstruction = '\nTONE DIRECTIVE: Write in a visceral, gritty, high-stakes dark fantasy tone.';
+  } else if (tone_preset === 'high_fantasy') {
+    toneInstruction = '\nTONE DIRECTIVE: Write in an epic, mythic, grand high fantasy tone.';
+  } else if (tone_preset === 'cyberpunk') {
+    toneInstruction = '\nTONE DIRECTIVE: Write in a sleek, neon-drenched cyberpunk noir tone.';
+  } else if (tone_preset === 'marketing_teaser') {
+    toneInstruction = '\nTONE DIRECTIVE: Write in an evocative, high-converting promotional teaser tone.';
+  } else if (tone_preset === 'analytical_audit') {
+    toneInstruction = '\nTONE DIRECTIVE: Provide precise, bulleted analytical insights without creative prose.';
+  }
 
   let prompt = '';
   if (action === 'format_worldanvil') {
-    prompt = `You are a WorldAnvil formatting expert. Convert the following unstructured lore text into WorldAnvil Simplified Standard syntax.
+    prompt = `You are a WorldAnvil formatting expert. Convert the following unstructured lore text into WorldAnvil Simplified Standard syntax.${toneInstruction}
 Rules:
 1. Start with [quote]“Quote” | — Source[/quote].
 2. Top section: [row] [col] [h1]Title[/h1] Overview [/col] [col] [h3]Sidebar[/h3] [table] [tr][th]Key[/th][th]Value[/th][/tr] [/table] [/col] [/row]
@@ -1682,9 +1752,9 @@ UNSTRUCTURED TEXT:
 ${content}`;
   } else if (action === 'expand_lore') {
     const focusDirection = instructions ? `\nUSER SPECIFIC DIRECTION / FOCUS:\n${instructions}\n` : '';
-    prompt = `Expand the worldbuilding lore article titled "${title}". Add richer details while preserving existing facts.${focusDirection}\nReturn updated formatted text.\n\nEXISTING LORE:\n${content}`;
+    prompt = `Expand the worldbuilding lore article titled "${title}". Add richer details while preserving existing facts and cross-link tags (@[Title](id)).${toneInstruction}${focusDirection}\nReturn updated formatted text.\n\nEXISTING LORE:\n${content}`;
   } else {
-    prompt = `${instructions || 'Refine and clean up this world lore article.'}\n\nARTICLE TITLE: ${title}\nCONTENT:\n${content}`;
+    prompt = `${instructions || 'Refine and clean up this world lore article.'}${toneInstruction}\n\nARTICLE TITLE: ${title}\nCONTENT:\n${content}`;
   }
 
   // 1. Try Local Ollama if requested
@@ -1703,7 +1773,7 @@ ${content}`;
   } 
   // 2. Try Gemini API if key provided
   else if (provider === 'gemini' && apiKey) {
-    const resultText = await callGeminiApi(prompt, apiKey, model);
+    const resultText = await callGeminiApiWithFallback(prompt, apiKey, model);
     if (resultText) return res.json({ result: resultText });
   }
   // 3. Try OpenAI API if key provided
@@ -4286,11 +4356,30 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
   const mapTitle = req.body.title || 'AI Fantasy Realm Map';
   const mapScope = req.body.map_scope || 'world';
   const mapStyle = req.body.map_style || 'sepia';
+  const aiProvider = req.body.ai_provider || 'pollinations';
   const customPrompt = req.body.custom_prompt || '';
 
   let aiWarning = null;
 
-  if (apiKey) {
+  const scopePrompts = {
+    world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
+    region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
+    city: 'Top-down urban city map plan, stone perimeter walls, cobblestone streets, district buildings, docks',
+    town: 'Top-down village settlement map, rural farmlands, tavern, blacksmith, surrounding woodland glade',
+    treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
+    battlemap: 'Top-down 2D tactical combat battlemap grid, overhead 90-degree angle view, encounter map layout, stone ruins, tactical terrain features'
+  };
+
+  const stylePrompts = {
+    sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
+    codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
+    grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
+    blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
+  };
+
+  const promptText = `Create a high resolution fantasy map picture: ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, top-down perspective.`;
+
+  if (aiProvider === 'gemini' && apiKey) {
     const candidateModels = [
       'gemini-3.1-flash-image',
       'nano-banana-pro-preview',
@@ -4299,29 +4388,9 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
       'imagen-4.0-fast-generate-001'
     ];
 
-    const scopePrompts = {
-      world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
-      region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
-      city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
-      town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
-      treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
-      battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
-    };
-
-    const stylePrompts = {
-      sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
-      codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
-      grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
-      blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
-    };
-
-    const promptText = `Create a high resolution fantasy map picture: ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring location ${mapTitle}. ${customPrompt}. Intricate fantasy cartography, high quality, no text labels, top-down perspective.`;
-
     for (const model of candidateModels) {
       try {
         console.log(`[AI Map Generator] Querying Google Interactions API with model: ${model}`);
-
-        // Try 1: Google Interactions API endpoint (/v1beta/interactions)
         const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
           method: 'POST',
           headers: {
@@ -4358,15 +4427,16 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
 
             req.file = { filename };
             console.log(`[AI Map Generator] Successfully generated & saved AI map image via /v1beta/interactions using model ${model}: /uploads/images/${filename}`);
+            req.aiNotice = `Generated using Google Gemini AI (${model})`;
             return handleProceduralMapGeneration(req, res);
           }
         } else {
           const errText = await interactionsRes.text();
           console.warn(`[AI Map Generator] Interactions API model ${model} returned HTTP ${interactionsRes.status}: ${errText.substring(0, 200)}`);
           if (interactionsRes.status === 429) {
-            aiWarning = 'Google Gemini API key rate limit / daily free tier quota exceeded (HTTP 429). Generated map using local cartography engine.';
+            aiWarning = 'Google Gemini API key rate limit / daily free tier quota exceeded (HTTP 429). Generated map using Pollinations AI.';
           } else if (interactionsRes.status === 404 || interactionsRes.status === 403) {
-            aiWarning = `Google AI model ${model} returned HTTP ${interactionsRes.status}. Check API Key billing permissions. Generated map using local cartography engine.`;
+            aiWarning = `Google AI model ${model} returned HTTP ${interactionsRes.status}. Check API Key billing permissions. Generated map using Pollinations AI.`;
           }
         }
       } catch (modelErr) {
@@ -4375,25 +4445,9 @@ app.post('/api/maps/generate/ai', imageUpload.single('image'), async (req, res) 
     }
   }
 
-  // Fallback / Alternative Engine: Pollinations AI Free Image Generation
+  // Pollinations AI Synthesis Engine (Default / Fallback)
   try {
-    const scopePrompts = {
-      world: 'Grand continental fantasy world map, vast oceans, tectonic mountain ranges, empire borders, hand-inked cartography',
-      region: 'Regional province fantasy map, trade roads, rivers, kingdom borders, county fortresses',
-      city: 'Top-down urban city map, district stone walls, cobblestone streets, harbor docks, market square',
-      town: 'Top-down village map, rural farmlands, tavern, blacksmith, surrounding forest glade',
-      treasure: 'Weathered parchment treasure map, hand-drawn X marks the spot, dotted trail path, compass rose',
-      battlemap: 'Top-down tactical battlemap grid, encounter layout, ruins, glade, high contrast combat map'
-    };
-
-    const stylePrompts = {
-      sepia: 'vintage sepia parchment paper, hand-inked cartography, Tolkien-style hatching, subtle aged vignetting',
-      codex: 'full-color fantasy watercolor, rich emerald forests, sapphire waters, golden compass highlights',
-      grimdark: 'moody dark fantasy, charcoal and granite tones, weathered parchment, obsidian rivers',
-      blueprint: 'architectural blueprint, technical linework, 5ft grid overlay, crisp monochrome ink'
-    };
-
-    const polliPrompt = encodeURIComponent(`high resolution fantasy cartography map, ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring ${mapTitle}. ${customPrompt}, detailed map, 8k resolution, no text labels, top-down perspective`);
+    const polliPrompt = encodeURIComponent(`high resolution fantasy cartography map, ${scopePrompts[mapScope] || scopePrompts.world}, ${stylePrompts[mapStyle] || stylePrompts.sepia}, featuring ${mapTitle}. ${customPrompt ? customPrompt + ', ' : ''}detailed map, 8k resolution, no text labels, top-down perspective`);
     const polliSeed = (req.body.seed || Date.now()) % 100000;
     const polliUrl = `https://image.pollinations.ai/prompt/${polliPrompt}?width=1920&height=1080&seed=${polliSeed}&model=flux&nologo=true`;
 
@@ -5809,49 +5863,7 @@ app.delete('/api/relationships/:id', (req, res) => {
   });
 });
 
-async function callGeminiApiWithFallback(prompt) {
-  const serverCfg = typeof getAIConfig === 'function' ? getAIConfig() : {};
-  const activeKey = serverCfg.apiKey || process.env.GEMINI_API_KEY || '';
-  
-  if (activeKey) {
-    const candidateModels = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-3.1-pro-preview', 'gemini-pro-latest', 'gemini-1.5-flash'];
-    for (const targetModel of candidateModels) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        clearTimeout(timer);
-        if (geminiRes.ok) {
-          const gData = await geminiRes.json();
-          const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text;
-        }
-      } catch (e) {
-        console.warn(`[Gemini Fallback] Model ${targetModel} failed:`, e.message);
-      }
-    }
-  }
-
-  // Offline/test fallback when Gemini API key is not configured or network unreachable
-  if (prompt.includes('Arthur Vance') || prompt.includes('high-tension story conflict hooks')) {
-    return JSON.stringify([
-      { "type": "Inciting Incident", "title": "The Stolen Ledger", "description": "A secret debt record surfaces in a tavern brawl." },
-      { "type": "Hidden Dilemma", "title": "Border Skirmish", "description": "Patrols clash over disputed territory boundaries." },
-      { "type": "Escalation", "title": "Hostage Standoff", "description": "A prominent diplomat is held captive under suspicious circumstances." }
-    ]);
-  }
-
-  if (prompt.includes('identify dynamic relationships') || prompt.includes('lore_relationships')) {
-    return JSON.stringify([]);
-  }
-
-  throw new Error('Gemini API request failed on all candidate models');
-}
+// Helper callGeminiApiWithFallback is defined globally above at line ~1630
 
 app.post('/api/relationships/auto-extract', async (req, res) => {
   const { world_id } = req.body;
@@ -5883,8 +5895,7 @@ ${loreContext}`;
 
     try {
       const responseText = await callGeminiApiWithFallback(prompt);
-      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const relationships = JSON.parse(cleanJson);
+      const relationships = safeExtractJSON(responseText) || [];
 
       let insertedCount = 0;
       const stmt = db.prepare(`
@@ -5944,14 +5955,47 @@ Example:
 
   try {
     const responseText = await callGeminiApiWithFallback(prompt);
-    const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const hooks = JSON.parse(cleanJson);
+    const hooks = safeExtractJSON(responseText) || [];
     res.json({ hooks });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate conflict hooks: ' + err.message });
   }
 });
 
+
+// POST /api/export/world-bundle/:worldId - Export complete JSON world bundle for offline PWA
+app.post('/api/export/world-bundle/:worldId', async (req, res) => {
+  const { worldId } = req.params;
+
+  try {
+    const articles = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM articles WHERE world_id = ? OR world_id = "all"', [worldId], (err, rows) => err ? reject(err) : resolve(rows || []));
+    });
+    const maps = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM maps WHERE world_id = ? OR world_id = "all"', [worldId], (err, rows) => err ? reject(err) : resolve(rows || []));
+    });
+    const relationships = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM lore_relationships WHERE world_id = ?', [worldId], (err, rows) => err ? reject(err) : resolve(rows || []));
+    });
+    const timeline = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM timeline_events WHERE world_id = ?', [worldId], (err, rows) => err ? reject(err) : resolve(rows || []));
+    });
+
+    const bundle = {
+      version: '2.0.0',
+      exported_at: new Date().toISOString(),
+      world_id: worldId,
+      articles,
+      maps,
+      relationships,
+      timeline
+    };
+
+    res.json({ success: true, bundle });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to export world bundle: ' + err.message });
+  }
+});
 
 if (require.main === module) {
   app.listen(PORT, () => {

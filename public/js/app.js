@@ -48,6 +48,9 @@ class LoreApp {
     this.selectedTag = null;
     this.searchQuery = '';
     this.editingId = null;
+    this.navigationHistory = [];
+    this.historyIndex = -1;
+    this.recentArticles = [];
     this.doctorWorldScope = 'all';
     this.guidedQueue = [];
     this.guidedQueueIndex = 0;
@@ -216,6 +219,34 @@ class LoreApp {
         window.LoreBadges.renderAll();
       }
     }
+
+    this.notifyWorldChange(worldId);
+  }
+
+  notifyWorldChange(worldId) {
+    const activeWorld = worldId || 'default';
+    if (window.LoreEvents && typeof window.LoreEvents.emit === 'function') {
+      window.LoreEvents.emit('world:changed', { worldId: activeWorld });
+    }
+
+    if (window.atlasView) {
+      window.atlasView.worldId = activeWorld;
+      if (typeof window.atlasView.init === 'function') window.atlasView.init();
+    }
+    if (window.timelineView) {
+      window.timelineView.worldId = activeWorld;
+      if (typeof window.timelineView.init === 'function') window.timelineView.init();
+    }
+    if (window.frontpageView) {
+      window.frontpageView.worldId = activeWorld;
+      if (typeof window.frontpageView.init === 'function') window.frontpageView.init();
+    }
+    if (window.relationshipView) {
+      if (typeof window.relationshipView.init === 'function') window.relationshipView.init(activeWorld);
+    }
+    if (window.ContextBuilder) {
+      if (typeof window.ContextBuilder.init === 'function') window.ContextBuilder.init(this.articles);
+    }
   }
 
   openCreateWorldModal() {
@@ -373,24 +404,27 @@ class LoreApp {
       if (tabTimeline) tabTimeline.classList.add('active');
       if (!window.timelineView) {
         window.timelineView = new TimelineView('timeline-app-root', { worldId: this.currentWorldId || 'default' });
-        window.timelineView.init();
       } else {
-        window.timelineView.init();
+        window.timelineView.worldId = this.currentWorldId || 'default';
       }
+      window.timelineView.init();
     } else if (tabName === 'frontpage') {
       if (frontpageView) frontpageView.classList.add('active');
       if (tabFrontpage) tabFrontpage.classList.add('active');
       if (!window.frontpageView) {
         window.frontpageView = new FrontpageView('frontpage-app-root', { worldId: this.currentWorldId || 'default' });
-        window.frontpageView.init();
       } else {
-        window.frontpageView.init();
+        window.frontpageView.worldId = this.currentWorldId || 'default';
       }
+      window.frontpageView.init();
     } else if (tabName === 'atlas') {
       if (atlasView) atlasView.classList.add('active');
       if (tabAtlas) tabAtlas.classList.add('active');
       if (!window.atlasView) {
         window.atlasView = new AtlasView('atlas-app-root', { worldId: this.currentWorldId || 'default' });
+        window.atlasView.init();
+      } else if (window.atlasView.worldId !== (this.currentWorldId || 'default')) {
+        window.atlasView.worldId = this.currentWorldId || 'default';
         window.atlasView.init();
       }
     } else if (tabName === 'marketing') {
@@ -2029,13 +2063,22 @@ class LoreApp {
     this.renderArticleList(this.articles);
   }
 
-  async loadArticle(id) {
+  async loadArticle(id, isHistoryNav = false) {
     try {
       const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
       if (!res.ok) return;
 
       this.currentArticle = await res.json();
       this.recordRecentArticle(this.currentArticle.id, this.currentArticle.title, this.currentArticle.category);
+
+      if (!isHistoryNav) {
+        if (this.historyIndex === -1 || this.navigationHistory[this.historyIndex] !== id) {
+          this.navigationHistory = this.navigationHistory.slice(0, this.historyIndex + 1);
+          this.navigationHistory.push(id);
+          this.historyIndex = this.navigationHistory.length - 1;
+        }
+      }
+      this.syncHistoryButtons();
       
       const emptyState = document.getElementById('article-viewer-empty');
       const viewer = document.getElementById('article-viewer');
@@ -2113,11 +2156,11 @@ class LoreApp {
 
     if (isInSlate) {
       btn.textContent = '✓ In Slate';
-      btn.classList.add('added');
+      btn.classList.add('in-slate', 'added');
       btn.disabled = true;
     } else {
       btn.textContent = '+ Add to Slate';
-      btn.classList.remove('added');
+      btn.classList.remove('in-slate', 'added');
       btn.disabled = false;
     }
   }
@@ -2142,14 +2185,9 @@ class LoreApp {
 
     if (wasAdded) {
       // Visual feedback: text change + pulse animation
-      btn.textContent = '✓ Added';
-      btn.classList.add('added', 'slate-pulse-anim');
+      btn.textContent = '✓ In Slate';
+      btn.classList.add('in-slate', 'added');
       btn.disabled = true;
-
-      // Remove animation class after it completes
-      btn.addEventListener('animationend', () => {
-        btn.classList.remove('slate-pulse-anim');
-      }, { once: true });
 
       if (window.showToast) {
         window.showToast(`"${this.currentArticle.title}" added to Weave Matrix slate`, 'success');
@@ -5348,6 +5386,154 @@ document.addEventListener('click', function(e) {
     e.preventDefault();
     if (window.app && typeof window.app.handleAddToSlateClick === 'function') {
       window.app.handleAddToSlateClick();
+    }
+  }
+});
+
+  navigateHistoryBack() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      const targetId = this.navigationHistory[this.historyIndex];
+      this.loadArticle(targetId, true);
+    }
+  }
+
+  syncHistoryButtons() {
+    const backBtn = document.getElementById('article-back-btn');
+    if (backBtn) {
+      backBtn.disabled = !(this.historyIndex > 0);
+    }
+  }
+
+  recordRecentArticle(id, title, category) {
+    if (!this.recentArticles) this.recentArticles = [];
+    this.recentArticles = this.recentArticles.filter(a => a.id !== id);
+    this.recentArticles.unshift({ id, title, category });
+    if (this.recentArticles.length > 5) this.recentArticles.pop();
+    this.renderRecentArticlesDock();
+  }
+
+  renderRecentArticlesDock() {
+    const dock = document.getElementById('recent-articles-dock');
+    if (!dock) return;
+    if (this.recentArticles.length <= 1) {
+      dock.classList.add('hidden');
+      return;
+    }
+
+    dock.classList.remove('hidden');
+    let html = '<span class="recent-label">⏱️ Recent:</span>';
+    this.recentArticles.forEach(a => {
+      const isActive = this.currentArticle && this.currentArticle.id === a.id;
+      html += `<button class="recent-article-chip ${isActive ? 'active' : ''}" onclick="window.app.loadArticle('${a.id}')">${a.title}</button>`;
+    });
+    dock.innerHTML = html;
+  }
+
+  toggleCommandPalette() {
+    const modal = document.getElementById('command-palette-modal');
+    const input = document.getElementById('cmd-palette-input');
+    if (!modal) return;
+
+    if (modal.classList.contains('hidden')) {
+      modal.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+        this.updateCommandPaletteResults('');
+      }
+    } else {
+      modal.classList.add('hidden');
+    }
+  }
+
+  updateCommandPaletteResults(query) {
+    const resultsEl = document.getElementById('cmd-palette-results');
+    if (!resultsEl) return;
+
+    const q = (query || '').toLowerCase().trim();
+    let html = '';
+
+    const navItems = [
+      { label: '📖 Open Lore Codex', tab: 'library' },
+      { label: '🗺️ Open World Atlas', tab: 'atlas' },
+      { label: '⏳ Open Timeline Chronology', tab: 'timeline' },
+      { label: '⚔️ Open Relationship Matrix', tab: 'relationships' },
+      { label: '🏰 Open World Wiki Frontpage', tab: 'frontpage' },
+      { label: '⚡ Open Weave Matrix', tab: 'context' },
+      { label: '📢 Open Marketing Suite', tab: 'marketing' }
+    ];
+
+    const matchingNav = navItems.filter(n => !q || n.label.toLowerCase().includes(q));
+    if (matchingNav.length > 0) {
+      html += '<div class="cmd-section-title">Navigation Views</div>';
+      matchingNav.forEach(n => {
+        html += `<div class="cmd-item" onclick="window.switchTab('${n.tab}'); window.app.toggleCommandPalette();">${n.label}</div>`;
+      });
+    }
+
+    if (this.articles && this.articles.length > 0) {
+      const matchingArticles = this.articles.filter(a => !q || a.title.toLowerCase().includes(q) || (a.category && a.category.toLowerCase().includes(q))).slice(0, 8);
+      if (matchingArticles.length > 0) {
+        html += '<div class="cmd-section-title">Lore Vault Articles</div>';
+        matchingArticles.forEach(a => {
+          html += `<div class="cmd-item" onclick="window.switchTab('library'); window.app.loadArticle('${a.id}'); window.app.toggleCommandPalette();">📄 ${a.title} <span class="cmd-badge">${a.category}</span></div>`;
+        });
+      }
+    }
+
+    resultsEl.innerHTML = html || '<div class="cmd-no-results">No matching articles or views found.</div>';
+  }
+
+// --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const cmdModal = document.getElementById('command-palette-modal');
+    if (cmdModal && !cmdModal.classList.contains('hidden')) {
+      cmdModal.classList.add('hidden');
+      return;
+    }
+    const aiDrawer = document.getElementById('ai-chat-drawer');
+    if (aiDrawer && aiDrawer.classList.contains('open')) {
+      if (typeof window.toggleAiChatDrawer === 'function') window.toggleAiChatDrawer();
+      return;
+    }
+    const weaveDrawer = document.getElementById('weave-matrix-drawer');
+    if (weaveDrawer && weaveDrawer.classList.contains('open')) {
+      if (typeof window.toggleWeaveMatrixDrawer === 'function') window.toggleWeaveMatrixDrawer();
+      return;
+    }
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (window.app && typeof window.app.toggleCommandPalette === 'function') {
+      window.app.toggleCommandPalette();
+    }
+    return;
+  }
+
+  if (e.ctrlKey && e.shiftKey) {
+    const key = e.key ? e.key.toLowerCase() : '';
+    if (key === 'f') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleZenMode === 'function') {
+        window.app.toggleZenMode();
+      }
+    } else if (key === 'm') {
+      e.preventDefault();
+      if (typeof window.toggleWeaveMatrixDrawer === 'function') {
+        window.toggleWeaveMatrixDrawer();
+      }
+    }
+  }
+});
+
+// Event listener for Command Palette input
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'cmd-palette-input') {
+    if (window.app && typeof window.app.updateCommandPaletteResults === 'function') {
+      window.app.updateCommandPaletteResults(e.target.value);
     }
   }
 });
