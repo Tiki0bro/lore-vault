@@ -1,5 +1,11 @@
 {
+  "use_custom_provider": false,
+  "default_model": "gemini-2.0-flash",
+  "custom_provider": "gemini",
+  "custom_api_key": "AIzaSyTestKey12345",
+  "custom_model": "gemini-2.0-flash",
+  "ollama_url": "http://localhost:11434",
   "provider": "gemini",
-  "apiKey": "AQ.Ab8RN6KO9k1pMsai2L33Ef5P9J9d1kBZVQZMicQEl_d-JGzBtA",
+  "apiKey": "AIzaSyTestKey12345",
   "model": "gemini-2.0-flash"
 }

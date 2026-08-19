@@ -164,7 +164,30 @@ const imageUpload = multer({
   }
 });
 
+function maskApiKey(key) {
+  if (!key || typeof key !== 'string') return '';
+  const trimmed = key.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('••••')) return trimmed;
+  if (trimmed.length <= 4) {
+    return '••••••••' + trimmed;
+  }
+  return '••••••••' + trimmed.slice(-4);
+}
+
 function getAIConfig() {
+  let config = {
+    use_custom_provider: false,
+    default_model: 'gemini-2.0-flash',
+    custom_provider: 'gemini',
+    custom_api_key: '',
+    custom_model: 'gemini-2.0-flash',
+    ollama_url: 'http://localhost:11434',
+    provider: 'gemini',
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: 'gemini-2.0-flash'
+  };
+
   if (fs.existsSync(configPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -172,19 +195,36 @@ function getAIConfig() {
         // Auto-upgrade deprecated 2024-2025 era Gemini models
         if (parsed.model === 'gemini-1.5-flash') parsed.model = 'gemini-flash-latest';
         if (parsed.model === 'gemini-1.5-pro') parsed.model = 'gemini-pro-latest';
+        if (parsed.custom_model === 'gemini-1.5-flash') parsed.custom_model = 'gemini-flash-latest';
+        if (parsed.custom_model === 'gemini-1.5-pro') parsed.custom_model = 'gemini-pro-latest';
         if (parsed.model && parsed.model.includes('3.0')) parsed.model = 'gemini-2.0-flash';
         if (parsed.model && parsed.model.includes('3.1')) parsed.model = 'gemini-pro-latest';
-        return parsed;
+        config = { ...config, ...parsed };
       }
     } catch (e) {}
   }
-  return { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY || '', model: 'gemini-flash-latest' };
+
+  // Synchronize legacy compatibility fields
+  if (config.use_custom_provider) {
+    config.provider = config.custom_provider || 'gemini';
+    config.apiKey = config.custom_api_key || config.apiKey || '';
+    config.model = config.custom_model || config.model || 'gemini-2.0-flash';
+  } else {
+    config.provider = 'gemini';
+    config.apiKey = process.env.GEMINI_API_KEY || (config.apiKey && !config.custom_api_key ? config.apiKey : '');
+    config.model = config.default_model || 'gemini-2.0-flash';
+  }
+
+  return config;
 }
 
 function saveAIConfig(config) {
   try {
+    if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-  } catch (e) {}
+  } catch (e) {
+    console.error('Failed to save AI config:', e);
+  }
 }
 
 const dbPath = path.join(dbDir, 'lore.db');
@@ -501,6 +541,26 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lore_statblocks (
+      id TEXT PRIMARY KEY,
+      article_id TEXT NOT NULL,
+      system TEXT NOT NULL,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      stats_json TEXT NOT NULL,
+      is_secret INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_statblocks_article_id ON lore_statblocks(article_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_statblocks_system ON lore_statblocks(system)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_statblocks_type ON lore_statblocks(type)");
+
+
   // Check if DB is empty and seed default WorldAnvil articles
   db.get('SELECT COUNT(*) as count FROM articles', (err, row) => {
     if (!err && row.count === 0) {
@@ -780,11 +840,14 @@ app.get('/api/articles/:id', (req, res) => {
 
     db.all(outboundQuery, [id], (err, outbound) => {
       db.all(inboundQuery, [id], (err, inbound) => {
-        res.json({
-          ...article,
-          tags: safeParseTags(article.tags),
-          outboundLinks: outbound || [],
-          inboundLinks: inbound || []
+        db.all('SELECT * FROM lore_statblocks WHERE article_id = ?', [id], (err, statblocks) => {
+          res.json({
+            ...article,
+            tags: safeParseTags(article.tags),
+            outboundLinks: outbound || [],
+            inboundLinks: inbound || [],
+            statblocks: statblocks || []
+          });
         });
       });
     });
@@ -852,10 +915,11 @@ app.delete('/api/articles/:id', (req, res) => {
   db.run('DELETE FROM articles WHERE id = ?', [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     
-    // Clean up associated relations, personas, and relationships
+    // Clean up associated relations, personas, relationships, and stat blocks
     db.run('DELETE FROM relations WHERE source_id = ? OR target_id = ?', [id, id]);
     db.run('DELETE FROM personas WHERE article_id = ?', [id]);
     db.run('DELETE FROM lore_relationships WHERE source_entity_id = ? OR target_entity_id = ?', [id, id]);
+    db.run('DELETE FROM lore_statblocks WHERE article_id = ?', [id]);
 
     // Remove local file if exists (safely wrapped in try/catch)
     try {
@@ -868,6 +932,346 @@ app.delete('/api/articles/:id', (req, res) => {
     res.json({ message: 'Article deleted successfully' });
   });
 });
+
+// --- TTRPG STAT BLOCK REST API ENDPOINTS ---
+
+// GET /api/articles/:articleId/statblock - Fetch stat block(s) for article
+app.get('/api/articles/:articleId/statblock', (req, res) => {
+  const { articleId } = req.params;
+  const isPlayerMode = req.query.mode === 'player';
+
+  let query = 'SELECT * FROM lore_statblocks WHERE article_id = ?';
+  const params = [articleId];
+
+  if (isPlayerMode) {
+    query += ' AND is_secret = 0';
+  }
+
+  query += ' ORDER BY created_at DESC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return sendApiError(res, 500, 'ERR_DB', 'Failed to fetch stat block', err);
+    res.json({ status: 'success', data: rows || [] });
+  });
+});
+
+// POST /api/articles/:articleId/statblock - Create or update stat block
+app.post('/api/articles/:articleId/statblock', (req, res) => {
+  const { articleId } = req.params;
+  const { id, system, type, name, stats_json, is_secret } = req.body || {};
+
+  const validationErr = validateFields(req.body, ['system', 'type', 'name']);
+  if (validationErr) return sendApiError(res, 400, 'ERR_VALIDATION', validationErr);
+
+  const blockId = id || `statblock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const statsStr = typeof stats_json === 'object' ? JSON.stringify(stats_json) : (stats_json || '{}');
+  const secretVal = is_secret ? 1 : 0;
+
+  const upsertQuery = `
+    INSERT INTO lore_statblocks (id, article_id, system, type, name, stats_json, is_secret, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      system = excluded.system,
+      type = excluded.type,
+      name = excluded.name,
+      stats_json = excluded.stats_json,
+      is_secret = excluded.is_secret,
+      updated_at = CURRENT_TIMESTAMP
+  `;
+
+  db.run(upsertQuery, [blockId, articleId, system, type, name, statsStr, secretVal], function (err) {
+    if (err) return sendApiError(res, 500, 'ERR_DB', 'Failed to save stat block', err);
+    
+    res.json({
+      status: 'success',
+      data: {
+        id: blockId,
+        article_id: articleId,
+        system,
+        type,
+        name,
+        stats_json: typeof stats_json === 'string' ? safeExtractJSON(stats_json) || {} : stats_json,
+        is_secret: secretVal
+      }
+    });
+  });
+});
+
+// DELETE /api/statblocks/:id - Delete a stat block
+app.delete('/api/statblocks/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM lore_statblocks WHERE id = ?', [id], function (err) {
+    if (err) return sendApiError(res, 500, 'ERR_DB', 'Failed to delete stat block', err);
+    res.json({ status: 'success', message: 'Stat block deleted successfully' });
+  });
+});
+
+// GET /api/statblocks/:id/export/foundry - Export stat block as Foundry VTT Actor JSON
+app.get('/api/statblocks/:id/export/foundry', (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM lore_statblocks WHERE id = ?', [id], (err, row) => {
+    if (err || !row) return sendApiError(res, 404, 'ERR_NOT_FOUND', 'Stat block not found');
+
+    let stats = {};
+    try { stats = typeof row.stats_json === 'string' ? JSON.parse(row.stats_json) : (row.stats_json || {}); } catch(e) {}
+
+    const foundryData = {
+      name: row.name,
+      type: row.type === 'character' ? 'npc' : row.type === 'weapon' ? 'weapon' : 'item',
+      img: 'icons/svg/mystery-man.svg',
+      system: {
+        attributes: {
+          hp: { value: stats.hp || 10, max: stats.hp || 10 },
+          ac: { value: stats.ac || 10 },
+          speed: { value: stats.speed || '30 ft' }
+        },
+        abilities: {
+          str: { value: stats.abilities?.str || 10 },
+          dex: { value: stats.abilities?.dex || 10 },
+          con: { value: stats.abilities?.con || 10 },
+          int: { value: stats.abilities?.int || 10 },
+          wis: { value: stats.abilities?.wis || 10 },
+          cha: { value: stats.abilities?.cha || 10 }
+        },
+        details: {
+          cr: parseFloat(stats.cr || 1),
+          alignment: stats.alignment || 'Neutral',
+          biography: { value: stats.description || '' }
+        }
+      },
+      flags: { lorevault: { id: row.id, system: row.system } }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${row.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_foundry.json"`);
+    res.json(foundryData);
+  });
+});
+
+// GET /api/worlds/:worldId/bestiary - Fetch bestiary index of stat blocks across world
+app.get('/api/worlds/:worldId/bestiary', (req, res) => {
+  const { worldId } = req.params;
+  const { system, type, mode } = req.query;
+
+  let query = `
+    SELECT sb.*, a.title as article_title, a.category as article_category 
+    FROM lore_statblocks sb
+    JOIN articles a ON sb.article_id = a.id
+  `;
+  const params = [];
+  const conditions = [];
+
+  if (worldId && worldId !== 'all') {
+    conditions.push('(a.world_id = ? OR a.world_id IS NULL)');
+    params.push(worldId);
+  }
+
+  if (mode === 'player') {
+    conditions.push('sb.is_secret = 0');
+  }
+
+  if (system) {
+    conditions.push('sb.system = ?');
+    params.push(system);
+  }
+
+  if (type) {
+    conditions.push('sb.type = ?');
+    params.push(type);
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  query += ' ORDER BY sb.created_at DESC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) return sendApiError(res, 500, 'ERR_DB', 'Failed to fetch bestiary', err);
+    res.json({ status: 'success', data: rows || [] });
+  });
+});
+
+// POST /api/statblocks/convert-ai - Generate a TTRPG stat block from article lore using Gemini
+app.post('/api/statblocks/convert-ai', async (req, res) => {
+  const { article_id, system = 'dnd5e', type = 'character' } = req.body || {};
+
+  if (!article_id) {
+    return sendApiError(res, 400, 'ERR_VALIDATION', 'Missing required field: article_id');
+  }
+
+  db.get('SELECT * FROM articles WHERE id = ?', [article_id], async (err, article) => {
+    if (err || !article) {
+      return sendApiError(res, 404, 'ERR_NOT_FOUND', 'Article not found for AI conversion');
+    }
+
+    const prompt = `You are a master TTRPG game designer and mechanics author for ${system === 'pf2e' ? 'Pathfinder 2nd Edition' : 'Dungeons & Dragons 5th Edition'}.
+Analyze the following worldbuilding lore article and generate an authentic, balanced, high-quality TTRPG stat block payload of type "${type}".
+
+Article Title: ${article.title}
+Category: ${article.category}
+Summary: ${article.summary || ''}
+Lore Content Snippet: ${article.content ? article.content.substring(0, 1800) : ''}
+
+You MUST return ONLY valid JSON (no markdown triple backticks, no markdown text).
+
+JSON Format Template for type="${type}":
+${type === 'weapon' ? `
+{
+  "name": "${article.title}",
+  "category": "Martial Melee Weapon",
+  "rarity": "Very Rare",
+  "attunement": true,
+  "attunement_req": "by a creature of non-lawful alignment",
+  "damage": "1d8 + 2",
+  "damage_type": "Slashing",
+  "properties": ["Finesse", "Versatile (1d10)"],
+  "value": "1,500 gp",
+  "weight": "3 lbs",
+  "description": "Short flavor description based on article lore.",
+  "special_effects": [
+    { "name": "Lore Strike", "description": "Deals 2d6 extra radiant damage to undead." }
+  ]
+}
+` : type === 'lore_card' ? `
+{
+  "name": "${article.title}",
+  "card_category": "Ancient Spell / Artifact",
+  "casting_time": "1 action",
+  "range": "60 feet",
+  "components": "V, S, M",
+  "duration": "Instantaneous",
+  "summary": "Short rule summary.",
+  "quote": "Quote from lore text.",
+  "details": [
+    { "b": "Effect", "val": "Detailed mechanics effect." }
+  ]
+}
+` : `
+{
+  "name": "${article.title}",
+  "size": "Medium",
+  "alignment": "Neutral",
+  "ac": 16,
+  "ac_type": "Natural Armor",
+  "hp": 75,
+  "hit_dice": "10d8 + 30",
+  "speed": "30 ft.",
+  "abilities": { "str": 16, "dex": 14, "con": 16, "int": 12, "wis": 12, "cha": 10 },
+  "saving_throws": "Con +6, Wis +4",
+  "skills": "Perception +4, Stealth +4",
+  "resistances": "Fire, Cold",
+  "immunities": "",
+  "senses": "Darkvision 60 ft., passive Perception 14",
+  "languages": "Common",
+  "cr": "5",
+  "xp": 1800,
+  "traits": [
+    { "name": "Lore Presence", "description": "Creatures within 30 ft have disadvantage on saving throws against fear." }
+  ],
+  "actions": [
+    { "name": "Multiattack", "description": "Makes two melee attacks." },
+    { "name": "Relic Strike", "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., 2d8+3 slashing damage." }
+  ],
+  "reactions": [],
+  "legendary_actions": []
+}
+`}`;
+
+    let generatedJson = null;
+    try {
+      const rawAiText = await callGeminiApiWithFallback(prompt);
+      generatedJson = safeExtractJSON(rawAiText);
+    } catch (aiErr) {
+      console.warn('[StatBlock AI Error]', aiErr.message);
+    }
+
+    // Default Fallback JSON if AI extraction fails or Gemini is unavailable
+    if (!generatedJson || typeof generatedJson !== 'object') {
+      if (type === 'weapon') {
+        generatedJson = {
+          name: article.title,
+          category: 'Martial Weapon',
+          rarity: 'Rare',
+          attunement: true,
+          damage: '1d8 + 2',
+          damage_type: 'Slashing',
+          properties: ['Finesse', 'Versatile (1d10)'],
+          value: '500 gp',
+          weight: '3 lbs',
+          description: article.summary || 'A blade forged in lore.',
+          special_effects: [{ name: 'Vault Spark', description: 'Glows faintly near hidden lore ruins.' }]
+        };
+      } else if (type === 'lore_card') {
+        generatedJson = {
+          name: article.title,
+          card_category: 'Lore Card',
+          casting_time: '1 action',
+          range: 'Self',
+          components: 'V, S',
+          duration: '1 hour',
+          summary: article.summary || 'Ancient knowledge inscribed on parchment.',
+          quote: article.title,
+          details: [{ b: 'Lore Benefit', val: 'Grants advantage on History checks.' }]
+        };
+      } else {
+        generatedJson = {
+          name: article.title,
+          size: 'Medium',
+          alignment: 'Neutral',
+          ac: 15,
+          ac_type: 'Natural Armor',
+          hp: 52,
+          hit_dice: '8d8 + 16',
+          speed: '30 ft.',
+          abilities: { str: 14, dex: 14, con: 14, int: 10, wis: 12, cha: 10 },
+          saving_throws: 'Con +4',
+          skills: 'Perception +3',
+          resistances: '',
+          immunities: '',
+          senses: 'Passive Perception 13',
+          languages: 'Common',
+          cr: '3',
+          xp: 700,
+          traits: [{ name: 'Vigilant Guard', description: 'Has advantage on initiative rolls.' }],
+          actions: [
+            { name: 'Multiattack', description: 'Makes two weapon attacks.' },
+            { name: 'Longsword', description: 'Melee Weapon Attack: +4 to hit, 1d8+2 slashing damage.' }
+          ],
+          reactions: [],
+          legendary_actions: []
+        };
+      }
+    }
+
+    const blockId = `statblock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const name = generatedJson.name || article.title;
+    const statsStr = JSON.stringify(generatedJson);
+
+    const insertQuery = `
+      INSERT INTO lore_statblocks (id, article_id, system, type, name, stats_json, is_secret, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
+    `;
+
+    db.run(insertQuery, [blockId, article_id, system, type, name, statsStr], function (saveErr) {
+      if (saveErr) return sendApiError(res, 500, 'ERR_DB', 'Failed to save generated stat block', saveErr);
+
+      res.json({
+        status: 'success',
+        data: {
+          id: blockId,
+          article_id,
+          system,
+          type,
+          name,
+          stats_json: generatedJson,
+          is_secret: 0
+        }
+      });
+    });
+  });
+});
+
 
 // GET /api/categories - Metadata, sub-categories & counts (filtered by world_id)
 app.get('/api/categories', (req, res) => {
@@ -1864,15 +2268,137 @@ app.post('/api/ai/generate-art', async (req, res) => {
 
 // GET /api/ai/config - Get Permanent Server AI Config
 app.get('/api/ai/config', (req, res) => {
-  res.json(getAIConfig());
+  const cfg = getAIConfig();
+  const rawKey = cfg.custom_api_key || (cfg.use_custom_provider ? cfg.apiKey : '') || '';
+  const maskedKey = maskApiKey(rawKey);
+  res.json({
+    success: true,
+    use_custom_provider: !!cfg.use_custom_provider,
+    default_model: cfg.default_model || 'gemini-2.0-flash',
+    custom_provider: cfg.custom_provider || 'gemini',
+    custom_model: cfg.custom_model || 'gemini-2.0-flash',
+    custom_api_key: maskedKey,
+    ollama_url: cfg.ollama_url || 'http://localhost:11434',
+    masked_key: maskedKey,
+    masked_api_key: maskedKey,
+    has_custom_key: rawKey.length > 0,
+    active_provider: cfg.use_custom_provider ? (cfg.custom_provider || 'gemini') : 'gemini_hosted',
+    active_model: cfg.use_custom_provider ? (cfg.custom_model || 'gemini-2.0-flash') : (cfg.default_model || 'gemini-2.0-flash'),
+    provider: cfg.use_custom_provider ? (cfg.custom_provider || 'gemini') : 'gemini',
+    model: cfg.use_custom_provider ? (cfg.custom_model || 'gemini-2.0-flash') : (cfg.default_model || 'gemini-2.0-flash'),
+    apiKey: maskedKey
+  });
 });
 
 // POST /api/ai/config - Save Permanent Server AI Config
 app.post('/api/ai/config', (req, res) => {
-  const { provider, apiKey, model } = req.body;
-  const config = { provider: provider || 'gemini', apiKey: apiKey || '', model: model || 'gemini-1.5-flash' };
-  saveAIConfig(config);
-  res.json({ message: 'Server AI Configuration Saved Permanently!', config });
+  try {
+    const { use_custom_provider, custom_provider, custom_api_key, custom_model, ollama_url, provider, apiKey, model } = req.body || {};
+    const current = getAIConfig();
+    const resolvedCustomProvider = custom_provider || provider || current.custom_provider || 'gemini';
+    const resolvedCustomModel = custom_model || model || current.custom_model || 'gemini-2.0-flash';
+    const resolvedOllamaUrl = ollama_url || current.ollama_url || 'http://localhost:11434';
+
+    let keyInput = custom_api_key !== undefined ? custom_api_key : apiKey;
+    let finalCustomApiKey = current.custom_api_key || '';
+    if (keyInput !== undefined) {
+      if (typeof keyInput === 'string' && !keyInput.startsWith('••••')) {
+        finalCustomApiKey = keyInput;
+      }
+    }
+
+    const updated = {
+      ...current,
+      use_custom_provider: use_custom_provider !== undefined ? !!use_custom_provider : current.use_custom_provider,
+      default_model: current.default_model || 'gemini-2.0-flash',
+      custom_provider: resolvedCustomProvider,
+      custom_api_key: finalCustomApiKey,
+      custom_model: resolvedCustomModel,
+      ollama_url: resolvedOllamaUrl,
+      provider: resolvedCustomProvider,
+      apiKey: finalCustomApiKey,
+      model: resolvedCustomModel
+    };
+
+    saveAIConfig(updated);
+    const maskedKey = maskApiKey(updated.custom_api_key);
+    res.json({
+      success: true,
+      status: 'success',
+      message: 'Server AI Configuration Saved Permanently!',
+      config: {
+        ...updated,
+        masked_key: maskedKey,
+        masked_api_key: maskedKey,
+        custom_api_key: maskedKey,
+        apiKey: maskedKey,
+        active_provider: updated.use_custom_provider ? updated.custom_provider : 'gemini_hosted',
+        active_model: updated.use_custom_provider ? updated.custom_model : updated.default_model
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/ai/test-connection - Test AI Provider Connection & Measure Latency
+app.post('/api/ai/test-connection', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { use_custom_provider, provider, custom_provider, api_key, custom_api_key, apiKey, model, custom_model, ollama_url } = req.body || {};
+    const serverCfg = getAIConfig();
+    const effectiveUseCustom = use_custom_provider !== undefined ? !!use_custom_provider : serverCfg.use_custom_provider;
+    const effectiveProvider = provider || custom_provider || (effectiveUseCustom ? serverCfg.custom_provider : 'gemini') || 'gemini';
+
+    if (effectiveUseCustom && effectiveProvider === 'ollama') {
+      const targetUrl = (ollama_url || serverCfg.ollama_url || 'http://localhost:11434').replace(/\/+$/, '') + '/api/tags';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        const response = await fetch(targetUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        const latency_ms = Date.now() - startTime;
+        if (response.ok) {
+          return res.json({
+            success: true,
+            latency_ms,
+            message: 'Ollama local server reachable successfully!'
+          });
+        } else {
+          return res.json({
+            success: false,
+            latency_ms,
+            message: `Ollama returned status ${response.status}`
+          });
+        }
+      } catch (ollamaErr) {
+        clearTimeout(timeout);
+        return res.json({
+          success: false,
+          latency_ms: Date.now() - startTime,
+          message: `Failed to reach Ollama instance at ${targetUrl}: ${ollamaErr.message}`
+        });
+      }
+    }
+
+    const testPrompt = 'Respond with "OK".';
+    let keyInput = api_key !== undefined ? api_key : (custom_api_key !== undefined ? custom_api_key : apiKey);
+    const keyToUse = keyInput && typeof keyInput === 'string' && !keyInput.startsWith('••••') ? keyInput : (effectiveUseCustom ? serverCfg.custom_api_key : '');
+    const modelToUse = model || custom_model || (effectiveUseCustom ? serverCfg.custom_model : serverCfg.default_model) || 'gemini-2.0-flash';
+
+    await callGeminiApi(testPrompt, keyToUse, modelToUse);
+    return res.json({
+      success: true,
+      latency_ms: Date.now() - startTime,
+      message: 'AI Provider connection verified successfully!'
+    });
+  } catch (err) {
+    return res.json({
+      success: false,
+      latency_ms: Date.now() - startTime,
+      message: 'Connection test failed: ' + err.message
+    });
+  }
 });
 
 // POST /api/ai/ask - Ask My World AI Q&A Engine Endpoint
@@ -6236,12 +6762,143 @@ app.post('/api/export/world-bundle/:worldId', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🌌 AI WELCOME CONCIERGE & INTENT ROUTER
+// ==========================================
+
+function fallbackConciergeRoute(intentText) {
+  const text = (intentText || '').toLowerCase();
+  if (text.includes('write') || text.includes('chapter') || text.includes('draft') || text.includes('prose') || text.includes('book') || text.includes('novel') || text.includes('scene') || text.includes('story')) {
+    return {
+      target_view: 'reader',
+      enable_zen_mode: true,
+      open_drawer: 'weave-matrix',
+      search_filter: '',
+      action_summary: 'Opening Zen Reader Mode with Weave Matrix context staging.'
+    };
+  }
+  if (text.includes('map') || text.includes('atlas') || text.includes('geography') || text.includes('pin') || text.includes('land') || text.includes('world') || text.includes('cartography')) {
+    return {
+      target_view: 'atlas',
+      enable_zen_mode: false,
+      open_drawer: null,
+      search_filter: '',
+      action_summary: 'Opening Interactive World Atlas cartography canvas.'
+    };
+  }
+  if (text.includes('stat') || text.includes('dnd') || text.includes('5e') || text.includes('monster') || text.includes('dm') || text.includes('boss') || text.includes('combat') || text.includes('npc') || text.includes('bestiary')) {
+    return {
+      target_view: 'reader',
+      enable_zen_mode: false,
+      open_drawer: 'statblock',
+      search_filter: '',
+      action_summary: 'Opening TTRPG Stat Block Engine drawer.'
+    };
+  }
+  if (text.includes('audit') || text.includes('doctor') || text.includes('fix') || text.includes('health') || text.includes('stub') || text.includes('orphan') || text.includes('canon')) {
+    return {
+      target_view: 'frontpage',
+      enable_zen_mode: false,
+      open_drawer: 'doctor',
+      search_filter: '',
+      action_summary: 'Running Narrative World Doctor health audit.'
+    };
+  }
+  if (text.includes('relation') || text.includes('faction') || text.includes('war') || text.includes('alliance') || text.includes('conflict') || text.includes('house')) {
+    return {
+      target_view: 'relationships',
+      enable_zen_mode: false,
+      open_drawer: null,
+      search_filter: '',
+      action_summary: 'Opening Faction & Character Relationship Matrix.'
+    };
+  }
+  if (text.includes('time') || text.includes('history') || text.includes('chronology') || text.includes('era') || text.includes('year') || text.includes('event')) {
+    return {
+      target_view: 'timeline',
+      enable_zen_mode: false,
+      open_drawer: null,
+      search_filter: '',
+      action_summary: 'Opening World Chronology & Event Timeline.'
+    };
+  }
+  return {
+    target_view: 'frontpage',
+    enable_zen_mode: false,
+    open_drawer: null,
+    search_filter: '',
+    action_summary: 'Welcome to LoreVault! Opening World Overview Portal.'
+  };
+}
+
+app.post('/api/concierge/route-intent', async (req, res) => {
+  try {
+    const { world_id, user_intent } = req.body;
+    const intentText = (user_intent || '').trim();
+
+    if (!intentText) {
+      return res.json({
+        success: true,
+        routing: fallbackConciergeRoute('')
+      });
+    }
+
+    // Try Gemini AI intent classification with fallback retries
+    const prompt = `You are the AI Welcome Concierge for LoreVault, a local-first worldbuilding and literary database.
+Analyze the user's creative goal and classify it into workspace navigation actions.
+
+USER INTENT: "${intentText}"
+
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "target_view": "reader" | "atlas" | "relationships" | "timeline" | "frontpage",
+  "enable_zen_mode": boolean,
+  "open_drawer": "statblock" | "weave-matrix" | "doctor" | null,
+  "search_filter": string,
+  "action_summary": string
+}
+
+Rules:
+1. "target_view" MUST be one of: "reader", "atlas", "relationships", "timeline", "frontpage".
+2. "enable_zen_mode" should be true if writing/drafting prose or focusing, false otherwise.
+3. "open_drawer" should be "statblock" for monsters/NPCs/DMs, "weave-matrix" for scene prep/prose, "doctor" for auditing/fixing stubs, or null.
+4. "action_summary" should be a concise 1-sentence friendly greeting describing what workspace view was configured.
+5. Do NOT include markdown code fences or backticks. Return raw JSON.`;
+
+    try {
+      const aiResponse = await callGeminiApi(prompt);
+      let parsed = safeExtractJSON(aiResponse);
+      if (parsed && parsed.target_view) {
+        const validViews = ['reader', 'atlas', 'relationships', 'timeline', 'frontpage'];
+        if (!validViews.includes(parsed.target_view)) {
+          parsed.target_view = 'frontpage';
+        }
+        return res.json({
+          success: true,
+          routing: parsed
+        });
+      }
+    } catch (aiErr) {
+      console.warn('[Concierge] Gemini AI classification warning, falling back to regex router:', aiErr.message);
+    }
+
+    const fallbackRoute = fallbackConciergeRoute(intentText);
+    return res.json({
+      success: true,
+      routing: fallbackRoute
+    });
+  } catch (err) {
+    console.error('[Concierge] Endpoint error:', err);
+    return res.status(500).json({ error: 'Failed to route concierge intent: ' + err.message });
+  }
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`LoreVault Server running locally on http://localhost:${PORT}`);
   });
 }
 
-module.exports = { app, db, getCastPersonaContext, stripSecretBlocks, filterArticleVisibility, serializeMarkdown, serializeXML, serializeJSON, serializeYAML, serializeContext, smartCategorizeArticle, callGeminiApiWithFallback };
+module.exports = { app, db, getCastPersonaContext, stripSecretBlocks, filterArticleVisibility, serializeMarkdown, serializeXML, serializeJSON, serializeYAML, serializeContext, smartCategorizeArticle, callGeminiApiWithFallback, getAIConfig, saveAIConfig, maskApiKey };
 
 

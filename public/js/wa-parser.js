@@ -28,6 +28,10 @@ const WAParser = {
       return `<div class="wa-box"><h4 class="wa-box-title">📜 ${title}</h4><div class="wa-box-body">${content}</div></div>`;
     });
 
+    html = html.replace(/\[statblock\]/gi, () => {
+      return `<div class="wa-statblock-inline-trigger" style="margin:1rem 0;"><button class="btn btn-secondary btn-sm" onclick="event.preventDefault(); window.app.toggleStatBlockDrawer();">🛡️ View Attached TTRPG Stat Block</button></div>`;
+    });
+
     // 1. [quote]“Quote” | — Source[/quote]
     html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, (match, content) => {
       const parts = content.split('|');

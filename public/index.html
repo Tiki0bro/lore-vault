@@ -57,6 +57,9 @@
         <!-- Universal Command Palette Trigger -->
         <button id="cmd-palette-btn" class="btn btn-secondary" title="Open Universal Command Palette" onclick="window.app.toggleCommandPalette()">🔍 <span class="kbd-hint">Ctrl+K</span></button>
 
+        <!-- AI Welcome Concierge Trigger -->
+        <button id="concierge-nav-btn" class="btn btn-secondary" title="Open AI Welcome Concierge & Journey Launcher" onclick="window.app.toggleConciergeModal()">✨ Concierge <span class="kbd-hint">Ctrl+Shift+W</span></button>
+
         <!-- Weave Matrix Side Drawer Trigger -->
         <button id="weave-matrix-btn" class="btn btn-secondary" title="Toggle Weave Matrix Context Drawer" onclick="window.toggleWeaveMatrixDrawer()">⚡ Context Drawer <span class="kbd-hint">Ctrl+Shift+M</span></button>
 
@@ -149,6 +152,9 @@
                       <option value="" disabled selected>🌍 Move to World...</option>
                     </select>
                     <button class="btn btn-secondary toolbar-btn" onclick="openQuickMarketingModal()">📢 Quick Promo Copy</button>
+                    <button id="statblock-drawer-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleStatBlockDrawer()" title="TTRPG Stat Block (D&D 5e / PF2e)">🛡️ Stat Block <span id="statblock-badge-indicator" class="statblock-active-dot hidden">●</span></button>
+                    <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleMarkdown()" title="Copy raw WorldAnvil Markdown">📋 Copy MD</button>
+                    <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleShareLink()" title="Copy public share link">🔗 Share Link</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
                     <button class="btn btn-danger toolbar-btn" onclick="window.app.deleteCurrentArticle()">🗑️ Delete</button>
                   </div>
@@ -1827,6 +1833,100 @@
     </div>
   </div>
 
+  <!-- TTRPG Stat Block Slide-Out Drawer -->
+  <div id="statblock-drawer" class="statblock-drawer hidden">
+    <div class="statblock-drawer-header">
+      <div class="statblock-header-title">
+        <h3>🛡️ TTRPG Stat Block</h3>
+        <span id="statblock-system-badge" class="badge">D&D 5e</span>
+      </div>
+      <button class="drawer-close-btn" onclick="window.app.toggleStatBlockDrawer()">✕</button>
+    </div>
+
+    <!-- Drawer Navigation Tabs -->
+    <div class="statblock-drawer-tabs">
+      <button id="sb-tab-btn-view" class="sb-tab-btn active" onclick="window.app.switchStatBlockTab('view')">📜 Card View</button>
+      <button id="sb-tab-btn-edit" class="sb-tab-btn" onclick="window.app.switchStatBlockTab('edit')">✏️ Manual Edit</button>
+      <button id="sb-tab-btn-ai" class="sb-tab-btn" onclick="window.app.switchStatBlockTab('ai')">⚡ AI Convert</button>
+    </div>
+
+    <div class="statblock-drawer-body">
+      <!-- 1. Card View Panel -->
+      <div id="sb-panel-view" class="sb-panel active">
+        <div id="statblock-card-container">
+          <div class="sb-empty-state">
+            <p>No stat block attached to this article yet.</p>
+            <button class="btn btn-primary btn-sm" onclick="window.app.switchStatBlockTab('ai')">⚡ Convert Lore to Stat Block</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Manual Form Edit Panel -->
+      <div id="sb-panel-edit" class="sb-panel hidden">
+        <form id="statblock-edit-form" onsubmit="window.app.saveStatBlockForm(event)">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="sb-edit-name" class="form-control" placeholder="Stat Block Name" required>
+          </div>
+          <div class="form-row" style="display:flex; gap:0.5rem;">
+            <div class="form-group" style="flex:1;">
+              <label>System</label>
+              <select id="sb-edit-system" class="form-control">
+                <option value="dnd5e">D&D 5th Edition</option>
+                <option value="pf2e">Pathfinder 2nd Edition</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Type</label>
+              <select id="sb-edit-type" class="form-control">
+                <option value="character">Character / Creature</option>
+                <option value="weapon">Weapon / Equipment</option>
+                <option value="lore_card">Lore Card / Spell</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>JSON Data Payload</label>
+            <textarea id="sb-edit-json" class="form-control font-mono" rows="11" placeholder="{ ...JSON attributes... }"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+              <input type="checkbox" id="sb-edit-is-secret"> 🔒 DM Secret (Hide in Player Mode)
+            </label>
+          </div>
+          <div class="sb-form-actions" style="display:flex; gap:0.5rem; margin-top:1rem;">
+            <button type="submit" class="btn btn-primary" style="flex:1;">Save Stat Block</button>
+            <button type="button" class="btn btn-danger" onclick="window.app.deleteCurrentStatBlock()">Delete</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. AI Converter Panel -->
+      <div id="sb-panel-ai" class="sb-panel hidden">
+        <div class="ai-converter-box" style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+          <h4 style="margin-top:0;">⚡ AI Lore-to-Stat-Block Converter</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Generates authentic TTRPG game mechanics derived directly from this article's lore text using Gemini AI.</p>
+          <div class="form-group">
+            <label>Target Game System</label>
+            <select id="sb-ai-system" class="form-control">
+              <option value="dnd5e">D&D 5th Edition (5e)</option>
+              <option value="pf2e">Pathfinder 2nd Edition (PF2e)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Stat Block Category</label>
+            <select id="sb-ai-type" class="form-control">
+              <option value="character">Monster / NPC / Creature</option>
+              <option value="weapon">Weapon / Magic Equipment</option>
+              <option value="lore_card">Lore Card / Spell / Artifact</option>
+            </select>
+          </div>
+          <button id="sb-ai-generate-btn" class="btn btn-warning" style="width: 100%; margin-top: 0.5rem;" onclick="window.app.triggerAIStatBlockConversion()">✨ Generate Stat Block from Lore</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Command Palette Modal Overlay -->
   <div id="command-palette-modal" class="modal-backdrop hidden" onclick="if(event.target===this) window.app.toggleCommandPalette()">
     <div class="cmd-palette-container">
@@ -1836,6 +1936,77 @@
         <span class="kbd-hint">Esc</span>
       </div>
       <div id="cmd-palette-results" class="cmd-palette-results"></div>
+    </div>
+  </div>
+
+  <!-- AI Welcome Concierge & User Journey Launcher Modal -->
+  <div id="welcome-concierge-modal" class="modal-backdrop hidden" onclick="if(event.target===this) window.app.closeConciergeModal()">
+    <div class="concierge-modal-container">
+      <div class="concierge-header">
+        <div class="concierge-badge">✨ WELCOME JOURNEY LAUNCHER</div>
+        <h2 class="concierge-title">Welcome back to LoreVault</h2>
+        <p class="concierge-subtitle">Were you planning on bringing your worlds to life or starting your literary journey today?</p>
+      </div>
+
+      <!-- Preset Intent Cards Grid (0ms instant execution) -->
+      <div class="concierge-preset-grid">
+        <div class="concierge-preset-card" onclick="window.app.executeConciergePreset('worldbuilder')">
+          <div class="preset-icon">🪐</div>
+          <div class="preset-content">
+            <h4>Bring Worlds to Life</h4>
+            <p>Worldbuilder Mode: Launch Atlas cartography canvas, territories & lore pins.</p>
+          </div>
+          <span class="preset-arrow">➔</span>
+        </div>
+
+        <div class="concierge-preset-card" onclick="window.app.executeConciergePreset('literary')">
+          <div class="preset-icon">📜</div>
+          <div class="preset-content">
+            <h4>Start Literary Journey</h4>
+            <p>Writer Focus Mode: Activate Zen Reader mode & stage active prose into Weave Matrix.</p>
+          </div>
+          <span class="preset-arrow">➔</span>
+        </div>
+
+        <div class="concierge-preset-card" onclick="window.app.executeConciergePreset('dm_prep')">
+          <div class="preset-icon">⚔️</div>
+          <div class="preset-content">
+            <h4>DM Campaign Prep</h4>
+            <p>Game Master Mode: Open TTRPG Stat Block Engine & DM secret filters.</p>
+          </div>
+          <span class="preset-arrow">➔</span>
+        </div>
+
+        <div class="concierge-preset-card" onclick="window.app.executeConciergePreset('audit')">
+          <div class="preset-icon">🩺</div>
+          <div class="preset-content">
+            <h4>World Doctor Audit</h4>
+            <p>Narrative Audit Mode: Audit orphan stubs, cross-links & canon health score.</p>
+          </div>
+          <span class="preset-arrow">➔</span>
+        </div>
+      </div>
+
+      <!-- Custom AI Intent Prompt Input -->
+      <div class="concierge-ai-section">
+        <div class="concierge-ai-header">
+          <span>🤖 Custom Creative Goal</span>
+          <span class="concierge-ai-tag">Gemini AI Intent Router</span>
+        </div>
+        <div class="concierge-input-wrapper">
+          <input type="text" id="concierge-intent-input" class="concierge-input" placeholder="Or describe what you're working on... (e.g., 'Help me draft a duel scene between Kaelen and the Dragon Lord')" onkeydown="if(event.key==='Enter') window.app.submitConciergeAIIntent()">
+          <button id="concierge-launch-btn" class="btn btn-primary btn-concierge-launch" onclick="window.app.submitConciergeAIIntent()">✨ Launch Journey</button>
+        </div>
+      </div>
+
+      <!-- Footer & Startup Controls -->
+      <div class="concierge-footer">
+        <label class="concierge-checkbox-label">
+          <input type="checkbox" id="concierge-startup-checkbox" onchange="window.app.toggleConciergeStartupPref(this.checked)">
+          Show Concierge launcher on app startup
+        </label>
+        <button class="btn btn-secondary btn-sm" onclick="window.app.closeConciergeModal()">Skip & Close <span class="kbd-hint">Esc</span></button>
+      </div>
     </div>
   </div>
 

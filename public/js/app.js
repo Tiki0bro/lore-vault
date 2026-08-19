@@ -92,6 +92,7 @@ class LoreApp {
     this.setupSearchBar();
     this.setupWeaveMatrix();
     this.setupCrosslinkPopover();
+    this.initConcierge();
   }
 
   initThemeMode() {
@@ -2070,6 +2071,7 @@ class LoreApp {
 
       this.currentArticle = await res.json();
       this.recordRecentArticle(this.currentArticle.id, this.currentArticle.title, this.currentArticle.category);
+      this.checkStatBlockIndicator(this.currentArticle.id);
 
       if (!isHistoryNav) {
         if (this.historyIndex === -1 || this.navigationHistory[this.historyIndex] !== id) {
@@ -2803,6 +2805,9 @@ Overview paragraph describing the location, faction, or character.
     modal.classList.remove('hidden');
     this.setupEditorDragAndDrop();
     this.updateEditorPreview();
+    setTimeout(() => {
+      if (titleIn) titleIn.focus();
+    }, 50);
   }
 
   closeEditor() {
@@ -5558,6 +5563,52 @@ document.addEventListener('click', function(e) {
   }
 });
 
+  copyCurrentArticleMarkdown() {
+    if (!this.currentArticle || !this.currentArticle.content) {
+      if (typeof window.showToast === 'function') window.showToast('No active article to copy.', 'warning');
+      return;
+    }
+    const text = this.currentArticle.content;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (typeof window.showToast === 'function') window.showToast('📋 Article Markdown copied to clipboard!', 'success');
+      }).catch(() => this.fallbackCopyText(text));
+    } else {
+      this.fallbackCopyText(text);
+    }
+  }
+
+  copyCurrentArticleShareLink() {
+    if (!this.currentArticle || !this.currentArticle.id) {
+      if (typeof window.showToast === 'function') window.showToast('No active article selected.', 'warning');
+      return;
+    }
+    const shareUrl = `${window.location.origin}/#article-${this.currentArticle.id}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        if (typeof window.showToast === 'function') window.showToast('🔗 Article share link copied to clipboard!', 'success');
+      }).catch(() => this.fallbackCopyText(shareUrl));
+    } else {
+      this.fallbackCopyText(shareUrl);
+    }
+  }
+
+  fallbackCopyText(text) {
+    const tempInput = document.createElement('textarea');
+    tempInput.value = text;
+    tempInput.style.position = 'fixed';
+    tempInput.style.opacity = '0';
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    try {
+      document.execCommand('copy');
+      if (typeof window.showToast === 'function') window.showToast('📋 Copied to clipboard!', 'success');
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast('Failed to copy to clipboard.', 'error');
+    }
+    document.body.removeChild(tempInput);
+  }
+
   navigateHistoryBack() {
     if (this.historyIndex > 0) {
       this.historyIndex--;
@@ -5653,9 +5704,583 @@ document.addEventListener('click', function(e) {
     resultsEl.innerHTML = html || '<div class="cmd-no-results">No matching articles or views found.</div>';
   }
 
+  // --- AI WELCOME CONCIERGE & JOURNEY LAUNCHER ---
+  initConcierge() {
+    const pref = localStorage.getItem('lorevault_show_concierge');
+    const checkbox = document.getElementById('concierge-startup-checkbox');
+    if (checkbox) {
+      checkbox.checked = pref !== 'false';
+    }
+    if (pref !== 'false') {
+      setTimeout(() => {
+        this.openConciergeModal();
+      }, 400);
+    }
+  }
+
+  toggleConciergeModal() {
+    const modal = document.getElementById('welcome-concierge-modal');
+    if (!modal) return;
+    if (modal.classList.contains('hidden')) {
+      this.openConciergeModal();
+    } else {
+      this.closeConciergeModal();
+    }
+  }
+
+  openConciergeModal() {
+    const modal = document.getElementById('welcome-concierge-modal');
+    const input = document.getElementById('concierge-intent-input');
+    const checkbox = document.getElementById('concierge-startup-checkbox');
+    if (!modal) return;
+
+    if (checkbox) {
+      const pref = localStorage.getItem('lorevault_show_concierge');
+      checkbox.checked = pref !== 'false';
+    }
+
+    modal.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 100);
+    }
+  }
+
+  closeConciergeModal() {
+    const modal = document.getElementById('welcome-concierge-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+
+  toggleConciergeStartupPref(enabled) {
+    localStorage.setItem('lorevault_show_concierge', enabled ? 'true' : 'false');
+    this.showToast(enabled ? '✨ Concierge launcher enabled on startup' : '✨ Concierge launcher disabled on startup (Use Ctrl+Shift+W to launch)');
+  }
+
+  executeConciergePreset(type) {
+    if (type === 'worldbuilder') {
+      window.switchTab('atlas');
+      this.closeConciergeModal();
+      this.showToast('🪐 Switched to Worldbuilder Mode (Atlas Cartography)');
+    } else if (type === 'literary') {
+      window.switchTab('library');
+      if (!document.body.classList.contains('zen-mode')) {
+        this.toggleZenMode();
+      }
+      if (typeof window.toggleWeaveMatrixDrawer === 'function') {
+        window.toggleWeaveMatrixDrawer(true);
+      }
+      this.closeConciergeModal();
+      this.showToast('📜 Switched to Literary Writer Focus Mode');
+    } else if (type === 'dm_prep') {
+      window.switchTab('library');
+      if (typeof this.toggleStatBlockDrawer === 'function') {
+        this.toggleStatBlockDrawer(true);
+      }
+      this.closeConciergeModal();
+      this.showToast('⚔️ Switched to DM Campaign Prep & Stat Blocks');
+    } else if (type === 'audit') {
+      window.switchTab('frontpage');
+      if (typeof this.runWorldDoctorAudit === 'function') {
+        this.runWorldDoctorAudit();
+      }
+      this.closeConciergeModal();
+      this.showToast('🩺 Running Narrative World Doctor Health Audit');
+    }
+  }
+
+  async submitConciergeAIIntent() {
+    const input = document.getElementById('concierge-intent-input');
+    const launchBtn = document.getElementById('concierge-launch-btn');
+    const text = input ? input.value.trim() : '';
+
+    if (!text) {
+      this.executeConciergePreset('worldbuilder');
+      return;
+    }
+
+    if (launchBtn) {
+      launchBtn.disabled = true;
+      launchBtn.innerHTML = '⏳ Routing...';
+    }
+
+    try {
+      const res = await fetch('/api/concierge/route-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          user_intent: text
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.routing) {
+        this.applyConciergeRouting(data.routing);
+      } else {
+        this.executeConciergePreset('worldbuilder');
+      }
+    } catch (err) {
+      console.warn('[Concierge] Client API call error, applying fallback route:', err);
+      this.executeConciergePreset('worldbuilder');
+    } finally {
+      if (launchBtn) {
+        launchBtn.disabled = false;
+        launchBtn.innerHTML = '✨ Launch Journey';
+      }
+    }
+  }
+
+  applyConciergeRouting(routing) {
+    const targetView = routing.target_view || 'frontpage';
+
+    let tabName = targetView;
+    if (targetView === 'reader') tabName = 'library';
+
+    window.switchTab(tabName);
+
+    if (routing.enable_zen_mode && !document.body.classList.contains('zen-mode')) {
+      this.toggleZenMode();
+    }
+
+    if (routing.open_drawer === 'statblock' && typeof this.toggleStatBlockDrawer === 'function') {
+      this.toggleStatBlockDrawer(true);
+    } else if (routing.open_drawer === 'weave-matrix' && typeof window.toggleWeaveMatrixDrawer === 'function') {
+      window.toggleWeaveMatrixDrawer(true);
+    } else if (routing.open_drawer === 'doctor' && typeof this.runWorldDoctorAudit === 'function') {
+      this.runWorldDoctorAudit();
+    }
+
+    this.closeConciergeModal();
+    if (routing.action_summary) {
+      this.showToast('✨ ' + routing.action_summary);
+    }
+  }
+
+  // --- TTRPG STAT BLOCK CONTROLLER METHODS ---
+
+  async checkStatBlockIndicator(articleId) {
+    const dot = document.getElementById('statblock-badge-indicator');
+    if (!dot) return;
+
+    try {
+      const res = await fetch(`/api/articles/${encodeURIComponent(articleId)}/statblock`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+          dot.classList.remove('hidden');
+          this.currentStatBlock = json.data[0];
+        } else {
+          dot.classList.add('hidden');
+          this.currentStatBlock = null;
+        }
+      }
+    } catch (e) {
+      dot.classList.add('hidden');
+    }
+  }
+
+  toggleStatBlockDrawer() {
+    const drawer = document.getElementById('statblock-drawer');
+    if (!drawer) return;
+
+    const isHidden = drawer.classList.contains('hidden');
+    if (isHidden) {
+      drawer.classList.remove('hidden');
+      if (this.currentArticle) {
+        this.loadStatBlockData(this.currentArticle.id);
+      }
+    } else {
+      drawer.classList.add('hidden');
+    }
+  }
+
+  switchStatBlockTab(tabName) {
+    const viewBtn = document.getElementById('sb-tab-btn-view');
+    const editBtn = document.getElementById('sb-tab-btn-edit');
+    const aiBtn = document.getElementById('sb-tab-btn-ai');
+
+    const viewPanel = document.getElementById('sb-panel-view');
+    const editPanel = document.getElementById('sb-panel-edit');
+    const aiPanel = document.getElementById('sb-panel-ai');
+
+    if (!viewPanel || !editPanel || !aiPanel) return;
+
+    if (viewBtn) viewBtn.classList.toggle('active', tabName === 'view');
+    if (editBtn) editBtn.classList.toggle('active', tabName === 'edit');
+    if (aiBtn) aiBtn.classList.toggle('active', tabName === 'ai');
+
+    viewPanel.classList.toggle('hidden', tabName !== 'view');
+    editPanel.classList.toggle('hidden', tabName !== 'edit');
+    aiPanel.classList.toggle('hidden', tabName !== 'ai');
+
+    if (tabName === 'edit' && this.currentStatBlock) {
+      this.populateStatBlockEditForm(this.currentStatBlock);
+    }
+  }
+
+  async loadStatBlockData(articleId) {
+    const container = document.getElementById('statblock-card-container');
+    const sysBadge = document.getElementById('statblock-system-badge');
+    if (!container) return;
+
+    try {
+      const res = await fetch(`/api/articles/${encodeURIComponent(articleId)}/statblock`);
+      if (res.ok) {
+        const json = await res.json();
+        const statblocks = json.data || [];
+        if (statblocks.length > 0) {
+          this.currentStatBlock = statblocks[0];
+          if (sysBadge) sysBadge.textContent = this.currentStatBlock.system.toUpperCase();
+          container.innerHTML = this.renderStatBlockCard(this.currentStatBlock);
+        } else {
+          this.currentStatBlock = null;
+          if (sysBadge) sysBadge.textContent = 'D&D 5e';
+          container.innerHTML = `
+            <div class="sb-empty-state">
+              <p>No stat block attached to this article yet.</p>
+              <button class="btn btn-primary btn-sm" onclick="window.app.switchStatBlockTab('ai')">⚡ Convert Lore to Stat Block</button>
+            </div>
+          `;
+        }
+      }
+    } catch (err) {
+      container.innerHTML = `<div class="alert alert-error">Error loading stat block: ${err.message}</div>`;
+    }
+  }
+
+  populateStatBlockEditForm(statblock) {
+    const nameInput = document.getElementById('sb-edit-name');
+    const sysSelect = document.getElementById('sb-edit-system');
+    const typeSelect = document.getElementById('sb-edit-type');
+    const jsonInput = document.getElementById('sb-edit-json');
+    const secretChk = document.getElementById('sb-edit-is-secret');
+
+    if (nameInput) nameInput.value = statblock.name || '';
+    if (sysSelect) sysSelect.value = statblock.system || 'dnd5e';
+    if (typeSelect) typeSelect.value = statblock.type || 'character';
+    if (secretChk) secretChk.checked = !!statblock.is_secret;
+
+    if (jsonInput) {
+      const parsed = typeof statblock.stats_json === 'string' ? JSON.parse(statblock.stats_json || '{}') : statblock.stats_json;
+      jsonInput.value = JSON.stringify(parsed || {}, null, 2);
+    }
+  }
+
+  renderStatBlockCard(sb) {
+    const system = sb.system || 'dnd5e';
+    const type = sb.type || 'character';
+    let data = {};
+    try {
+      data = typeof sb.stats_json === 'string' ? JSON.parse(sb.stats_json) : (sb.stats_json || {});
+    } catch (e) { data = {}; }
+
+    const name = sb.name || data.name || 'Unnamed Stat Block';
+
+    if (type === 'weapon') {
+      return `
+        <div class="weapon-card">
+          <div class="weapon-card-header">
+            <h3>⚔️ ${name}</h3>
+            <span class="rarity-badge ${(data.rarity || 'common').toLowerCase().replace(/\s+/g, '-')}">${data.rarity || 'Item'}</span>
+          </div>
+          <p class="dnd5e-subtitle">${data.category || 'Equipment'} ${data.attunement ? '(Requires Attunement)' : ''}</p>
+          <div class="weapon-prop-grid">
+            <div class="weapon-prop-box"><strong>Damage:</strong> ${data.damage || '1d8'} ${data.damage_type || ''}</div>
+            <div class="weapon-prop-box"><strong>Value:</strong> ${data.value || 'N/A'}</div>
+            <div class="weapon-prop-box"><strong>Weight:</strong> ${data.weight || 'N/A'}</div>
+            <div class="weapon-prop-box"><strong>Properties:</strong> ${Array.isArray(data.properties) ? data.properties.join(', ') : (data.properties || 'None')}</div>
+          </div>
+          ${data.description ? `<p style="font-size:0.88rem; line-height:1.45; margin-top:0.75rem;">${data.description}</p>` : ''}
+          ${Array.isArray(data.special_effects) && data.special_effects.length > 0 ? `
+            <div style="margin-top:0.75rem; border-top:1px solid var(--border-color); padding-top:0.5rem;">
+              <strong>Special Effects:</strong>
+              ${data.special_effects.map(e => `<div style="font-size:0.85rem; margin-top:0.3rem;"><strong>${e.name}:</strong> ${e.description}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    if (type === 'lore_card') {
+      return `
+        <div class="weapon-card" style="border-color: #8b5cf6;">
+          <div class="weapon-card-header">
+            <h3 style="color:#a78bfa;">📜 ${name}</h3>
+            <span class="badge" style="background:#6d28d9; color:#fff;">${data.card_category || 'Lore Card'}</span>
+          </div>
+          <div style="font-size:0.85rem; line-height:1.5;">
+            ${data.casting_time ? `<div><strong>Casting Time:</strong> ${data.casting_time}</div>` : ''}
+            ${data.range ? `<div><strong>Range:</strong> ${data.range}</div>` : ''}
+            ${data.components ? `<div><strong>Components:</strong> ${data.components}</div>` : ''}
+            ${data.duration ? `<div><strong>Duration:</strong> ${data.duration}</div>` : ''}
+          </div>
+          ${data.quote ? `<blockquote class="wa-quote" style="margin:0.75rem 0;"><p>"${data.quote}"</p></blockquote>` : ''}
+          ${data.summary ? `<p style="font-size:0.88rem; margin-top:0.5rem;">${data.summary}</p>` : ''}
+          ${Array.isArray(data.details) ? `
+            <div style="margin-top:0.75rem; font-size:0.85rem;">
+              ${data.details.map(d => `<div><strong>${d.b}:</strong> ${d.val}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Pathfinder 2e Creature Card
+    if (system === 'pf2e') {
+      return `
+        <div class="pf2e-card">
+          <div class="pf2e-header">
+            <h2>${name}</h2>
+            <span class="pf2e-level-badge">CREATURE ${data.cr || '1'}</span>
+          </div>
+          <div class="pf2e-traits-row">
+            <span class="pf2e-trait-chip">${data.size || 'MEDIUM'}</span>
+            <span class="pf2e-trait-chip">${data.alignment || 'N'}</span>
+          </div>
+          <div style="font-size:0.85rem; line-height:1.5;">
+            <div><strong>Perception:</strong> ${data.skills || '+5'}</div>
+            <div><strong>Defenses:</strong> AC ${data.ac || 15}; Fort +${data.abilities ? Math.max(1, Math.floor(((data.abilities.con||12)-10)/2)) : 2}, Ref +${data.abilities ? Math.max(1, Math.floor(((data.abilities.dex||12)-10)/2)) : 2}, Will +${data.abilities ? Math.max(1, Math.floor(((data.abilities.wis||12)-10)/2)) : 2}</div>
+            <div><strong>HP:</strong> ${data.hp || 30}</div>
+            <div><strong>Speed:</strong> ${data.speed || '25 feet'}</div>
+          </div>
+          ${Array.isArray(data.actions) && data.actions.length > 0 ? `
+            <div style="margin-top:0.75rem; border-top:1px solid #7c3aed; padding-top:0.5rem;">
+              <strong style="color:#c4b5fd;">Strikes & Actions:</strong>
+              ${data.actions.map(a => `<div style="font-size:0.85rem; margin-top:0.35rem;"><span class="pf2e-action-icon">◆</span><strong>${a.name}:</strong> ${a.description}</div>`).join('')}
+            </div>
+          ` : ''}
+          <div style="margin-top:1rem; padding-top:0.5rem; border-top:1px solid rgba(255,255,255,0.1); text-align:right;">
+            <a href="/api/statblocks/${sb.id}/export/foundry" class="btn btn-secondary btn-sm" style="font-size:0.75rem;">📦 Export Foundry VTT JSON</a>
+          </div>
+        </div>
+      `;
+    }
+
+    // D&D 5e Creature parchment card
+    const ab = data.abilities || { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+    const mod = (val) => { const m = Math.floor(((val||10) - 10) / 2); return m >= 0 ? `+${m}` : `${m}`; };
+
+    return `
+      <div class="dnd5e-card">
+        <div class="dnd5e-header">
+          <h2>${name}</h2>
+          <div class="dnd5e-subtitle">${data.size || 'Medium'} ${data.type || 'creature'}, ${data.alignment || 'unaligned'}</div>
+        </div>
+        <hr class="dnd5e-tapered-hr" />
+        <div class="dnd5e-prop-line"><strong>Armor Class</strong> ${data.ac || 10} (${data.ac_type || 'natural armor'})</div>
+        <div class="dnd5e-prop-line">
+          <strong>Hit Points</strong> ${data.hp || 10} 
+          ${data.hit_dice ? `<button class="btn-text" style="color:#7a200d; font-weight:bold; cursor:pointer;" onclick="window.app.rollDiceExpression('${data.hit_dice}', '${name} Hit Points')">🎲 (${data.hit_dice})</button>` : ''}
+        </div>
+        <div class="dnd5e-prop-line"><strong>Speed</strong> ${data.speed || '30 ft.'}</div>
+        <hr class="dnd5e-tapered-hr" />
+        <div class="dnd5e-abilities-grid">
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.str)}', '${name} STR Check')" style="cursor:pointer;" title="Roll STR Check"><div class="stat-lbl">STR</div><div class="stat-val">${ab.str||10} (${mod(ab.str)})</div></div>
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.dex)}', '${name} DEX Check')" style="cursor:pointer;" title="Roll DEX Check"><div class="stat-lbl">DEX</div><div class="stat-val">${ab.dex||10} (${mod(ab.dex)})</div></div>
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.con)}', '${name} CON Check')" style="cursor:pointer;" title="Roll CON Check"><div class="stat-lbl">CON</div><div class="stat-val">${ab.con||10} (${mod(ab.con)})</div></div>
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.int)}', '${name} INT Check')" style="cursor:pointer;" title="Roll INT Check"><div class="stat-lbl">INT</div><div class="stat-val">${ab.int||10} (${mod(ab.int)})</div></div>
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.wis)}', '${name} WIS Check')" style="cursor:pointer;" title="Roll WIS Check"><div class="stat-lbl">WIS</div><div class="stat-val">${ab.wis||10} (${mod(ab.wis)})</div></div>
+          <div class="dnd5e-ability-box" onclick="window.app.rollDiceExpression('1d20${mod(ab.cha)}', '${name} CHA Check')" style="cursor:pointer;" title="Roll CHA Check"><div class="stat-lbl">CHA</div><div class="stat-val">${ab.cha||10} (${mod(ab.cha)})</div></div>
+        </div>
+        <hr class="dnd5e-tapered-hr" />
+        ${data.saving_throws ? `<div class="dnd5e-prop-line"><strong>Saving Throws</strong> ${data.saving_throws}</div>` : ''}
+        ${data.skills ? `<div class="dnd5e-prop-line"><strong>Skills</strong> ${data.skills}</div>` : ''}
+        ${data.resistances ? `<div class="dnd5e-prop-line"><strong>Damage Resistances</strong> ${data.resistances}</div>` : ''}
+        ${data.senses ? `<div class="dnd5e-prop-line"><strong>Senses</strong> ${data.senses}</div>` : ''}
+        ${data.languages ? `<div class="dnd5e-prop-line"><strong>Languages</strong> ${data.languages}</div>` : ''}
+        <div class="dnd5e-prop-line"><strong>Challenge</strong> ${data.cr || '1'} (${data.xp || 200} XP)</div>
+        <hr class="dnd5e-tapered-hr" />
+        ${Array.isArray(data.traits) && data.traits.length > 0 ? data.traits.map(t => `<div class="dnd5e-action-item"><strong>${t.name}.</strong> ${t.description}</div>`).join('') : ''}
+        ${Array.isArray(data.actions) && data.actions.length > 0 ? `
+          <div class="dnd5e-section-title">Actions</div>
+          ${data.actions.map(a => `<div class="dnd5e-action-item"><strong>${a.name}.</strong> ${a.description}</div>`).join('')}
+        ` : ''}
+        ${Array.isArray(data.legendary_actions) && data.legendary_actions.length > 0 ? `
+          <div class="dnd5e-section-title">Legendary Actions</div>
+          ${data.legendary_actions.map(l => `<div class="dnd5e-action-item"><strong>${l.name}.</strong> ${l.description}</div>`).join('')}
+        ` : ''}
+        <div style="margin-top:1rem; padding-top:0.5rem; border-top:1px solid #7a200d; text-align:right;">
+          <a href="/api/statblocks/${sb.id}/export/foundry" class="btn btn-secondary btn-sm" style="font-size:0.75rem; background:rgba(122,32,13,0.1); color:#7a200d; border-color:#7a200d;">📦 Export Foundry VTT JSON</a>
+        </div>
+      </div>
+    `;
+  }
+
+  rollDiceExpression(expression, label = 'Roll') {
+    if (!expression) return;
+    
+    let cleanExpr = expression.trim().toLowerCase();
+    let numDice = 1;
+    let dieSides = 20;
+    let modifier = 0;
+
+    if (cleanExpr.includes('d')) {
+      const parts = cleanExpr.split('d');
+      numDice = parseInt(parts[0]) || 1;
+      const subParts = parts[1].split(/[\+\-]/);
+      dieSides = parseInt(subParts[0]) || 20;
+
+      if (parts[1].includes('+')) {
+        modifier = parseInt(parts[1].split('+')[1]) || 0;
+      } else if (parts[1].includes('-')) {
+        modifier = -1 * (parseInt(parts[1].split('-')[1]) || 0);
+      }
+    } else {
+      modifier = parseInt(cleanExpr.replace('+', '')) || 0;
+    }
+
+    const rolls = [];
+    let total = 0;
+    for (let i = 0; i < numDice; i++) {
+      const roll = Math.floor(Math.random() * dieSides) + 1;
+      rolls.push(roll);
+      total += roll;
+    }
+    total += modifier;
+
+    const modifierStr = modifier !== 0 ? (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`) : '';
+    const rollBreakdown = `[${rolls.join(', ')}]${modifierStr}`;
+    
+    let isCrit = dieSides === 20 && rolls.includes(20);
+    let isFumble = dieSides === 20 && rolls.includes(1);
+    
+    let msg = `🎲 <strong>${label}</strong>: <strong>${total}</strong> <span style="font-size:0.8em; opacity:0.8;">(${rollBreakdown})</span>`;
+    if (isCrit) msg += ` <span style="color:#22c55e; font-weight:bold;">🎯 CRITICAL HIT!</span>`;
+    if (isFumble) msg += ` <span style="color:#ef4444; font-weight:bold;">💥 NATURAL 1!</span>`;
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(msg, isCrit ? 'success' : isFumble ? 'error' : 'info');
+    }
+  }
+
+  async saveStatBlockForm(e) {
+    if (e) e.preventDefault();
+    if (!this.currentArticle) return;
+
+    const name = document.getElementById('sb-edit-name')?.value;
+    const system = document.getElementById('sb-edit-system')?.value;
+    const type = document.getElementById('sb-edit-type')?.value;
+    const rawJson = document.getElementById('sb-edit-json')?.value;
+    const isSecret = document.getElementById('sb-edit-is-secret')?.checked ? 1 : 0;
+
+    if (!name) {
+      if (typeof window.showToast === 'function') window.showToast('Please enter a stat block name', 'error');
+      return;
+    }
+
+    let parsedJson = {};
+    try {
+      parsedJson = JSON.parse(rawJson || '{}');
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast('Invalid JSON payload syntax', 'error');
+      return;
+    }
+
+    const payload = {
+      id: this.currentStatBlock ? this.currentStatBlock.id : null,
+      system,
+      type,
+      name,
+      stats_json: parsedJson,
+      is_secret: isSecret
+    };
+
+    try {
+      const res = await fetch(`/api/articles/${encodeURIComponent(this.currentArticle.id)}/statblock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        this.currentStatBlock = json.data;
+        if (typeof window.showToast === 'function') window.showToast('Stat block saved successfully', 'success');
+        this.switchStatBlockTab('view');
+        this.loadStatBlockData(this.currentArticle.id);
+        this.checkStatBlockIndicator(this.currentArticle.id);
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Failed to save stat block: ${err.message}`, 'error');
+    }
+  }
+
+  async deleteCurrentStatBlock() {
+    if (!this.currentStatBlock) return;
+    if (!confirm('Are you sure you want to delete this stat block?')) return;
+
+    try {
+      const res = await fetch(`/api/statblocks/${encodeURIComponent(this.currentStatBlock.id)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        this.currentStatBlock = null;
+        if (typeof window.showToast === 'function') window.showToast('Stat block deleted', 'info');
+        this.switchStatBlockTab('view');
+        this.loadStatBlockData(this.currentArticle.id);
+        this.checkStatBlockIndicator(this.currentArticle.id);
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Error deleting stat block: ${err.message}`, 'error');
+    }
+  }
+
+  async triggerAIStatBlockConversion() {
+    if (!this.currentArticle) return;
+
+    const btn = document.getElementById('sb-ai-generate-btn');
+    const system = document.getElementById('sb-ai-system')?.value || 'dnd5e';
+    const type = document.getElementById('sb-ai-type')?.value || 'character';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating Mechanics via Gemini AI...';
+    }
+
+    try {
+      const res = await fetch('/api/statblocks/convert-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          article_id: this.currentArticle.id,
+          system,
+          type
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        this.currentStatBlock = json.data;
+        if (typeof window.showToast === 'function') window.showToast('✨ Stat block generated from lore!', 'success');
+        this.switchStatBlockTab('view');
+        this.loadStatBlockData(this.currentArticle.id);
+        this.checkStatBlockIndicator(this.currentArticle.id);
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`AI Conversion error: ${err.message}`, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '✨ Generate Stat Block from Lore';
+      }
+    }
+  }
+
 // --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    const conciergeModal = document.getElementById('welcome-concierge-modal');
+    if (conciergeModal && !conciergeModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeConciergeModal === 'function') {
+        window.app.closeConciergeModal();
+      }
+      return;
+    }
+    const sbDrawer = document.getElementById('statblock-drawer');
+    if (sbDrawer && !sbDrawer.classList.contains('hidden')) {
+      sbDrawer.classList.add('hidden');
+      return;
+    }
     const cmdModal = document.getElementById('command-palette-modal');
     if (cmdModal && !cmdModal.classList.contains('hidden')) {
       cmdModal.classList.add('hidden');
@@ -5693,8 +6318,19 @@ document.addEventListener('keydown', function(e) {
       if (typeof window.toggleWeaveMatrixDrawer === 'function') {
         window.toggleWeaveMatrixDrawer();
       }
+    } else if (key === 's') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleStatBlockDrawer === 'function') {
+        window.app.toggleStatBlockDrawer();
+      }
+    } else if (key === 'w') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleConciergeModal === 'function') {
+        window.app.toggleConciergeModal();
+      }
     }
   }
+
 });
 
 // Event listener for Command Palette input

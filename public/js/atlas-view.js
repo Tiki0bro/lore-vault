@@ -3070,16 +3070,21 @@ class AtlasView {
     drawer.style.display = 'block';
 
     const targetSubMapId = pin ? (pin.target_sub_map_id || pin.sub_map_id) : null;
-    const drilldownHtml = targetSubMapId ? `
-      <div class="submap-drilldown-box" style="margin-top: 16px; padding: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent-primary, #38bdf8); border-radius: 8px;">
-        <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary, #38bdf8); margin-bottom: 8px;">
-          <i class="fa-solid fa-sitemap"></i> Nested Sub-Map Available
-        </div>
-        <button id="atlas-drilldown-btn" class="tool-btn primary full-width" data-submap-id="${targetSubMapId}">
-          <i class="fa-solid fa-map-location-dot"></i> 🗺️ Drill Down into Sub-Map
+    const drilldownHtml = `
+      <div class="submap-drilldown-box" style="margin-top: 16px; padding: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent-primary, #38bdf8); border-radius: 8px; display:flex; flex-direction:column; gap:8px;">
+        ${targetSubMapId ? `
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary, #38bdf8);">
+            <i class="fa-solid fa-sitemap"></i> Nested Sub-Map Available
+          </div>
+          <button id="atlas-drilldown-btn" class="tool-btn primary full-width" data-submap-id="${targetSubMapId}">
+            <i class="fa-solid fa-map-location-dot"></i> 🗺️ Drill Down into Sub-Map
+          </button>
+        ` : ''}
+        <button id="atlas-gen-battlemap-btn" class="tool-btn full-width" style="background:rgba(245,158,11,0.15); border:1px solid var(--accent-gold);">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> ⚔️ Auto-Generate Tactical Battlemap
         </button>
       </div>
-    ` : '';
+    `;
 
     if (!articleId) {
       content.innerHTML = `
@@ -3124,6 +3129,138 @@ class AtlasView {
         });
       }
     }
+
+    const genBattlemapBtn = document.getElementById('atlas-gen-battlemap-btn');
+    if (genBattlemapBtn) {
+      genBattlemapBtn.addEventListener('click', () => {
+        this.closeArticleDrawer();
+        this.openGeneratorModal();
+        const titleInput = document.getElementById('gen-map-title');
+        if (titleInput) titleInput.value = `${label} Battlemap`;
+        const modal = document.getElementById('atlas-generate-modal');
+        if (modal) {
+          const scopeCard = modal.querySelector('.gen-scope-card[data-scope="battlemap"]');
+          if (scopeCard) scopeCard.click();
+        }
+      });
+    }
+  }
+
+  initMinimap() {
+    const minimapContainer = document.getElementById('atlas-minimap');
+    if (!minimapContainer || !this.currentMap) return;
+
+    const imgEl = document.getElementById('minimap-img');
+    if (imgEl) imgEl.src = this.currentMap.image_path;
+
+    if (!this._minimapBound) {
+      this._minimapBound = true;
+      minimapContainer.addEventListener('click', (e) => {
+        const rect = minimapContainer.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) / rect.width;
+        const clickY = (e.clientY - rect.top) / rect.height;
+
+        const w = this.currentMap.width || 1920;
+        const h = this.currentMap.height || 1080;
+        const targetLat = clickY * h;
+        const targetLng = clickX * w;
+
+        if (this.mapInstance && typeof this.mapInstance.panTo === 'function') {
+          this.mapInstance.panTo([targetLat, targetLng]);
+        }
+      });
+
+      if (this.mapInstance) {
+        this.mapInstance.on('move zoom resize', () => this.syncMinimapViewport());
+      }
+    }
+
+    this.syncMinimapViewport();
+  }
+
+  syncMinimapViewport() {
+    const minimapContainer = document.getElementById('atlas-minimap');
+    const rectEl = document.getElementById('minimap-viewport-rect');
+    if (!minimapContainer || !rectEl || !this.mapInstance || !this.currentMap) return;
+
+    const bounds = this.mapInstance.getBounds();
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+
+    const westPct = Math.max(0, Math.min(1, bounds.getWest() / w));
+    const eastPct = Math.max(0, Math.min(1, bounds.getEast() / w));
+    const southPct = Math.max(0, Math.min(1, bounds.getSouth() / h));
+    const northPct = Math.max(0, Math.min(1, bounds.getNorth() / h));
+
+    const leftPct = westPct * 100;
+    const topPct = southPct * 100;
+    const widthPct = Math.max(5, (eastPct - westPct) * 100);
+    const heightPct = Math.max(5, (northPct - southPct) * 100);
+
+    rectEl.style.left = `${leftPct}%`;
+    rectEl.style.top = `${topPct}%`;
+    rectEl.style.width = `${widthPct}%`;
+    rectEl.style.height = `${heightPct}%`;
+  }
+
+  animateRouteExpedition(route) {
+    if (!route || !Array.isArray(route.points) || route.points.length < 2) {
+      alert('Invalid route for expedition animation.');
+      return;
+    }
+    if (typeof L === 'undefined' || !this.mapInstance) return;
+
+    if (this._activeTravelAnimation) {
+      cancelAnimationFrame(this._activeTravelAnimation);
+      this._activeTravelAnimation = null;
+    }
+
+    if (this._travelPartyMarker) {
+      this.mapInstance.removeLayer(this._travelPartyMarker);
+      this._travelPartyMarker = null;
+    }
+
+    const w = this.currentMap.width || 1920;
+    const h = this.currentMap.height || 1080;
+    const pointsPx = route.points.map(pt => [pt[1] * h, pt[0] * w]);
+
+    const partyIcon = L.divIcon({
+      className: 'expedition-party-token',
+      html: `<div class="party-token-node" style="font-size:1.4rem; filter:drop-shadow(0 0 6px rgba(245,158,11,0.8));">⛵</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    this._travelPartyMarker = L.marker(pointsPx[0], { icon: partyIcon }).addTo(this.mapInstance);
+
+    let startTime = null;
+    const durationMs = Math.max(3000, pointsPx.length * 1500);
+
+    const animateStep = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(1.0, elapsed / durationMs);
+
+      const totalSegments = pointsPx.length - 1;
+      const segmentIndex = Math.min(totalSegments - 1, Math.floor(progress * totalSegments));
+      const segmentProgress = (progress * totalSegments) - segmentIndex;
+
+      const p1 = pointsPx[segmentIndex];
+      const p2 = pointsPx[segmentIndex + 1];
+
+      const currentLat = p1[0] + (p2[0] - p1[0]) * segmentProgress;
+      const currentLng = p1[1] + (p2[1] - p1[1]) * segmentProgress;
+
+      this._travelPartyMarker.setLatLng([currentLat, currentLng]);
+
+      if (progress < 1.0) {
+        this._activeTravelAnimation = requestAnimationFrame(animateStep);
+      } else {
+        console.log('[Atlas Expedition] Party travel animation completed!');
+      }
+    };
+
+    this._activeTravelAnimation = requestAnimationFrame(animateStep);
   }
 
   async triggerAiBorderDetection() {
