@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoreVault - Owlbear Rodeo 2.0 Extension</title>
+  <script src="https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@2.3.0/dist/index.umd.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --accent: #d97706;
+      --accent-hover: #b45309;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 15px;
+      color: var(--accent);
+    }
+    .search-box {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-main);
+      margin-bottom: 12px;
+    }
+    .search-box:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .card-title {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .card-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+    .btn-secondary {
+      background: #334155;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>📖 LoreVault Owlbear Extension</h2>
+    <span style="font-size:11px; color:var(--text-muted);">v2.0</span>
+  </div>
+
+  <input type="text" id="vtt-search" class="search-box" placeholder="🔍 Search lore, monsters, statblocks..." />
+
+  <div id="vtt-results" class="results-list">
+    <div class="card">
+      <div class="card-title">LoreVault Server Connection</div>
+      <div class="card-meta">Connecting to http://localhost:3000...</div>
+    </div>
+  </div>
+
+  <script>
+    let OBR_READY = false;
+
+    // Check Owlbear Rodeo SDK
+    if (typeof OBR !== 'undefined') {
+      OBR.onReady(() => {
+        OBR_READY = true;
+        console.log('[LoreVault VTT] Owlbear Rodeo SDK Ready!');
+      });
+    }
+
+    async function fetchLoreVaultData(query = '') {
+      const resultsContainer = document.getElementById('vtt-results');
+      try {
+        const res = await fetch(`http://localhost:3000/api/articles?mode=player&search=${encodeURIComponent(query)}`);
+        const articles = await res.json();
+        
+        if (!Array.isArray(articles) || articles.length === 0) {
+          resultsContainer.innerHTML = '<div class="card"><div class="card-meta">No matching lore entries found.</div></div>';
+          return;
+        }
+
+        resultsContainer.innerHTML = articles.slice(0, 10).map(art => `
+          <div class="card">
+            <div class="card-title">${art.title}</div>
+            <div class="card-meta">Category: ${art.category || 'General'} | World: ${art.world_id || 'Main'}</div>
+            <div class="card-actions">
+              <button class="btn" onclick="spawnTokenOnMap('${art.title.replace(/'/g, "\\'")}', '${art.header_image || ''}')">📌 Add Token to Map</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        resultsContainer.innerHTML = '<div class="card"><div class="card-meta" style="color:#ef4444;">Could not connect to LoreVault server (http://localhost:3000). Ensure server is running.</div></div>';
+      }
+    }
+
+    async function spawnTokenOnMap(name, imageUrl) {
+      if (OBR_READY && typeof OBR !== 'undefined') {
+        try {
+          await OBR.scene.items.addItems([{
+            id: `lorevault-${Date.now()}`,
+            type: "IMAGE",
+            name: name,
+            image: { url: imageUrl || "https://upload.wikimedia.org/wikipedia/commons/e/e0/PlaceholderLC.png" },
+            position: { x: 0, y: 0 },
+            layer: "CHARACTER"
+          }]);
+          alert(`Added token "${name}" to Owlbear Rodeo canvas!`);
+        } catch(e) {
+          console.warn('[LoreVault VTT] OBR item drop error:', e);
+        }
+      } else {
+        alert(`Token "${name}" selected! (Owlbear SDK active in live room mode)`);
+      }
+    }
+
+    document.getElementById('vtt-search').addEventListener('input', (e) => {
+      fetchLoreVaultData(e.target.value);
+    });
+
+    fetchLoreVaultData();
+  </script>
+</body>
+</html>

@@ -378,3 +378,78 @@ test('POST /api/ai/test-connection handles unreachable ollama instance gracefull
   assert.ok(typeof ollamaRes.json.latency_ms === 'number');
   assert.ok(ollamaRes.json.message.includes('Ollama'));
 });
+
+// --- VTT INTEGRATION SUITE TEST SUITE ---
+
+test('GET /api/vtt/foundry/journals/:articleId returns valid Foundry Journal JSON', async () => {
+  const artRes = await makeRequest('/api/articles', { method: 'POST' }, {
+    title: 'VTT Test Article ' + Date.now(),
+    category: 'History',
+    content: 'Lore text with [secret]Hidden Cultist HQ[/secret] details.'
+  });
+  assert.strictEqual(artRes.statusCode, 201);
+  const articleId = artRes.json.id;
+
+  const res = await makeRequest(`/api/vtt/foundry/journals/${articleId}?mode=player`);
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(res.json.name);
+  assert.ok(Array.isArray(res.json.pages));
+  assert.strictEqual(res.json.pages[0].type, 'text');
+  assert.strictEqual(res.json.pages[0].text.content.includes('Hidden Cultist HQ'), false);
+});
+
+test('GET /api/vtt/foundry/scenes/:mapId returns valid Foundry Scene JSON', async () => {
+  const mapsRes = await makeRequest('/api/worlds/main/maps');
+  const mapId = (mapsRes.json && mapsRes.json.maps && mapsRes.json.maps.length > 0) ? mapsRes.json.maps[0].id : 1;
+  const res = await makeRequest(`/api/vtt/foundry/scenes/${mapId}?mode=player`);
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(res.json.name);
+  assert.ok(typeof res.json.width === 'number');
+  assert.ok(Array.isArray(res.json.notes));
+});
+
+test('POST /api/vtt/export/roll20 exports formatted Handouts', async () => {
+  const artRes = await makeRequest('/api/articles', { method: 'POST' }, {
+    title: 'VTT Roll20 Test Article ' + Date.now(),
+    category: 'Lore',
+    content: 'Roll20 lore content'
+  });
+  const articleId = artRes.json.id;
+
+  const res = await makeRequest('/api/vtt/export/roll20', { method: 'POST' }, {
+    article_ids: [articleId],
+    mode: 'player'
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.ok(Array.isArray(res.json.r20_handouts));
+  assert.ok(res.json.r20_handouts.length > 0);
+});
+
+
+test('POST /api/vtt/export/fgu generates clean Fantasy Grounds XML document', async () => {
+  const res = await makeRequest('/api/vtt/export/fgu', { method: 'POST' }, {
+    world_id: 'main',
+    mode: 'player'
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(res.raw.includes('<?xml version="1.0"'));
+  assert.ok(res.raw.includes('<root version="4.1">'));
+});
+
+test('POST /api/vtt/validate-schema sanitizes DM secret blocks in player mode', async () => {
+  const res = await makeRequest('/api/vtt/validate-schema', { method: 'POST' }, {
+    target_vtt: 'foundry',
+    mode: 'player',
+    payload: {
+      name: 'Test Document',
+      secret_notes: '[secret]Hidden Cultist HQ[/secret] Regular town lore'
+    }
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.valid, true);
+  assert.strictEqual(res.json.sanitized_payload.secret_notes.includes('Hidden Cultist HQ'), false);
+  assert.ok(res.json.sanitized_payload.secret_notes.includes('Regular town lore'));
+});
+
+

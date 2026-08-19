@@ -158,6 +158,7 @@
                     </select>
                     <button class="btn btn-secondary toolbar-btn" onclick="openQuickMarketingModal()">📢 Quick Promo Copy</button>
                     <button id="statblock-drawer-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleStatBlockDrawer()" title="TTRPG Stat Block (D&D 5e / PF2e)">🛡️ Stat Block <span id="statblock-badge-indicator" class="statblock-active-dot hidden">●</span></button>
+                    <button id="vtt-export-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.openVttExportModal()" title="Export to Virtual Tabletop (Foundry, Owlbear, Roll20, FGU)">🎲 VTT Export <span class="kbd-hint">Ctrl+Shift+V</span></button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleMarkdown()" title="Copy raw WorldAnvil Markdown">📋 Copy MD</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleShareLink()" title="Copy public share link">🔗 Share Link</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
@@ -987,6 +988,62 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="window.app.closeImportModal()">Cancel</button>
           <button class="btn btn-primary" onclick="window.app.processImport()">Start Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIFIED VTT EXPORT MANAGER MODAL -->
+    <div id="vtt-export-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeVttExportModal()"></div>
+      <div class="modal-card" style="max-width: 680px;">
+        <div class="modal-header">
+          <h2>🎲 Virtual Tabletop (VTT) Export Hub</h2>
+          <button class="modal-close" onclick="window.app.closeVttExportModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.4rem;">Target VTT Platform</label>
+            <div class="segmented-control" id="vtt-target-segmented">
+              <button type="button" class="segmented-btn active" data-vtt="foundry" onclick="window.app.setVttTarget('foundry')">🛡️ Foundry VTT</button>
+              <button type="button" class="segmented-btn" data-vtt="owlbear" onclick="window.app.setVttTarget('owlbear')">🐻 Owlbear Rodeo</button>
+              <button type="button" class="segmented-btn" data-vtt="roll20" onclick="window.app.setVttTarget('roll20')">🎲 Roll20</button>
+              <button type="button" class="segmented-btn" data-vtt="fgu" onclick="window.app.setVttTarget('fgu')">⚔️ Fantasy Grounds</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.4rem;">Privacy & DM Secrets Guard</label>
+            <div class="segmented-control" id="vtt-privacy-segmented">
+              <button type="button" class="segmented-btn active" data-mode="player" onclick="window.app.setVttPrivacyMode('player')">👁️ Player Mode (Strip Secrets)</button>
+              <button type="button" class="segmented-btn" data-mode="gm" onclick="window.app.setVttPrivacyMode('gm')">🔒 GM Mode (Secrets Included)</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.4rem;">Target Lore Content</label>
+            <select id="vtt-content-type-select" class="form-control" style="width: 100%; padding: 0.6rem; border-radius: 6px;" onchange="window.app.updateVttPreview()">
+              <option value="current_article">📄 Current Article</option>
+              <option value="current_statblock">🛡️ Current Article Statblock</option>
+              <option value="active_map">🗺️ Active Atlas Map</option>
+              <option value="world_bundle">🌍 Entire World Bundle</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight:600; display:block; margin-bottom:0.4rem;">VTT Export Preview & Schema Check</label>
+            <pre id="vtt-preview-box" style="max-height: 200px; overflow-y: auto; background: var(--bg-dark, #0d1117); border: 1px solid var(--border-color, #30363d); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; color: #a5d6ff;">Select an option above to generate preview...</pre>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="vtt-owlbear-link-container" class="hidden">
+            <a href="/vtt/owlbear.html" target="_blank" class="btn btn-secondary">🔗 Open Owlbear Extension</a>
+          </div>
+          <div style="display:flex; gap:0.5rem; margin-left:auto;">
+            <button class="btn btn-secondary" onclick="window.app.closeVttExportModal()">Cancel</button>
+            <button class="btn btn-secondary" onclick="window.app.copyVttExportData()">📋 Copy to Clipboard</button>
+            <button class="btn btn-primary" onclick="window.app.downloadVttExportPackage()">💾 Download File</button>
+          </div>
         </div>
       </div>
     </div>

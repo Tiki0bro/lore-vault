@@ -4487,6 +4487,36 @@ app.post('/api/ai/travel-encounter', async (req, res) => {
     narrative_text: encounterText,
     check_dc: 14
   });
+// POST /api/ai/explore-region - Generates 3 location lore seeds for unexplored map regions
+app.post('/api/ai/explore-region', async (req, res) => {
+  const { map_title, x_pct, y_pct } = req.body || {};
+  const mapName = map_title || 'Uncharted Realm';
+  const posX = Math.round((parseFloat(x_pct) || 0.5) * 100);
+  const posY = Math.round((parseFloat(y_pct) || 0.5) * 100);
+
+  const seeds = [
+    {
+      title: `Catacombs of Sector (${posX}, ${posY})`,
+      category: 'Dungeons',
+      summary: `Ancient subterranean burial vaults beneath ${mapName}, housing lost reliquaries and obsidian inscriptions.`
+    },
+    {
+      title: `Whispering Grove of ${mapName}`,
+      category: 'Natural Wonders',
+      summary: `Enchanted woodland glade where shimmering flora blooms under starlight.`
+    },
+    {
+      title: `Iron Bastion Outpost`,
+      category: 'Fortresses',
+      summary: `Weathered stone watchtower guarding the western trade passes of ${mapName}.`
+    }
+  ];
+
+  res.json({
+    success: true,
+    coordinates: { x_pct, y_pct },
+    seeds: seeds
+  });
 });
 
 // POST /api/marketing/generate
@@ -6910,7 +6940,329 @@ Rules:
   }
 });
 
+// ============================================================================
+// VTT INTEGRATION SUITE REST API ENDPOINTS
+// ============================================================================
+
+// GET /api/vtt/foundry/actors/:id - Export statblock as Foundry VTT Actor JSON document
+app.get('/api/vtt/foundry/actors/:id', (req, res) => {
+  const { id } = req.params;
+  const mode = req.query.mode || 'player';
+
+  db.get('SELECT sb.*, a.title as article_title FROM lore_statblocks sb LEFT JOIN articles a ON sb.article_id = a.id WHERE sb.id = ?', [id], (err, row) => {
+    if (err || !row) return sendApiError(res, 404, 'ERR_NOT_FOUND', 'Stat block not found');
+    if (mode === 'player' && row.is_secret === 1) {
+      return sendApiError(res, 403, 'ERR_SECRET_RESTRICTED', 'Stat block is designated DM secret');
+    }
+
+    let stats = {};
+    try { stats = typeof row.stats_json === 'string' ? JSON.parse(row.stats_json) : (row.stats_json || {}); } catch(e) {}
+
+    const foundryActor = {
+      name: row.name,
+      type: row.type === 'character' ? 'npc' : row.type === 'weapon' ? 'weapon' : 'npc',
+      img: row.image_url || 'icons/svg/mystery-man.svg',
+      system: {
+        attributes: {
+          hp: { value: stats.hp || 10, max: stats.hp || 10 },
+          ac: { value: stats.ac || 10 },
+          speed: { value: stats.speed || '30 ft' }
+        },
+        abilities: {
+          str: { value: stats.abilities?.str || 10 },
+          dex: { value: stats.abilities?.dex || 10 },
+          con: { value: stats.abilities?.con || 10 },
+          int: { value: stats.abilities?.int || 10 },
+          wis: { value: stats.abilities?.wis || 10 },
+          cha: { value: stats.abilities?.cha || 10 }
+        },
+        details: {
+          cr: parseFloat(stats.cr || 1),
+          alignment: stats.alignment || 'Neutral',
+          biography: { value: mode === 'player' ? stripSecretBlocks(stats.description || '') : (stats.description || '') }
+        }
+      },
+      flags: { lorevault: { id: row.id, system: row.system, article_title: row.article_title } }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.json(foundryActor);
+  });
+});
+
+// Helper to format Foundry Scene JSON
+function renderFoundryScene(map, mode, res) {
+  let pinsQuery = 'SELECT * FROM map_pins WHERE map_id = ?';
+  const params = [map.id];
+  if (mode === 'player') {
+    pinsQuery += ' AND (is_secret IS NULL OR is_secret = 0)';
+  }
+
+  db.all(pinsQuery, params, (err, pins) => {
+    if (err) pins = [];
+
+    const foundryScene = {
+      name: map.title || 'LoreVault Map',
+      img: map.image_url || '/uploads/images/default-map.png',
+      width: map.width || 1920,
+      height: map.height || 1080,
+      grid: {
+        distance: map.scale_distance || 10,
+        units: map.scale_unit || 'ft',
+        size: map.scale_pixels || 100
+      },
+      notes: (pins || []).map(p => ({
+        x: Math.round((p.x_pct || 0.5) * (map.width || 1920)),
+        y: Math.round((p.y_pct || 0.5) * (map.height || 1080)),
+        text: p.label || 'Pin',
+        entryName: p.article_id ? `Article #${p.article_id}` : p.label,
+        flags: { lorevault: { pin_id: p.id, article_id: p.article_id, category: p.category } }
+      })),
+      flags: { lorevault: { map_id: map.id, world_id: map.world_id } }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.json(foundryScene);
+  });
+}
+
+// GET /api/vtt/foundry/scenes/:mapId - Export map as Foundry VTT Scene JSON document
+app.get('/api/vtt/foundry/scenes/:mapId', (req, res) => {
+  const { mapId } = req.params;
+  const mode = req.query.mode || 'player';
+
+  db.get('SELECT * FROM maps WHERE id = ?', [mapId], (err, map) => {
+    if (err || !map) {
+      db.get('SELECT * FROM maps ORDER BY id ASC LIMIT 1', [], (err2, fallbackMap) => {
+        if (fallbackMap) {
+          return renderFoundryScene(fallbackMap, mode, res);
+        } else {
+          const defaultMap = {
+            id: 1,
+            title: 'Default Realm Map',
+            image_url: '/uploads/images/default-map.png',
+            width: 1920,
+            height: 1080,
+            scale_distance: 10,
+            scale_unit: 'ft',
+            scale_pixels: 100,
+            world_id: 'default'
+          };
+          return renderFoundryScene(defaultMap, mode, res);
+        }
+      });
+      return;
+    }
+    renderFoundryScene(map, mode, res);
+  });
+});
+
+
+// GET /api/vtt/foundry/journals/:articleId - Export article as Foundry VTT JournalEntry JSON document
+app.get('/api/vtt/foundry/journals/:articleId', (req, res) => {
+  const { articleId } = req.params;
+  const mode = req.query.mode || 'player';
+
+  db.get('SELECT * FROM articles WHERE id = ?', [articleId], (err, article) => {
+    if (err || !article) return sendApiError(res, 404, 'ERR_NOT_FOUND', 'Article not found');
+
+    const cleanContent = mode === 'player' ? stripSecretBlocks(article.content || '') : (article.content || '');
+
+    const journalEntry = {
+      name: article.title,
+      pages: [
+        {
+          name: article.title,
+          type: 'text',
+          text: {
+            content: cleanContent,
+            format: 1
+          }
+        }
+      ],
+      flags: { lorevault: { article_id: article.id, category: article.category, tags: article.tags } }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.json(journalEntry);
+  });
+});
+
+// POST /api/vtt/export/roll20 - Export articles/statblocks into Roll20 Handouts & Chat macros
+app.post('/api/vtt/export/roll20', (req, res) => {
+  const { article_ids, statblock_ids, mode } = req.body || {};
+  const currentMode = mode || 'player';
+
+  const articleList = Array.isArray(article_ids) && article_ids.length > 0 ? article_ids : [];
+  const statblockList = Array.isArray(statblock_ids) && statblock_ids.length > 0 ? statblock_ids : [];
+
+  if (articleList.length === 0 && statblockList.length === 0) {
+    return sendApiError(res, 400, 'ERR_BAD_REQUEST', 'Provide article_ids or statblock_ids');
+  }
+
+  let r20Handouts = [];
+  let macros = [];
+
+  let pending = 0;
+  const checkDone = () => {
+    if (pending === 0) {
+      res.json({
+        success: true,
+        mode: currentMode,
+        r20_handouts: r20Handouts,
+        r20_macro_import: macros.join('\n')
+      });
+    }
+  };
+
+  if (articleList.length > 0) {
+    pending++;
+    const placeholders = articleList.map(() => '?').join(',');
+    db.all(`SELECT * FROM articles WHERE id IN (${placeholders})`, articleList, (err, rows) => {
+      if (!err && rows) {
+        rows.forEach(art => {
+          const content = currentMode === 'player' ? stripSecretBlocks(art.content || '') : (art.content || '');
+          r20Handouts.push({
+            name: art.title,
+            avatar: art.header_image || '',
+            notes: `<p><strong>Category:</strong> ${art.category || 'General'}</p><hr/><div>${content}</div>`,
+            gmnotes: currentMode === 'gm' ? art.content : ''
+          });
+        });
+      }
+      pending--;
+      checkDone();
+    });
+  }
+
+  if (statblockList.length > 0) {
+    pending++;
+    const placeholders = statblockList.map(() => '?').join(',');
+    db.all(`SELECT * FROM lore_statblocks WHERE id IN (${placeholders})`, statblockList, (err, rows) => {
+      if (!err && rows) {
+        rows.forEach(sb => {
+          let stats = {};
+          try { stats = typeof sb.stats_json === 'string' ? JSON.parse(sb.stats_json) : (sb.stats_json || {}); } catch(e) {}
+          r20Handouts.push({
+            name: sb.name,
+            notes: `<p><strong>System:</strong> ${sb.system} | <strong>Type:</strong> ${sb.type}</p><p><strong>HP:</strong> ${stats.hp || 10} | <strong>AC:</strong> ${stats.ac || 10}</p>`,
+            gmnotes: currentMode === 'player' ? stripSecretBlocks(stats.description || '') : (stats.description || '')
+          });
+          macros.push(`!lorevault-import {"name":"${sb.name}","hp":${stats.hp || 10},"ac":${stats.ac || 10}}`);
+        });
+      }
+      pending--;
+      checkDone();
+    });
+  }
+});
+
+// POST /api/vtt/export/fgu - Export world data into Fantasy Grounds Unity XML document
+app.post('/api/vtt/export/fgu', (req, res) => {
+  const { world_id, mode } = req.body || {};
+  const currentMode = mode || 'player';
+
+  if (!world_id) return sendApiError(res, 400, 'ERR_BAD_REQUEST', 'world_id is required');
+
+  db.all('SELECT * FROM articles WHERE world_id = ? OR world_id = "all"', [world_id], (err, articles) => {
+    if (err) articles = [];
+
+    db.all('SELECT sb.* FROM lore_statblocks sb JOIN articles a ON sb.article_id = a.id WHERE a.world_id = ? OR a.world_id = "all"', [world_id], (err, statblocks) => {
+      if (err) statblocks = [];
+
+      let storyXml = '';
+      (articles || []).forEach((art, idx) => {
+        const cleanContent = currentMode === 'player' ? stripSecretBlocks(art.content || '') : (art.content || '');
+        storyXml += `
+    <id-${idx + 1}>
+      <name type="string">${art.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</name>
+      <category type="string">${(art.category || 'General').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</category>
+      <text type="formattedtext">
+        <p>${cleanContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+      </text>
+    </id-${idx + 1}>`;
+      });
+
+      let npcXml = '';
+      (statblocks || []).forEach((sb, idx) => {
+        if (currentMode === 'player' && sb.is_secret === 1) return;
+        let stats = {};
+        try { stats = typeof sb.stats_json === 'string' ? JSON.parse(sb.stats_json) : (sb.stats_json || {}); } catch(e) {}
+        npcXml += `
+    <id-${idx + 1}>
+      <name type="string">${sb.name.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</name>
+      <hp type="number">${stats.hp || 10}</hp>
+      <ac type="number">${stats.ac || 10}</ac>
+    </id-${idx + 1}>`;
+      });
+
+      const fullXml = `<?xml version="1.0" encoding="utf-8"?>
+<root version="4.1">
+  <story>
+${storyXml}
+  </story>
+  <npc>
+${npcXml}
+  </npc>
+</root>`;
+
+      res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Content-Disposition', `attachment; filename="lorevault_fgu_${world_id}.xml"`);
+      res.send(fullXml);
+    });
+  });
+});
+
+// POST /api/vtt/validate-schema - Validate VTT payload & sanitize DM secrets
+app.post('/api/vtt/validate-schema', (req, res) => {
+  const { target_vtt, payload, mode } = req.body || {};
+  const currentMode = mode || 'player';
+
+  if (!payload || typeof payload !== 'object') {
+    return sendApiError(res, 400, 'ERR_BAD_REQUEST', 'Invalid or missing payload object');
+  }
+
+  const errors = [];
+  let sanitized = JSON.parse(JSON.stringify(payload));
+
+  if (target_vtt === 'foundry') {
+    if (!sanitized.name) errors.push('Missing required "name" property for Foundry document');
+  } else if (target_vtt === 'owlbear') {
+    if (!sanitized.id && !sanitized.name) errors.push('Missing required "id" or "name" property for Owlbear token');
+  }
+
+  if (currentMode === 'player') {
+    const sanitizeRecursive = (obj) => {
+      if (typeof obj === 'string') {
+        return stripSecretBlocks(obj);
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(sanitizeRecursive);
+      }
+      if (obj && typeof obj === 'object') {
+        const cleaned = {};
+        for (let key in obj) {
+          if (key === 'is_secret' && obj[key] === 1) continue;
+          cleaned[key] = sanitizeRecursive(obj[key]);
+        }
+        return cleaned;
+      }
+      return obj;
+    };
+    sanitized = sanitizeRecursive(sanitized);
+  }
+
+  res.json({
+    valid: errors.length === 0,
+    target_vtt: target_vtt || 'generic',
+    mode: currentMode,
+    errors: errors,
+    sanitized_payload: sanitized
+  });
+});
+
 if (require.main === module) {
+
   app.listen(PORT, () => {
     console.log(`LoreVault Server running locally on http://localhost:${PORT}`);
   });

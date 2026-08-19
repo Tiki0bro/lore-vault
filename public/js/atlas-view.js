@@ -2906,10 +2906,19 @@ class AtlasView {
       const markerOpts = { draggable: isDraggable };
       if (markerIcon) markerOpts.icon = markerIcon;
 
-      const marker = L.marker(latlng, markerOpts).addTo(this.mapInstance);
       const targetSubMapId = pin.target_sub_map_id || pin.sub_map_id;
-      const tooltipLabel = targetSubMapId ? `🗺️ ${pin.label}` : pin.label;
-      marker.bindTooltip(tooltipLabel, { permanent: false, direction: 'top' });
+      const targetArticle = this.articles ? this.articles.find(a => a.id === pin.article_id) : null;
+      const categoryLabel = targetArticle ? (targetArticle.category || 'Location') : (pin.category || 'Location');
+      const summarySnippet = targetArticle ? (targetArticle.summary || (targetArticle.content ? targetArticle.content.substring(0, 80) + '...' : 'Lore location marker.')) : 'Lore location marker.';
+
+      const hoverCardHtml = `
+        <div class="atlas-pin-hover-card" style="padding:6px 10px; min-width:180px; max-width:220px; font-family:var(--font-body, sans-serif);">
+          <div style="font-weight:700; font-size:0.85rem; color:var(--accent-gold, #f59e0b);">${targetSubMapId ? '🗺️ ' : ''}${pin.label}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted, #94a3b8); margin-top:1px;">${categoryLabel}</div>
+          <div style="font-size:0.76rem; color:var(--text-primary, #e2e8f0); margin-top:4px; line-height:1.3;">${summarySnippet}</div>
+        </div>
+      `;
+      marker.bindTooltip(hoverCardHtml, { permanent: false, direction: 'top', className: 'atlas-hover-card-tooltip' });
 
       let isDraggingThisPin = false;
       if (isDraggable) {
