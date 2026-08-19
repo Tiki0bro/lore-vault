@@ -1659,6 +1659,27 @@ class AtlasView {
     };
   }
 
+  toggleFactionHeatmap(forceState) {
+    this.isFactionHeatmapActive = forceState !== undefined ? forceState : !this.isFactionHeatmapActive;
+    if (this.territoryLayers) {
+      Object.values(this.territoryLayers).forEach(layerObj => {
+        if (layerObj.polygon && typeof layerObj.polygon.setStyle === 'function') {
+          if (this.isFactionHeatmapActive) {
+            layerObj.polygon.setStyle({
+              fillOpacity: 0.55,
+              weight: 4
+            });
+          } else {
+            layerObj.polygon.setStyle({
+              fillOpacity: 0.25,
+              weight: 3
+            });
+          }
+        }
+      });
+    }
+  }
+
   async deleteCurrentMap() {
     if (!this.currentMap) {
       alert('No map currently selected to delete.');

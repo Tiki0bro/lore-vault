@@ -2094,6 +2094,46 @@
     </div>
   </div>
 
+  <!-- FLOATING QUICK-DICE DOCK -->
+  <div id="quick-dice-dock" class="quick-dice-dock">
+    <div class="dice-dock-header">
+      <span class="dice-dock-title">🎲 Virtual Dice Engine</span>
+      <div class="dice-dock-toggles">
+        <button id="dice-adv-btn" class="dice-toggle-btn" onclick="window.app.toggleDiceAdvantage()" title="Toggle Advantage (Roll 2d20, Keep Highest)">ADV</button>
+        <button id="dice-dis-btn" class="dice-toggle-btn" onclick="window.app.toggleDiceDisadvantage()" title="Toggle Disadvantage (Roll 2d20, Keep Lowest)">DIS</button>
+        <button id="dice-secret-btn" class="dice-toggle-btn" onclick="window.app.toggleDiceSecretMode()" title="Toggle DM Secret Roll">🔒 GM</button>
+      </div>
+    </div>
+    <div class="dice-dock-buttons">
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(4)">d4</button>
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(6)">d6</button>
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(8)">d8</button>
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(10)">d10</button>
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(12)">d12</button>
+      <button class="poly-dice-btn poly-d20" onclick="window.app.rollPolyhedral(20)">d20</button>
+      <button class="poly-dice-btn" onclick="window.app.rollPolyhedral(100)">d100</button>
+    </div>
+    <div class="dice-dock-input-row">
+      <input type="text" id="quick-dice-input" placeholder="Custom: e.g. 2d6+4" onkeydown="if(event.key==='Enter') window.app.rollCustomDiceInput()" />
+      <button class="btn btn-primary btn-sm" onclick="window.app.rollCustomDiceInput()">Roll</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.app.toggleDiceHistoryDrawer()">📜 (<span id="dice-history-count">0</span>)</button>
+    </div>
+  </div>
+
+  <!-- SLIDE-OUT ROLL HISTORY DRAWER -->
+  <div id="dice-history-drawer" class="dice-history-drawer hidden">
+    <div class="drawer-header">
+      <h3>📜 Dice Roll History Log</h3>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="window.app.clearDiceHistory()">🗑️ Clear</button>
+        <button class="drawer-close-btn" onclick="window.app.toggleDiceHistoryDrawer()">✕</button>
+      </div>
+    </div>
+    <div id="dice-history-list" class="drawer-body dice-history-list">
+      <div class="dice-history-empty">No dice rolled yet in this session. Tap any d20, weapon attack, or statblock modifier to roll!</div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 

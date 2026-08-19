@@ -417,6 +417,20 @@ db.serialize(() => {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS map_character_tokens (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL,
+      character_id TEXT,
+      label TEXT NOT NULL,
+      x_pct REAL DEFAULT 0.5,
+      y_pct REAL DEFAULT 0.5,
+      token_avatar TEXT,
+      vision_radius INTEGER DEFAULT 60,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS map_layers (
       id TEXT PRIMARY KEY,
       map_id TEXT NOT NULL,
@@ -4381,6 +4395,31 @@ Example format:
   }
 });
 
+// GET /api/maps/:mapId/tokens - Fetch character tokens for a map
+app.get('/api/maps/:mapId/tokens', (req, res) => {
+  db.all('SELECT * FROM map_character_tokens WHERE map_id = ?', [req.params.mapId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, tokens: rows || [] });
+  });
+});
+
+// POST /api/maps/:mapId/tokens - Add a character token to map
+app.post('/api/maps/:mapId/tokens', (req, res) => {
+  const mapId = req.params.mapId;
+  const { character_id, label, x_pct, y_pct, token_avatar, vision_radius } = req.body;
+  const tokenId = `token-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
+  db.run(`
+    INSERT INTO map_character_tokens (id, map_id, character_id, label, x_pct, y_pct, token_avatar, vision_radius)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [tokenId, mapId, character_id || null, label || 'Character Token', x_pct || 0.5, y_pct || 0.5, token_avatar || null, vision_radius || 60], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM map_character_tokens WHERE id = ?', [tokenId], (err2, token) => {
+      res.status(201).json({ success: true, token });
+    });
+  });
+});
+
 // POST /api/narrative/save-slate
 app.post('/api/narrative/save-slate', (req, res) => {
   try {
@@ -4487,6 +4526,8 @@ app.post('/api/ai/travel-encounter', async (req, res) => {
     narrative_text: encounterText,
     check_dc: 14
   });
+});
+
 // POST /api/ai/explore-region - Generates 3 location lore seeds for unexplored map regions
 app.post('/api/ai/explore-region', async (req, res) => {
   const { map_title, x_pct, y_pct } = req.body || {};

@@ -32,6 +32,23 @@ const WAParser = {
       return `<div class="wa-statblock-inline-trigger" style="margin:1rem 0;"><button class="btn btn-secondary btn-sm" onclick="event.preventDefault(); window.app.toggleStatBlockDrawer();">🛡️ View Attached TTRPG Stat Block</button></div>`;
     });
 
+    // 0b. Inline Interactive Dice Rolling Tags: [roll]2d6+4[/roll], [roll=Shortsword]1d20+5[/roll], [[2d20+3]]
+    html = html.replace(/\[roll=(.*?)\](.*?)\[\/roll\]/gi, (match, label, expr) => {
+      const cleanExpr = expr.trim();
+      const cleanLabel = label.trim();
+      return `<button class="dice-roll-badge" onclick="event.preventDefault(); window.app.rollDiceExpression('${cleanExpr}', '${cleanLabel.replace(/'/g, "\\'")}');" title="Roll ${cleanLabel} (${cleanExpr})">🎲 ${cleanLabel} (${cleanExpr})</button>`;
+    });
+
+    html = html.replace(/\[roll\](.*?)\[\/roll\]/gi, (match, expr) => {
+      const cleanExpr = expr.trim();
+      return `<button class="dice-roll-badge" onclick="event.preventDefault(); window.app.rollDiceExpression('${cleanExpr}', '${cleanExpr}');" title="Roll ${cleanExpr}">🎲 ${cleanExpr}</button>`;
+    });
+
+    html = html.replace(/\[\[(\d+d\d+(?:\s*[\+\-]\s*\d+)?)\]\]/gi, (match, expr) => {
+      const cleanExpr = expr.trim();
+      return `<button class="dice-roll-badge" onclick="event.preventDefault(); window.app.rollDiceExpression('${cleanExpr}', '${cleanExpr}');" title="Roll ${cleanExpr}">🎲 ${cleanExpr}</button>`;
+    });
+
     // 1. [quote]“Quote” | — Source[/quote]
     html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, (match, content) => {
       const parts = content.split('|');
