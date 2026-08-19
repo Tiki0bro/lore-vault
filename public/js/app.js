@@ -58,12 +58,14 @@ class LoreApp {
     this.searchDebounceTimer = null;
     this.searchResults = [];
     this.selectedIndex = -1;
+    this.aiConfig = null;
 
     this.init();
   }
 
   async init() {
     this.initThemeMode();
+    await this.fetchAIConfig();
     await this.fetchWorlds();
 
     let initialTheme = 'ancient-codex';
@@ -3391,118 +3393,233 @@ Overview paragraph describing the location, faction, or character.
     }
   }
 
-  // --- LIVE AI ASSISTANT METHODS ---
-  async openAISettings() {
-    document.getElementById('ai-settings-modal').classList.remove('hidden');
-    let provider = 'gemini';
-    let apiKey = '';
-    let model = 'gemini-1.5-flash';
-
+  // --- AI MODEL & PROVIDER CONFIGURATION METHODS ---
+  async fetchAIConfig() {
     try {
       const res = await fetch('/api/ai/config');
-      const cfg = await res.json();
-      provider = cfg.provider || 'gemini';
-      apiKey = cfg.apiKey || '';
-      model = cfg.model || 'gemini-1.5-flash';
-    } catch (e) {
-      provider = localStorage.getItem('lore_ai_provider') || 'gemini';
-      apiKey = localStorage.getItem('lore_ai_key') || '';
-      model = localStorage.getItem('lore_ai_model') || 'gemini-1.5-flash';
+      const data = await res.json();
+      if (data && (data.success || 'use_custom_provider' in data)) {
+        this.aiConfig = data;
+        this.updateAIStatusChip(data);
+      }
+    } catch (err) {
+      console.warn('[AI Config] Fetch warning:', err);
     }
+  }
 
-    document.getElementById('ai-provider-select').value = provider;
-    document.getElementById('ai-api-key').value = apiKey;
-    this.toggleAIFields(provider, model);
+  updateAIStatusChip(config) {
+    const cfg = config || this.aiConfig || { use_custom_provider: false };
+    const chip = document.getElementById('ai-status-chip');
+    const label = document.getElementById('ai-status-label');
+    if (!chip) return;
+
+    chip.classList.remove('custom-active', 'ollama-active');
+    if (!cfg.use_custom_provider) {
+      if (label) label.textContent = 'AI: Hosted Base';
+    } else if (cfg.custom_provider === 'ollama' || cfg.provider === 'ollama') {
+      if (label) label.textContent = 'AI: Local Ollama';
+      chip.classList.add('ollama-active');
+    } else {
+      const p = cfg.custom_provider || cfg.provider || 'gemini';
+      if (label) label.textContent = `AI: Custom (${p})`;
+      chip.classList.add('custom-active');
+    }
+  }
+
+  openAISettingsModal() {
+    const modal = document.getElementById('ai-settings-modal');
+    if (!modal) return;
+    this.loadAISettingsToForm();
+    modal.classList.remove('hidden');
+    const feedback = document.getElementById('ai-test-feedback');
+    if (feedback) {
+      feedback.classList.add('hidden');
+      feedback.textContent = '';
+      feedback.className = 'ai-test-feedback hidden';
+    }
+  }
+
+  closeAISettingsModal() {
+    const modal = document.getElementById('ai-settings-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  openAISettings() {
+    this.openAISettingsModal();
   }
 
   closeAISettings() {
-    document.getElementById('ai-settings-modal').classList.add('hidden');
+    this.closeAISettingsModal();
   }
 
-  toggleAIFields(provider, currentModel) {
-    const keyGroup = document.getElementById('ai-key-group');
-    const modelGroup = document.getElementById('ai-model-group');
-    const modelSelect = document.getElementById('ai-model-select');
-    const customInput = document.getElementById('ai-custom-model');
+  loadAISettingsToForm() {
+    const cfg = this.aiConfig || {
+      use_custom_provider: false,
+      custom_provider: 'gemini',
+      custom_model: 'gemini-2.0-flash',
+      masked_key: '',
+      ollama_url: 'http://localhost:11434'
+    };
+    const radioHosted = document.getElementById('ai-tier-hosted');
+    const radioCustom = document.getElementById('ai-tier-custom');
+    const providerSel = document.getElementById('ai-provider-select');
+    const keyInput = document.getElementById('ai-key-input');
+    const modelInput = document.getElementById('ai-model-input');
+    const ollamaInput = document.getElementById('ai-ollama-input');
 
-    if (keyGroup) keyGroup.style.display = (provider === 'gemini' || provider === 'openai') ? 'block' : 'none';
-    if (modelGroup) modelGroup.style.display = (provider !== 'offline') ? 'block' : 'none';
+    if (cfg.use_custom_provider) {
+      if (radioCustom) radioCustom.checked = true;
+      if (radioHosted) radioHosted.checked = false;
+      this.handleAITierToggle('custom');
+    } else {
+      if (radioHosted) radioHosted.checked = true;
+      if (radioCustom) radioCustom.checked = false;
+      this.handleAITierToggle('hosted');
+    }
 
-    if (modelSelect) {
-      let optionsHtml = '';
-      if (provider === 'gemini') {
-        optionsHtml = `
-          <option value="gemini-2.5-flash">🚀 Gemini 2.5 Flash</option>
-          <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro</option>
-          <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
-          <option value="gemini-flash-latest">⚡ Gemini Flash Latest (Recommended)</option>
-          <option value="gemini-pro-latest">🧠 Gemini Pro Latest</option>
-          <option value="custom">Custom Model Name...</option>
-        `;
-      } else if (provider === 'openai') {
-        optionsHtml = `
-          <option value="gpt-4o-mini">⚡ GPT-4o Mini (Fast & Cheap)</option>
-          <option value="gpt-4o">🧠 GPT-4o (Flagship High Intelligence)</option>
-          <option value="o1-mini">Reasoning o1-mini</option>
-          <option value="custom">Custom Model Name...</option>
-        `;
-      } else if (provider === 'ollama') {
-        optionsHtml = `
-          <option value="llama3">Llama 3 (8B)</option>
-          <option value="llama3.1">Llama 3.1</option>
-          <option value="mistral">Mistral (7B)</option>
-          <option value="gemma2">Gemma 2</option>
-          <option value="custom">Custom Model Name...</option>
-        `;
-      }
-      modelSelect.innerHTML = optionsHtml;
+    const provider = cfg.custom_provider || cfg.provider || 'gemini';
+    if (providerSel) providerSel.value = provider;
+    if (keyInput) {
+      keyInput.value = cfg.masked_key || cfg.masked_api_key || cfg.custom_api_key || cfg.apiKey || '';
+      keyInput.type = 'password';
+    }
+    if (modelInput) modelInput.value = cfg.custom_model || cfg.model || cfg.default_model || 'gemini-2.0-flash';
+    if (ollamaInput) ollamaInput.value = cfg.ollama_url || 'http://localhost:11434';
 
-      if (currentModel) {
-        const hasOption = Array.from(modelSelect.options).some(o => o.value === currentModel);
-        if (hasOption) {
-          modelSelect.value = currentModel;
-          if (customInput) customInput.style.display = 'none';
-        } else {
-          modelSelect.value = 'custom';
-          if (customInput) {
-            customInput.style.display = 'block';
-            customInput.value = currentModel;
-          }
-        }
-      }
+    this.handleAIProviderChange(provider);
+  }
+
+  handleAITierToggle(tier) {
+    const controls = document.getElementById('ai-custom-controls');
+    if (!controls) return;
+    if (tier === 'custom') {
+      controls.classList.remove('hidden');
+    } else {
+      controls.classList.add('hidden');
     }
   }
 
-  handleModelSelectChange(val) {
-    const customInput = document.getElementById('ai-custom-model');
-    if (customInput) {
-      customInput.style.display = (val === 'custom') ? 'block' : 'none';
+  handleAIProviderChange(provider) {
+    const groupKey = document.getElementById('group-api-key');
+    const groupOllama = document.getElementById('group-ollama-url');
+    if (provider === 'ollama') {
+      if (groupKey) groupKey.classList.add('hidden');
+      if (groupOllama) groupOllama.classList.remove('hidden');
+    } else {
+      if (groupKey) groupKey.classList.remove('hidden');
+      if (groupOllama) groupOllama.classList.add('hidden');
     }
+  }
+
+  toggleAPIKeyVisibility() {
+    const keyInput = document.getElementById('ai-key-input');
+    if (!keyInput) return;
+    keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
   }
 
   async saveAISettings() {
-    const provider = document.getElementById('ai-provider-select').value;
-    const key = document.getElementById('ai-api-key').value.trim();
-    const modelSelectVal = document.getElementById('ai-model-select').value;
-    const customModelVal = document.getElementById('ai-custom-model').value.trim();
-    const model = (modelSelectVal === 'custom' && customModelVal) ? customModelVal : modelSelectVal;
-
-    localStorage.setItem('lore_ai_provider', provider);
-    localStorage.setItem('lore_ai_key', key);
-    localStorage.setItem('lore_ai_model', model);
+    const radioCustom = document.getElementById('ai-tier-custom');
+    const useCustom = radioCustom ? radioCustom.checked : false;
+    const providerSel = document.getElementById('ai-provider-select');
+    const provider = providerSel ? providerSel.value : 'gemini';
+    const keyInput = document.getElementById('ai-key-input');
+    const key = keyInput ? keyInput.value : '';
+    const modelInput = document.getElementById('ai-model-input');
+    const model = modelInput ? modelInput.value : '';
+    const ollamaInput = document.getElementById('ai-ollama-input');
+    const ollamaUrl = ollamaInput ? ollamaInput.value : 'http://localhost:11434';
 
     try {
-      await fetch('/api/ai/config', {
+      const res = await fetch('/api/ai/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, apiKey: key, model })
+        body: JSON.stringify({
+          use_custom_provider: useCustom,
+          custom_provider: provider,
+          custom_api_key: key,
+          custom_model: model,
+          ollama_url: ollamaUrl,
+          provider: provider,
+          apiKey: key,
+          model: model
+        })
       });
-      alert(`AI Settings Saved! Active Model: ${model}`);
-    } catch (e) {
-      alert(`AI Settings Saved! Active Model: ${model}`);
+      const data = await res.json();
+      if (data && (data.success || data.config)) {
+        const updatedConfig = data.config || data;
+        this.aiConfig = updatedConfig;
+        this.updateAIStatusChip(updatedConfig);
+        this.closeAISettingsModal();
+        if (typeof window.showToast === 'function') {
+          window.showToast('⚙️ AI Settings saved successfully!', 'success');
+        }
+      } else {
+        throw new Error(data && data.error ? data.error : 'Save failed');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') {
+        window.showToast(`❌ Failed to save AI settings: ${err.message}`, 'error');
+      }
+    }
+  }
+
+  async testAIConnection() {
+    const feedback = document.getElementById('ai-test-feedback');
+    const testBtn = document.getElementById('ai-test-btn');
+    if (testBtn) {
+      testBtn.disabled = true;
+      testBtn.textContent = '⏳ Testing...';
     }
 
-    this.closeAISettings();
+    const radioCustom = document.getElementById('ai-tier-custom');
+    const useCustom = radioCustom ? radioCustom.checked : false;
+    const providerSel = document.getElementById('ai-provider-select');
+    const provider = providerSel ? providerSel.value : 'gemini';
+    const keyInput = document.getElementById('ai-key-input');
+    const key = keyInput ? keyInput.value : '';
+    const modelInput = document.getElementById('ai-model-input');
+    const model = modelInput ? modelInput.value : '';
+    const ollamaInput = document.getElementById('ai-ollama-input');
+    const ollamaUrl = ollamaInput ? ollamaInput.value : 'http://localhost:11434';
+
+    try {
+      const res = await fetch('/api/ai/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          use_custom_provider: useCustom,
+          provider: provider,
+          custom_provider: provider,
+          api_key: key,
+          custom_api_key: key,
+          model: model,
+          custom_model: model,
+          ollama_url: ollamaUrl
+        })
+      });
+      const data = await res.json();
+      if (feedback) {
+        feedback.classList.remove('hidden', 'success', 'error');
+        if (data.success) {
+          feedback.classList.add('success');
+          feedback.textContent = `✔ ${data.message} (${data.latency_ms}ms)`;
+        } else {
+          feedback.classList.add('error');
+          feedback.textContent = `✖ ${data.message}`;
+        }
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.classList.remove('hidden', 'success');
+        feedback.classList.add('error');
+        feedback.textContent = '✖ Network error testing connection: ' + err.message;
+      }
+    } finally {
+      if (testBtn) {
+        testBtn.disabled = false;
+        testBtn.textContent = '⚡ Test Connection';
+      }
+    }
   }
 
   async runAIAssist(action) {
@@ -3650,6 +3767,11 @@ Overview paragraph describing the location, faction, or character.
         URL.revokeObjectURL(url);
         this.showNotification('📄 World Health Report exported successfully!', 'success');
       }
+    } catch (err) {
+      this.showNotification(`❌ Export failed: ${err.message}`, 'error');
+    }
+  }
+
   async toggleDismissAuditIssue(issueKey) {
     if (!issueKey) return;
     try {
@@ -4946,622 +5068,6 @@ Overview paragraph describing the location, faction, or character.
     this.renderSubCategoryBar();
     this.renderArticlesList();
   }
-}
-
-// Global initialization
-window.LoreApp = LoreApp;
-document.addEventListener('DOMContentLoaded', () => {
-  window.app = new LoreApp();
-});
-
-document.addEventListener('click', (e) => {
-  const toggleBtn = e.target.closest('#theme-mode-toggle');
-  if (toggleBtn) {
-    e.preventDefault();
-    if (window.app && typeof window.app.toggleThemeMode === 'function') {
-      window.app.toggleThemeMode();
-    }
-  }
-});
-
-window.toggleWeaveMatrixDrawer = function() {
-  if (window.app && typeof window.app.toggleWeaveMatrixDrawer === 'function') {
-    window.app.toggleWeaveMatrixDrawer();
-  } else {
-    const drawer = document.getElementById('weave-matrix-drawer');
-    if (drawer) drawer.classList.toggle('hidden');
-  }
-};
-
-// Global fail-safe helpers for Canon Guard modal
-window.openDoctorModal = function() {
-  const modal = document.getElementById('doctor-modal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-  if (window.app && typeof window.app.runWorldAudit === 'function') {
-    window.app.runWorldAudit();
-  }
-};
-
-window.closeDoctorModal = function() {
-  const modal = document.getElementById('doctor-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-};
-
-window.setDoctorWorldScope = function(worldId) {
-  if (window.app && typeof window.app.setDoctorWorldScope === 'function') {
-    window.app.setDoctorWorldScope(worldId);
-  }
-};
-
-window.startGuidedSession = function() {
-  if (window.app && typeof window.app.startGuidedSession === 'function') {
-    window.app.startGuidedSession();
-  }
-};
-
-window.closeGuidedSession = function() {
-  if (window.app && typeof window.app.closeGuidedSession === 'function') {
-    window.app.closeGuidedSession();
-  }
-};
-
-window.exitGuidedSession = function() {
-  if (window.app && typeof window.app.exitGuidedSession === 'function') {
-    window.app.exitGuidedSession();
-  }
-};
-
-window.switchDoctorTab = function(tabId) {
-  if (window.app && typeof window.app.switchDoctorTab === 'function') {
-    window.app.switchDoctorTab(tabId);
-  }
-};
-
-window.startGuidedSessionFromTriage = function() {
-  if (window.app && typeof window.app.startGuidedSessionFromTriage === 'function') {
-    window.app.startGuidedSessionFromTriage();
-  }
-};
-
-window.closeImportTriageModal = function() {
-  if (window.app && typeof window.app.closeImportTriageModal === 'function') {
-    window.app.closeImportTriageModal();
-  } else {
-    const modal = document.getElementById('import-triage-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-// Global fail-safe helpers for Create World modal
-window.openCreateWorldModal = function() {
-  const modal = document.getElementById('create-world-modal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-};
-
-window.closeCreateWorldModal = function() {
-  const modal = document.getElementById('create-world-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-};
-
-window.openEditWorldModal = function() {
-  if (window.app && typeof window.app.openEditWorldModal === 'function') {
-    window.app.openEditWorldModal();
-  } else {
-    const modal = document.getElementById('edit-world-modal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-    }
-  }
-};
-
-window.closeEditWorldModal = function() {
-  if (window.app && typeof window.app.closeEditWorldModal === 'function') {
-    window.app.closeEditWorldModal();
-  } else {
-    const modal = document.getElementById('edit-world-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
-    }
-  }
-};
-
-// Global fail-safe helper for Ask AI Chat Drawer & Minimize State
-window.minimizeAIChatDrawer = function() {
-  const drawer = document.getElementById('ai-chat-drawer');
-  if (drawer) {
-    drawer.classList.add('minimized');
-  }
-};
-
-window.expandAIChatDrawer = function() {
-  const drawer = document.getElementById('ai-chat-drawer');
-  if (drawer) {
-    drawer.classList.remove('minimized');
-    drawer.classList.remove('hidden');
-  }
-};
-
-window.toggleAIChatDrawer = function() {
-  const drawer = document.getElementById('ai-chat-drawer');
-  if (drawer) {
-    if (drawer.classList.contains('minimized')) {
-      drawer.classList.remove('minimized');
-    } else {
-      drawer.classList.toggle('hidden');
-    }
-  }
-};
-
-window.closeStubPreviewModal = function() {
-  if (window.app && typeof window.app.closeStubPreviewModal === 'function') {
-    window.app.closeStubPreviewModal();
-  } else {
-    const modal = document.getElementById('stub-preview-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-window.closeHarmonizeModal = function() {
-  if (window.app && typeof window.app.closeHarmonizeModal === 'function') {
-    window.app.closeHarmonizeModal();
-  } else {
-    const modal = document.getElementById('harmonize-diff-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-window.closePersonaInterviewer = function() {
-  if (window.app && typeof window.app.closePersonaInterviewer === 'function') {
-    window.app.closePersonaInterviewer();
-  } else {
-    const modal = document.getElementById('persona-interviewer-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-window.closeBeatPrompter = function() {
-  if (window.app && typeof window.app.closeBeatPrompter === 'function') {
-    window.app.closeBeatPrompter();
-  } else {
-    const modal = document.getElementById('beat-prompter-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-window.switchTab = function(tabName) {
-  if (window.app && typeof window.app.switchTab === 'function') {
-    window.app.switchTab(tabName);
-  } else {
-    const libraryView = document.getElementById('view-library');
-    const studioView = document.getElementById('view-studio');
-    const contextView = document.getElementById('view-context');
-
-    const tabLibrary = document.getElementById('tab-library');
-    const tabStudio = document.getElementById('tab-studio');
-    const tabContext = document.getElementById('tab-context');
-
-    [libraryView, studioView, contextView].forEach(v => v && v.classList.remove('active'));
-    [tabLibrary, tabStudio, tabContext].forEach(t => t && t.classList.remove('active'));
-
-    if (tabName === 'studio') {
-      if (studioView) studioView.classList.add('active');
-      if (tabStudio) tabStudio.classList.add('active');
-    } else if (tabName === 'context') {
-      if (contextView) contextView.classList.add('active');
-      if (tabContext) tabContext.classList.add('active');
-    } else {
-      if (libraryView) libraryView.classList.add('active');
-      if (tabLibrary) tabLibrary.classList.add('active');
-    }
-  }
-};
-
-// --- IMAGE UPLOAD, DRAG & DROP, AND LIGHTBOX HELPERS ---
-if (window.app) {
-  window.app.uploadHeaderImage = async function(file) {
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const res = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const input = document.getElementById('edit-header-image');
-      if (input) input.value = data.url;
-    } catch (err) {
-      alert('Failed to upload cover image: ' + err.message);
-    }
-  };
-
-  window.app.uploadBodyImage = async function(file) {
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const res = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      this.insertMarkup(`[img]${data.url}[/img]\n`);
-    } catch (err) {
-      alert('Failed to upload image: ' + err.message);
-    }
-  };
-
-  window.app.setupEditorDragAndDrop = function() {
-    const textarea = document.getElementById('edit-content');
-    if (!textarea || textarea.dataset.dragBound) return;
-    textarea.dataset.dragBound = 'true';
-
-    textarea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      textarea.style.borderColor = 'var(--accent-blue)';
-    });
-
-    textarea.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      textarea.style.borderColor = '';
-    });
-
-    textarea.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      textarea.style.borderColor = '';
-      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        const file = e.dataTransfer.files[0];
-        if (file.type.startsWith('image/')) {
-          await window.app.uploadBodyImage(file);
-        }
-      }
-    });
-  };
-
-  window.app.generateAIImagePrompt = function() {
-    const title = document.getElementById('edit-title').value.trim() || 'Fantasy Lore Location';
-    const category = document.getElementById('edit-category').value || 'Locations';
-    const promptText = `An epic fantasy digital painting of ${title}, ${category} in WorldAnvil concept art style, highly detailed, dramatic atmospheric lighting, 8k resolution --v 6.0`;
-
-    const choice = confirm(`Generated AI Image Prompt:\n\n"${promptText}"\n\nClick OK to insert this concept prompt into your article content.`);
-    if (choice) {
-      this.insertMarkup(`[img align="center" caption="${title} concept art"]${promptText}[/img]\n`);
-    }
-  };
-
-  window.app.openMediaVault = function() {
-    const modal = document.getElementById('media-vault-modal');
-    if (modal) modal.classList.remove('hidden');
-    this.fetchMediaAssets();
-  };
-
-  window.app.closeMediaVault = function() {
-    const modal = document.getElementById('media-vault-modal');
-    if (modal) modal.classList.add('hidden');
-  };
-
-  window.app.fetchMediaAssets = async function(query = '') {
-    const grid = document.getElementById('media-vault-grid');
-    if (!grid) return;
-    grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:1rem; text-align:center;">Loading assets...</div>';
-
-    try {
-      const worldId = this.currentWorldId || 'default';
-      const url = `/api/media?world_id=${encodeURIComponent(worldId)}${query ? '&q=' + encodeURIComponent(query) : ''}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:2rem; text-align:center; grid-column:1/-1;">No media assets found in vault. Click "📷 Upload Image" to add image files.</div>';
-        return;
-      }
-
-      grid.innerHTML = data.map(item => `
-        <div class="media-card" style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem; display:flex; flex-direction:column; gap:0.4rem;">
-          <div style="height:120px; overflow:hidden; border-radius:4px; background:#000; display:flex; justify-content:center; align-items:center;">
-            <img src="${item.url}" alt="${item.original_name || item.filename}" style="max-width:100%; max-height:100%; object-fit:cover; cursor:pointer;" onclick="window.openImageLightbox('${item.url}', '${(item.original_name || item.filename).replace(/'/g, "\\'")}')" />
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-primary); font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${item.original_name || item.filename}">
-            ${item.original_name || item.filename}
-          </div>
-          <div style="display:flex; gap:0.25rem; margin-top:auto;">
-            <button class="btn btn-secondary" style="flex:1; font-size:0.7rem; padding:0.2rem;" onclick="window.app.insertMediaBBCode('${item.url}')">➕ Insert</button>
-            <button class="btn btn-secondary" style="font-size:0.7rem; padding:0.2rem; background:#dc2626; color:#fff;" onclick="window.app.deleteMediaAsset('${item.id}')">🗑️</button>
-          </div>
-        </div>
-      `).join('');
-    } catch (err) {
-      grid.innerHTML = `<div style="color:var(--accent-rose); font-size:0.85rem; padding:1rem;">Failed to load media assets: ${err.message}</div>`;
-    }
-  };
-
-  window.app.filterMediaVault = function(query) {
-    this.fetchMediaAssets(query);
-  };
-
-  window.app.uploadMediaVaultAsset = async function(file) {
-    if (!file) return;
-    await this.uploadHeaderImage(file);
-    this.fetchMediaAssets();
-  };
-
-  window.app.insertMediaBBCode = function(url) {
-    this.insertMarkup(`[img]${url}[/img]\n`);
-    this.closeMediaVault();
-  };
-
-  window.app.deleteMediaAsset = async function(id) {
-    if (!confirm('Are you sure you want to delete this media asset from the vault?')) return;
-    try {
-      const res = await fetch(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      this.fetchMediaAssets();
-    } catch (err) {
-      alert('Failed to delete asset: ' + err.message);
-    }
-  };
-}
-
-window.openImageLightbox = function(src, caption) {
-  const modal = document.getElementById('article-image-lightbox');
-  const img = document.getElementById('lightbox-img');
-  const cap = document.getElementById('lightbox-caption');
-  if (img) img.src = src;
-  if (cap) cap.textContent = caption || '';
-  if (modal) modal.classList.remove('hidden');
-};
-
-window.closeImageLightbox = function() {
-  const modal = document.getElementById('article-image-lightbox');
-  if (modal) modal.classList.add('hidden');
-};
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    window.closeImageLightbox();
-    window.closeToolsMenu();
-    const libraryView = document.getElementById('view-library');
-    if (libraryView && libraryView.classList.contains('zen-mode')) {
-      if (window.app && typeof window.app.toggleZenMode === 'function') {
-        window.app.toggleZenMode();
-      }
-    }
-  }
-
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
-    e.preventDefault();
-    if (window.app && typeof window.app.toggleZenMode === 'function') {
-      window.app.toggleZenMode();
-    }
-  }
-});
-
-/* --- Tools Dropdown Menu Helpers --- */
-window.toggleToolsMenu = function(e) {
-  if (e) e.stopPropagation();
-  const menu = document.getElementById('tools-dropdown-menu');
-  if (menu) {
-    menu.classList.toggle('hidden');
-  }
-};
-
-window.closeToolsMenu = function() {
-  const menu = document.getElementById('tools-dropdown-menu');
-  if (menu) {
-    menu.classList.add('hidden');
-  }
-};
-
-document.addEventListener('click', function(e) {
-  const container = document.querySelector('.tools-dropdown-container');
-  if (container && !container.contains(e.target)) {
-    window.closeToolsMenu();
-  }
-});
-
-/* --- Tags Accordion Global Helper --- */
-window.toggleTagsAccordion = function() {
-  if (window.app && typeof window.app.toggleTagsAccordion === 'function') {
-    window.app.toggleTagsAccordion();
-  } else {
-    const body = document.getElementById('tags-accordion-body');
-    const toggleBtn = document.getElementById('tags-accordion-toggle');
-    if (body) {
-      body.classList.toggle('collapsed');
-      const isCollapsed = body.classList.contains('collapsed');
-      if (toggleBtn) {
-        const arrow = toggleBtn.querySelector('.accordion-arrow');
-        if (arrow) arrow.textContent = isCollapsed ? '▸' : '▾';
-      }
-    }
-  }
-};
-
-/* --- Global Narrative Slate Helper Bindings --- */
-window.switchView = function(viewName) {
-  if (window.app && typeof window.app.switchView === 'function') {
-    window.app.switchView(viewName);
-  } else if (window.app && typeof window.app.switchTab === 'function') {
-    window.app.switchTab(viewName);
-  }
-};
-
-window.compileNarrativeSlate = function() {
-  if (window.app && typeof window.app.compileNarrativeSlate === 'function') {
-    return window.app.compileNarrativeSlate();
-  }
-};
-
-window.generateProseContinuation = function() {
-  if (window.app && typeof window.app.generateProseContinuation === 'function') {
-    return window.app.generateProseContinuation();
-  }
-};
-
-window.showPovRewriteModal = function() {
-  if (window.app && typeof window.app.showPovRewriteModal === 'function') {
-    return window.app.showPovRewriteModal();
-  }
-};
-
-window.closePovRewriteModal = function() {
-  if (window.app && typeof window.app.closePovRewriteModal === 'function') {
-    return window.app.closePovRewriteModal();
-  }
-};
-
-window.executePovRewrite = function() {
-  if (window.app && typeof window.app.executePovRewrite === 'function') {
-    return window.app.executePovRewrite();
-  }
-};
-
-window.suggestNextBeats = function() {
-  if (window.app && typeof window.app.suggestNextBeats === 'function') {
-    return window.app.suggestNextBeats();
-  }
-};
-
-window.closeBeatsModal = function() {
-  if (window.app && typeof window.app.closeBeatsModal === 'function') {
-    return window.app.closeBeatsModal();
-  }
-};
-
-window.saveNarrativeSlate = function() {
-  if (window.app && typeof window.app.saveNarrativeSlate === 'function') {
-    return window.app.saveNarrativeSlate();
-  }
-};
-
-window.loadNarrativeSlate = function(slateId) {
-  if (window.app && typeof window.app.loadNarrativeSlate === 'function') {
-    return window.app.loadNarrativeSlate(slateId);
-  }
-};
-
-window.addSceneStep = function(text) {
-  if (window.app && typeof window.app.addSceneStep === 'function') {
-    return window.app.addSceneStep(text);
-  }
-};
-
-window.toggleToneChip = function(btn) {
-  if (btn) btn.classList.toggle('active');
-};
-
-window.handleWikiLinkAutocomplete = function(event) {
-  if (window.app && typeof window.app.handleWikiLinkAutocomplete === 'function') {
-    window.app.handleWikiLinkAutocomplete(event);
-  }
-};
-
-window.openQuickMarketingModal = function() {
-  if (window.app && typeof window.app.openQuickMarketingModal === 'function') {
-    return window.app.openQuickMarketingModal();
-  }
-};
-
-window.closeQuickMarketingModal = function() {
-  if (window.app && typeof window.app.closeQuickMarketingModal === 'function') {
-    return window.app.closeQuickMarketingModal();
-  }
-};
-
-window.generateMarketingCopy = function(mode) {
-  if (window.app && typeof window.app.generateMarketingCopy === 'function') {
-    return window.app.generateMarketingCopy(mode);
-  }
-};
-
-window.copyMarketingOutput = function(mode) {
-  if (window.app && typeof window.app.copyMarketingOutput === 'function') {
-    return window.app.copyMarketingOutput(mode);
-  }
-};
-
-window.selectMarketingTone = function(btn) {
-  if (window.app && typeof window.app.selectMarketingTone === 'function') {
-    return window.app.selectMarketingTone(btn);
-  }
-};
-
-window.showWeaveActionModal = function() {
-  if (window.app && typeof window.app.showWeaveActionModal === 'function') {
-    return window.app.showWeaveActionModal();
-  } else {
-    const modal = document.getElementById('weave-action-modal');
-    if (modal) modal.classList.remove('hidden');
-  }
-};
-
-window.closeWeaveActionModal = function() {
-  if (window.app && typeof window.app.closeWeaveActionModal === 'function') {
-    return window.app.closeWeaveActionModal();
-  } else {
-    const modal = document.getElementById('weave-action-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-};
-
-window.routeToNarrativeSlate = function() {
-  if (window.app && typeof window.app.routeToNarrativeSlate === 'function') {
-    return window.app.routeToNarrativeSlate();
-  }
-};
-
-window.clearActiveWeaveContext = function() {
-  if (window.app && typeof window.app.clearActiveWeaveContext === 'function') {
-    return window.app.clearActiveWeaveContext();
-  }
-};
-
-window.routeToMarketing = function() {
-  if (window.app && typeof window.app.routeToMarketing === 'function') {
-    return window.app.routeToMarketing();
-  }
-};
-
-window.openQuickLoreChat = function() {
-  if (window.app && typeof window.app.openQuickLoreChat === 'function') {
-    return window.app.openQuickLoreChat();
-  }
-};
-
-window.routeToNewArticle = function() {
-  if (window.app && typeof window.app.routeToNewArticle === 'function') {
-    return window.app.routeToNewArticle();
-  }
-};
-
-// --- Event Delegation: Add to Slate Button ---
-document.addEventListener('click', function(e) {
-  if (e.target && e.target.id === 'add-to-slate-btn') {
-    e.preventDefault();
-    if (window.app && typeof window.app.handleAddToSlateClick === 'function') {
-      window.app.handleAddToSlateClick();
-    }
-  }
-});
 
   copyCurrentArticleMarkdown() {
     if (!this.currentArticle || !this.currentArticle.content) {
@@ -6266,9 +5772,376 @@ document.addEventListener('click', function(e) {
     }
   }
 
+  // --- VTT Export Manager Methods ---
+  openVttExportModal() {
+    const modal = document.getElementById('vtt-export-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      this.setVttTarget(this.vttTarget || 'foundry');
+    }
+  }
+
+  closeVttExportModal() {
+    const modal = document.getElementById('vtt-export-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+
+  setVttTarget(target) {
+    this.vttTarget = target || 'foundry';
+    const container = document.getElementById('vtt-target-segmented');
+    if (container) {
+      container.querySelectorAll('.segmented-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.vtt === this.vttTarget);
+      });
+    }
+    const owlbearLink = document.getElementById('vtt-owlbear-link-container');
+    if (owlbearLink) {
+      owlbearLink.classList.toggle('hidden', this.vttTarget !== 'owlbear');
+    }
+    this.updateVttPreview();
+  }
+
+  setVttPrivacyMode(mode) {
+    this.vttPrivacyMode = mode || 'player';
+    const container = document.getElementById('vtt-privacy-segmented');
+    if (container) {
+      container.querySelectorAll('.segmented-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === this.vttPrivacyMode);
+      });
+    }
+    this.updateVttPreview();
+  }
+
+  async updateVttPreview() {
+    const previewBox = document.getElementById('vtt-preview-box');
+    const select = document.getElementById('vtt-content-type-select');
+    if (!previewBox || !select) return;
+
+    const contentType = select.value;
+    const target = this.vttTarget || 'foundry';
+    const mode = this.vttPrivacyMode || 'player';
+
+    previewBox.textContent = 'Generating preview...';
+
+    try {
+      let url = '';
+      let method = 'GET';
+      let body = null;
+
+      if (contentType === 'current_article') {
+        if (!this.currentArticle) {
+          previewBox.textContent = 'No article currently selected.';
+          return;
+        }
+        if (target === 'foundry') {
+          url = `/api/vtt/foundry/journals/${this.currentArticle.id}?mode=${mode}`;
+        } else if (target === 'roll20') {
+          method = 'POST';
+          url = `/api/vtt/export/roll20`;
+          body = JSON.stringify({ article_ids: [this.currentArticle.id], mode: mode });
+        } else if (target === 'fgu') {
+          method = 'POST';
+          url = `/api/vtt/export/fgu`;
+          body = JSON.stringify({ world_id: this.currentWorldId || 'main', mode: mode });
+        } else {
+          url = `/api/vtt/foundry/journals/${this.currentArticle.id}?mode=${mode}`;
+        }
+      } else if (contentType === 'current_statblock') {
+        if (!this.currentStatBlock) {
+          previewBox.textContent = 'No stat block attached to current article.';
+          return;
+        }
+        url = `/api/vtt/foundry/actors/${this.currentStatBlock.id}?mode=${mode}`;
+      } else if (contentType === 'active_map') {
+        const mapId = (window.atlasView && window.atlasView.activeMap) ? window.atlasView.activeMap.id : 1;
+        url = `/api/vtt/foundry/scenes/${mapId}?mode=${mode}`;
+      } else {
+        method = 'POST';
+        url = `/api/vtt/export/fgu`;
+        body = JSON.stringify({ world_id: this.currentWorldId || 'main', mode: mode });
+      }
+
+      const options = {
+        method: method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body) options.body = body;
+
+      const res = await fetch(url, options);
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        previewBox.textContent = JSON.stringify(json, null, 2);
+      } catch (e) {
+        previewBox.textContent = text;
+      }
+    } catch (err) {
+      previewBox.textContent = `Error fetching preview: ${err.message}`;
+    }
+  }
+
+  async copyVttExportData() {
+    const previewBox = document.getElementById('vtt-preview-box');
+    if (!previewBox || !previewBox.textContent) return;
+    try {
+      await navigator.clipboard.writeText(previewBox.textContent);
+      this.showToast('📋 VTT export data copied to clipboard!');
+    } catch (err) {
+      this.showToast('Error copying to clipboard: ' + err.message);
+    }
+  }
+
+  downloadVttExportPackage() {
+    const previewBox = document.getElementById('vtt-preview-box');
+    if (!previewBox || !previewBox.textContent) return;
+
+    const target = this.vttTarget || 'vtt';
+    const isXml = target === 'fgu';
+    const ext = isXml ? 'xml' : 'json';
+    const blob = new Blob([previewBox.textContent], { type: isXml ? 'application/xml' : 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `lorevault_${target}_export.${ext}`;
+    a.click();
+    this.showToast(`💾 Downloaded ${a.download}`);
+  }
+}
+
+// Global initialization
+window.LoreApp = LoreApp;
+window.LoreVaultApp = LoreApp;
+document.addEventListener('DOMContentLoaded', () => {
+  window.app = new LoreApp();
+});
+
+document.addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('#theme-mode-toggle');
+  if (toggleBtn) {
+    e.preventDefault();
+    if (window.app && typeof window.app.toggleThemeMode === 'function') {
+      window.app.toggleThemeMode();
+    }
+  }
+});
+
+window.toggleWeaveMatrixDrawer = function() {
+  if (window.app && typeof window.app.toggleWeaveMatrixDrawer === 'function') {
+    window.app.toggleWeaveMatrixDrawer();
+  } else {
+    const drawer = document.getElementById('weave-matrix-drawer');
+    if (drawer) drawer.classList.toggle('hidden');
+  }
+};
+
+// Global fail-safe helpers for Canon Guard modal
+window.openDoctorModal = function() {
+  const modal = document.getElementById('doctor-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+  if (window.app && typeof window.app.runWorldAudit === 'function') {
+    window.app.runWorldAudit();
+  }
+};
+
+window.closeDoctorModal = function() {
+  const modal = document.getElementById('doctor-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+window.setDoctorWorldScope = function(worldId) {
+  if (window.app && typeof window.app.setDoctorWorldScope === 'function') {
+    window.app.setDoctorWorldScope(worldId);
+  }
+};
+
+window.startGuidedSession = function() {
+  if (window.app && typeof window.app.startGuidedSession === 'function') {
+    window.app.startGuidedSession();
+  }
+};
+
+window.closeGuidedSession = function() {
+  if (window.app && typeof window.app.closeGuidedSession === 'function') {
+    window.app.closeGuidedSession();
+  }
+};
+
+window.exitGuidedSession = function() {
+  if (window.app && typeof window.app.exitGuidedSession === 'function') {
+    window.app.exitGuidedSession();
+  }
+};
+
+window.switchDoctorTab = function(tabId) {
+  if (window.app && typeof window.app.switchDoctorTab === 'function') {
+    window.app.switchDoctorTab(tabId);
+  }
+};
+
+window.startGuidedSessionFromTriage = function() {
+  if (window.app && typeof window.app.startGuidedSessionFromTriage === 'function') {
+    window.app.startGuidedSessionFromTriage();
+  }
+};
+
+window.closeImportTriageModal = function() {
+  if (window.app && typeof window.app.closeImportTriageModal === 'function') {
+    window.app.closeImportTriageModal();
+  } else {
+    const modal = document.getElementById('import-triage-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+// Global fail-safe helpers for Create World modal
+window.openCreateWorldModal = function() {
+  const modal = document.getElementById('create-world-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+};
+
+window.closeCreateWorldModal = function() {
+  const modal = document.getElementById('create-world-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+window.openEditWorldModal = function() {
+  if (window.app && typeof window.app.openEditWorldModal === 'function') {
+    window.app.openEditWorldModal();
+  } else {
+    const modal = document.getElementById('edit-world-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  }
+};
+
+window.closeEditWorldModal = function() {
+  if (window.app && typeof window.app.closeEditWorldModal === 'function') {
+    window.app.closeEditWorldModal();
+  } else {
+    const modal = document.getElementById('edit-world-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+};
+
+// Global fail-safe helper for Ask AI Chat Drawer & Minimize State
+window.minimizeAIChatDrawer = function() {
+  const drawer = document.getElementById('ai-chat-drawer');
+  if (drawer) {
+    drawer.classList.add('minimized');
+  }
+};
+
+window.expandAIChatDrawer = function() {
+  const drawer = document.getElementById('ai-chat-drawer');
+  if (drawer) {
+    drawer.classList.remove('minimized');
+    drawer.classList.remove('hidden');
+  }
+};
+
+window.toggleAIChatDrawer = function() {
+  const drawer = document.getElementById('ai-chat-drawer');
+  if (drawer) {
+    if (drawer.classList.contains('minimized')) {
+      drawer.classList.remove('minimized');
+    } else {
+      drawer.classList.toggle('hidden');
+    }
+  }
+};
+
+window.closeStubPreviewModal = function() {
+  if (window.app && typeof window.app.closeStubPreviewModal === 'function') {
+    window.app.closeStubPreviewModal();
+  } else {
+    const modal = document.getElementById('stub-preview-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+window.closeHarmonizeModal = function() {
+  if (window.app && typeof window.app.closeHarmonizeModal === 'function') {
+    window.app.closeHarmonizeModal();
+  } else {
+    const modal = document.getElementById('harmonize-diff-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+window.closePersonaInterviewer = function() {
+  if (window.app && typeof window.app.closePersonaInterviewer === 'function') {
+    window.app.closePersonaInterviewer();
+  } else {
+    const modal = document.getElementById('persona-interviewer-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+window.closeBeatPrompter = function() {
+  if (window.app && typeof window.app.closeBeatPrompter === 'function') {
+    window.app.closeBeatPrompter();
+  } else {
+    const modal = document.getElementById('beat-prompter-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
+
+window.switchTab = function(tabName) {
+  if (window.app && typeof window.app.switchTab === 'function') {
+    window.app.switchTab(tabName);
+  } else {
+    const libraryView = document.getElementById('view-library');
+    const studioView = document.getElementById('view-studio');
+    const contextView = document.getElementById('view-context');
+
+    const tabLibrary = document.getElementById('tab-library');
+    const tabStudio = document.getElementById('tab-studio');
+    const tabContext = document.getElementById('tab-context');
+
+    [libraryView, studioView, contextView].forEach(v => v && v.classList.remove('active'));
+    [tabLibrary, tabStudio, tabContext].forEach(t => t && t.classList.remove('active'));
+
+    if (tabName === 'studio') {
+      if (studioView) studioView.classList.add('active');
+      if (tabStudio) tabStudio.classList.add('active');
+    } else if (tabName === 'context') {
+      if (contextView) contextView.classList.add('active');
+      if (tabContext) tabContext.classList.add('active');
+    } else {
+      if (libraryView) libraryView.classList.add('active');
+      if (tabLibrary) tabLibrary.classList.add('active');
+    }
+  }
+};
+
 // --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    const vttModal = document.getElementById('vtt-export-modal');
+    if (vttModal && !vttModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeVttExportModal === 'function') {
+        window.app.closeVttExportModal();
+      }
+      return;
+    }
     const conciergeModal = document.getElementById('welcome-concierge-modal');
     if (conciergeModal && !conciergeModal.classList.contains('hidden')) {
       if (window.app && typeof window.app.closeConciergeModal === 'function') {
@@ -6327,6 +6200,11 @@ document.addEventListener('keydown', function(e) {
       e.preventDefault();
       if (window.app && typeof window.app.toggleConciergeModal === 'function') {
         window.app.toggleConciergeModal();
+      }
+    } else if (key === 'v') {
+      e.preventDefault();
+      if (window.app && typeof window.app.openVttExportModal === 'function') {
+        window.app.openVttExportModal();
       }
     }
   }
