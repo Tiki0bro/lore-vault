@@ -67,6 +67,8 @@ class LoreApp {
 
   async init() {
     this.initThemeMode();
+    this.initCustomTheme();
+    await this.loadTemplates();
     await this.fetchAIConfig();
     await this.fetchWorlds();
 
@@ -6674,9 +6676,259 @@ window.switchTab = function(tabName) {
   }
 };
 
+  // --- CUSTOM TEMPLATE BUILDER METHODS ---
+  openTemplateBuilderModal() {
+    const modal = document.getElementById('template-builder-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeTemplateBuilderModal() {
+    const modal = document.getElementById('template-builder-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async saveCustomTemplate() {
+    const name = document.getElementById('tpl-name-input')?.value?.trim();
+    const category = document.getElementById('tpl-category-input')?.value?.trim();
+    const icon = document.getElementById('tpl-icon-input')?.value?.trim() || '📜';
+    const fieldsStr = document.getElementById('tpl-fields-input')?.value?.trim() || '';
+    const boilerplate = document.getElementById('tpl-boilerplate-input')?.value || '';
+
+    if (!name || !category) {
+      if (typeof window.showToast === 'function') window.showToast('Template Name and Category are required!', 'error');
+      return;
+    }
+
+    const fieldsArr = fieldsStr.split(',').map(f => f.trim()).filter(Boolean);
+
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          category,
+          icon,
+          fields_json: fieldsArr,
+          boilerplate_markdown: boilerplate
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (typeof window.showToast === 'function') window.showToast(`📜 Custom template "${name}" created!`, 'success');
+        this.closeTemplateBuilderModal();
+        this.loadTemplates();
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(`Error saving template: ${json.error}`, 'error');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Error: ${err.message}`, 'error');
+    }
+  }
+
+  async loadTemplates() {
+    try {
+      const res = await fetch('/api/templates');
+      const json = await res.json();
+      if (res.ok && Array.isArray(json.templates)) {
+        this.customTemplates = json.templates;
+      }
+    } catch (e) {}
+  }
+
+  // --- REVISION HISTORY & 1-CLICK ROLLBACK METHODS ---
+  async openRevisionHistoryModal() {
+    if (!this.currentArticle) {
+      if (typeof window.showToast === 'function') window.showToast('Open an article first to view its revision history.', 'info');
+      return;
+    }
+
+    const modal = document.getElementById('revision-history-modal');
+    if (modal) modal.classList.remove('hidden');
+    this.loadRevisionHistory(this.currentArticle.id);
+  }
+
+  closeRevisionHistoryModal() {
+    const modal = document.getElementById('revision-history-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async loadRevisionHistory(articleId) {
+    const listContainer = document.getElementById('revision-list-container');
+    const previewBox = document.getElementById('revision-preview-box');
+    const restoreBtn = document.getElementById('rollback-revision-btn');
+
+    if (previewBox) previewBox.textContent = 'Select a version snapshot on the left to preview...';
+    if (restoreBtn) restoreBtn.classList.add('hidden');
+    this.selectedRevisionFile = null;
+
+    try {
+      const res = await fetch(`/api/articles/${articleId}/history`);
+      const json = await res.json();
+
+      if (res.ok && Array.isArray(json.history) && json.history.length > 0) {
+        listContainer.innerHTML = json.history.map(item => `
+          <div class="revision-snapshot-card" onclick="window.app.previewRevision('${item.file}', this)">
+            <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">🕒 ${item.formatted_time}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${(item.size / 1024).toFixed(1)} KB</div>
+          </div>
+        `).join('');
+      } else {
+        listContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:0.5rem; text-align:center;">No previous revisions found for this article yet. Snapshots are created automatically when saving updates.</div>';
+      }
+    } catch (err) {
+      if (listContainer) listContainer.innerHTML = `<div style="font-size:0.75rem; color:#ef4444;">Error loading history: ${err.message}</div>`;
+    }
+  }
+
+  async previewRevision(file, cardElem) {
+    this.selectedRevisionFile = file;
+    const previewBox = document.getElementById('revision-preview-box');
+    const restoreBtn = document.getElementById('rollback-revision-btn');
+
+    document.querySelectorAll('.revision-snapshot-card').forEach(c => c.classList.remove('active'));
+    if (cardElem) cardElem.classList.add('active');
+
+    try {
+      const res = await fetch(`/storage/history/${this.currentArticle.id}/${file}`);
+      const text = await res.text();
+      if (previewBox) previewBox.textContent = text;
+      if (restoreBtn) restoreBtn.classList.remove('hidden');
+    } catch (err) {
+      if (previewBox) previewBox.textContent = 'Error loading snapshot content: ' + err.message;
+    }
+  }
+
+  async restoreSelectedRevision() {
+    if (!this.currentArticle || !this.selectedRevisionFile) return;
+
+    if (!confirm('Are you sure you want to rollback to this revision? Current article text will be replaced.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/articles/${this.currentArticle.id}/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: this.selectedRevisionFile })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (typeof window.showToast === 'function') window.showToast(`↩ Article successfully restored to revision!`, 'success');
+        this.closeRevisionHistoryModal();
+        this.loadArticle(this.currentArticle.id);
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(`Rollback error: ${json.error}`, 'error');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Rollback failed: ${err.message}`, 'error');
+    }
+  }
+
+  // --- PARCHMENT THEME STUDIO METHODS ---
+  openThemeStudioDrawer() {
+    const drawer = document.getElementById('theme-studio-drawer');
+    if (drawer) drawer.classList.remove('hidden');
+  }
+
+  closeThemeStudioDrawer() {
+    const drawer = document.getElementById('theme-studio-drawer');
+    if (drawer) drawer.classList.add('hidden');
+  }
+
+  applyThemePreset(presetKey) {
+    const presets = {
+      ancient_codex: { accent: '#f59e0b', bg: '#0f172a', font: "'Cinzel', serif" },
+      gothic_grimdark: { accent: '#ef4444', bg: '#090d16', font: "'Lora', Georgia, serif" },
+      aetherpunk: { accent: '#38bdf8', bg: '#030712', font: "'Outfit', sans-serif" },
+      scholar_ivory: { accent: '#b45309', bg: '#1e293b', font: "'Lora', Georgia, serif" }
+    };
+
+    const sel = presets[presetKey];
+    if (sel) {
+      document.getElementById('theme-accent-picker').value = sel.accent;
+      document.getElementById('theme-bg-picker').value = sel.bg;
+      document.getElementById('theme-font-select').value = sel.font;
+      this.previewCustomTheme();
+      if (typeof window.showToast === 'function') window.showToast(`🎨 Applied ${presetKey.replace('_', ' ')} theme preset!`, 'info');
+    }
+  }
+
+  previewCustomTheme() {
+    const accent = document.getElementById('theme-accent-picker')?.value;
+    const bg = document.getElementById('theme-bg-picker')?.value;
+    const font = document.getElementById('theme-font-select')?.value;
+
+    if (accent) document.documentElement.style.setProperty('--accent-primary', accent);
+    if (bg) document.documentElement.style.setProperty('--bg-main', bg);
+    if (font) document.documentElement.style.setProperty('--font-heading', font);
+  }
+
+  saveCustomTheme() {
+    const themeData = {
+      accent: document.getElementById('theme-accent-picker')?.value || '#f59e0b',
+      bg: document.getElementById('theme-bg-picker')?.value || '#0f172a',
+      font: document.getElementById('theme-font-select')?.value || "'Cinzel', serif"
+    };
+
+    localStorage.setItem('lorevault_custom_theme', JSON.stringify(themeData));
+    this.previewCustomTheme();
+    if (typeof window.showToast === 'function') window.showToast('💾 Custom theme settings saved!', 'success');
+    this.closeThemeStudioDrawer();
+  }
+
+  resetThemeDefaults() {
+    localStorage.removeItem('lorevault_custom_theme');
+    document.documentElement.style.removeProperty('--accent-primary');
+    document.documentElement.style.removeProperty('--bg-main');
+    document.documentElement.style.removeProperty('--font-heading');
+
+    document.getElementById('theme-accent-picker').value = '#f59e0b';
+    document.getElementById('theme-bg-picker').value = '#0f172a';
+    document.getElementById('theme-font-select').value = "'Cinzel', serif";
+
+    if (typeof window.showToast === 'function') window.showToast('↩ Theme reset to defaults.', 'info');
+  }
+
+  initCustomTheme() {
+    try {
+      const saved = localStorage.getItem('lorevault_custom_theme');
+      if (saved) {
+        const theme = JSON.parse(saved);
+        if (theme.accent) document.documentElement.style.setProperty('--accent-primary', theme.accent);
+        if (theme.bg) document.documentElement.style.setProperty('--bg-main', theme.bg);
+        if (theme.font) document.documentElement.style.setProperty('--font-heading', theme.font);
+      }
+    } catch (e) {}
+  }
+}
+
 // --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    const themeDrawer = document.getElementById('theme-studio-drawer');
+    if (themeDrawer && !themeDrawer.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeThemeStudioDrawer === 'function') {
+        window.app.closeThemeStudioDrawer();
+      }
+      return;
+    }
+    const tplModal = document.getElementById('template-builder-modal');
+    if (tplModal && !tplModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeTemplateBuilderModal === 'function') {
+        window.app.closeTemplateBuilderModal();
+      }
+      return;
+    }
+    const revModal = document.getElementById('revision-history-modal');
+    if (revModal && !revModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeRevisionHistoryModal === 'function') {
+        window.app.closeRevisionHistoryModal();
+      }
+      return;
+    }
     const fightModal = document.getElementById('fight-simulator-modal');
     if (fightModal && !fightModal.classList.contains('hidden')) {
       if (window.app && typeof window.app.closeFightSimulatorModal === 'function') {

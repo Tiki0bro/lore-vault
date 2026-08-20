@@ -638,3 +638,60 @@ test("Scholar's Tour step definitions and controller integration validation", as
   assert.ok(htmlContent.includes('id="tour-btn-prev"'), 'HTML must have #tour-btn-prev');
   assert.ok(htmlContent.includes('id="tour-btn-next"'), 'HTML must have #tour-btn-next');
 });
+
+// --- CUSTOM TEMPLATES & REVISION HISTORY TESTS ---
+
+test('GET & POST /api/templates handles custom category template CRUD', async () => {
+  const createRes = await makeRequest('/api/templates', { method: 'POST' }, {
+    name: 'Magic System',
+    category: 'Magic',
+    icon: '✨',
+    fields_json: ['Power Source', 'Deity'],
+    boilerplate_markdown: '# Magic System Overview'
+  });
+
+  assert.strictEqual(createRes.statusCode, 200);
+  assert.strictEqual(createRes.json.success, true);
+  assert.ok(createRes.json.id);
+
+  const getRes = await makeRequest('/api/templates');
+  assert.strictEqual(getRes.statusCode, 200);
+  assert.ok(Array.isArray(getRes.json.templates));
+  assert.ok(getRes.json.templates.some(t => t.name === 'Magic System'));
+
+  const delRes = await makeRequest(`/api/templates/${createRes.json.id}`, { method: 'DELETE' });
+  assert.strictEqual(delRes.statusCode, 200);
+  assert.strictEqual(delRes.json.success, true);
+});
+
+test('GET /api/articles/:id/history & POST /api/articles/:id/rollback restores article revision', async () => {
+  const uniqueTitle = 'Revision Test Article ' + Date.now();
+  const artRes1 = await makeRequest('/api/articles', { method: 'POST' }, {
+    title: uniqueTitle,
+    category: 'General',
+    content: 'Initial content before edit'
+  });
+  assert.strictEqual(artRes1.statusCode, 201);
+  const artId = artRes1.json.id;
+
+  await makeRequest(`/api/articles/${artId}`, { method: 'PUT' }, {
+    title: uniqueTitle,
+    category: 'General',
+    content: 'Updated content after edit'
+  });
+  
+  const histRes = await makeRequest(`/api/articles/${artId}/history`);
+  assert.strictEqual(histRes.statusCode, 200);
+  assert.ok(Array.isArray(histRes.json.history));
+  assert.ok(histRes.json.history.length > 0);
+
+  const targetSnapshotFile = histRes.json.history[0].file;
+
+  const rollbackRes = await makeRequest(`/api/articles/${artId}/rollback`, { method: 'POST' }, {
+    file: targetSnapshotFile
+  });
+
+  assert.strictEqual(rollbackRes.statusCode, 200);
+  assert.strictEqual(rollbackRes.json.success, true);
+  assert.strictEqual(rollbackRes.json.article_id, artId);
+});

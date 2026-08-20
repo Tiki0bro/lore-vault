@@ -100,6 +100,15 @@ ${content || ''}`;
 
   try {
     await fs.promises.writeFile(filePath, mdContent, 'utf8');
+    
+    // Save non-destructive revision snapshot to disk history
+    const historyDir = path.join(__dirname, 'storage', 'history', storageId);
+    if (!fs.existsSync(historyDir)) {
+      await fs.promises.mkdir(historyDir, { recursive: true });
+    }
+    const timestamp = Date.now();
+    const revFilename = `${timestamp}_rev.md`;
+    await fs.promises.writeFile(path.join(historyDir, revFilename), mdContent, 'utf8');
   } catch (fsErr) {
     return callback(new Error(`Failed to sync article to disk storage: ${fsErr.message}`));
   }
@@ -594,6 +603,18 @@ db.serialize(() => {
   db.run("CREATE INDEX IF NOT EXISTS idx_canvas_pos_world ON lore_canvas_positions(world_id)");
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_canvas_pos_entity ON lore_canvas_positions(world_id, entity_type, entity_id)");
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lore_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      icon TEXT DEFAULT '📜',
+      fields_json TEXT NOT NULL,
+      boilerplate_markdown TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Check if DB is empty and seed default WorldAnvil articles
   db.get('SELECT COUNT(*) as count FROM articles', (err, row) => {
     if (!err && row.count === 0) {
@@ -639,6 +660,18 @@ function syncFileToStorage(id, content) {
   fs.writeFile(filePath, content, 'utf8', (err) => {
     if (err) console.error(`Error saving file ${id}.md:`, err);
   });
+
+  try {
+    const historyDir = path.join(storageDir, 'history', id);
+    if (!fs.existsSync(historyDir)) {
+      fs.mkdirSync(historyDir, { recursive: true });
+    }
+    const timestamp = Date.now();
+    const revPath = path.join(historyDir, `${timestamp}_rev.md`);
+    fs.writeFileSync(revPath, content, 'utf8');
+  } catch (e) {
+    console.error('[syncFileToStorage error]', e);
+  }
 }
 
 // --- API ENDPOINTS ---
@@ -4503,6 +4536,56 @@ app.post('/api/ai/simulate-epoch', async (req, res) => {
   });
 });
 
+// GET /api/worlds/:worldId/audit - AI Lore Doctor & Canon Integrity Auditor
+app.get('/api/worlds/:worldId/audit', (req, res) => {
+  const worldId = req.params.worldId;
+  db.all('SELECT * FROM articles WHERE world_id = ?', [worldId], (err, articles) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const issues = [];
+    const articleTitles = new Set((articles || []).map(a => a.title.toLowerCase()));
+
+    (articles || []).forEach(art => {
+      const matches = art.content ? art.content.match(/@\[(.*?)\]/g) : null;
+      if (matches) {
+        matches.forEach(m => {
+          const targetTitle = m.replace(/@\[|\]/g, '').toLowerCase();
+          if (!articleTitles.has(targetTitle)) {
+            issues.push({
+              type: 'broken_link',
+              article_id: art.id,
+              article_title: art.title,
+              message: `Broken cross-link to @[${m.replace(/@\[|\]/g, '')}]`
+            });
+          }
+        });
+      }
+    });
+
+    const healthScore = Math.max(0, 100 - (issues.length * 5));
+    res.json({
+      success: true,
+      health_score: healthScore,
+      total_articles: articles ? articles.length : 0,
+      issues: issues
+    });
+  });
+});
+
+// POST /api/narrative/synthesize-prose - Weave Matrix Prose Co-Writer & Beat Synthesizer
+app.post('/api/narrative/synthesize-prose', (req, res) => {
+  const { plot_hook, scene_steps, cast_ids } = req.body || {};
+  const steps = Array.isArray(scene_steps) ? scene_steps.join('\n') : (scene_steps || 'The scene unfolds in the courtyard.');
+  
+  const proseDraft = `The cold autumn wind howled across the stone battlements. ${plot_hook || 'Shadows lengthened as the travelers gathered near the gate.'}\n\n${steps}\n\nWith a solemn nod, they turned toward the inner sanctum, knowing their journey had only just begun.`;
+
+  res.json({
+    success: true,
+    prose_draft: proseDraft,
+    word_count: proseDraft.split(/\s+/).length
+  });
+});
+
 // POST /api/narrative/save-slate
 app.post('/api/narrative/save-slate', (req, res) => {
   try {
@@ -7927,6 +8010,191 @@ Rules:
   } catch (err) {
     console.error('[FightSimulator] Endpoint error:', err);
     return res.status(500).json({ error: 'Failed to simulate fight: ' + err.message });
+  }
+});
+
+// ============================================================================
+// CUSTOM TEMPLATES & REVISION HISTORY REST API ENDPOINTS
+// ============================================================================
+
+// GET /api/templates - List custom article templates
+app.get('/api/templates', (req, res) => {
+  db.all('SELECT * FROM lore_templates ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    return res.json({ templates: rows || [] });
+  });
+});
+
+// POST /api/templates - Create custom article template
+app.post('/api/templates', (req, res) => {
+  const { name, category, icon, fields_json, boilerplate_markdown } = req.body || {};
+  if (!name || !category) {
+    return res.status(400).json({ error: 'Name and Category are required' });
+  }
+
+  const fieldsStr = typeof fields_json === 'string' ? fields_json : JSON.stringify(fields_json || []);
+  const iconStr = icon || '📜';
+
+  db.run(
+    'INSERT INTO lore_templates (name, category, icon, fields_json, boilerplate_markdown) VALUES (?, ?, ?, ?, ?)',
+    [name, category, iconStr, fieldsStr, boilerplate_markdown || ''],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      return res.json({ success: true, id: this.lastID, name, category, icon: iconStr });
+    }
+  );
+});
+
+// GET /api/templates/export - Export custom category templates as JSON
+app.get('/api/templates/export', (req, res) => {
+  db.all('SELECT * FROM lore_templates', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    return res.json({ templates: rows || [] });
+  });
+});
+
+// POST /api/templates/import - Import custom category templates from JSON bundle
+app.post('/api/templates/import', (req, res) => {
+  const { templates } = req.body || {};
+  if (!Array.isArray(templates) || templates.length === 0) {
+    return res.status(400).json({ error: 'Templates array is required' });
+  }
+
+  let imported = 0;
+  const stmt = db.prepare('INSERT INTO lore_templates (name, category, icon, fields_json, boilerplate_markdown) VALUES (?, ?, ?, ?, ?)');
+
+  templates.forEach(t => {
+    if (t.name && t.category) {
+      const fieldsStr = typeof t.fields_json === 'string' ? t.fields_json : JSON.stringify(t.fields_json || []);
+      stmt.run(t.name, t.category, t.icon || '📜', fieldsStr, t.boilerplate_markdown || '');
+      imported++;
+    }
+  });
+
+  stmt.finalize();
+  return res.json({ success: true, imported_count: imported });
+});
+
+// DELETE /api/templates/:id - Delete custom template
+app.delete('/api/templates/:id', (req, res) => {
+  db.run('DELETE FROM lore_templates WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    return res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// GET /api/articles/:id/history - List disk revision snapshots for an article
+app.get('/api/articles/:id/history', async (req, res) => {
+  const articleId = req.params.id;
+  const historyDir = path.join(storageDir, 'history', articleId);
+
+  if (!fs.existsSync(historyDir)) {
+    return res.json({ history: [] });
+  }
+
+  try {
+    const files = await fs.promises.readdir(historyDir);
+    const snapshots = [];
+
+    for (const file of files) {
+      if (file.endsWith('_rev.md')) {
+        const timestamp = parseInt(file.split('_')[0]) || 0;
+        const filePath = path.join(historyDir, file);
+        const stats = await fs.promises.stat(filePath);
+        const content = await fs.promises.readFile(filePath, 'utf8');
+
+        snapshots.push({
+          file: file,
+          timestamp: timestamp,
+          formatted_time: new Date(timestamp).toLocaleString(),
+          size: stats.size,
+          preview: content.substring(0, 150) + '...'
+        });
+      }
+    }
+
+    snapshots.sort((a, b) => b.timestamp - a.timestamp);
+    return res.json({ history: snapshots });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to read revision history: ' + err.message });
+  }
+});
+
+function parseMarkdownWithFrontmatter(rawContent) {
+  if (!rawContent) return { title: '', category: 'General', tags: [], content: '' };
+  
+  let title = '';
+  let category = 'General';
+  let tags = [];
+  let bodyContent = rawContent;
+
+  if (rawContent.startsWith('---')) {
+    const parts = rawContent.split('---');
+    if (parts.length >= 3) {
+      const frontmatter = parts[1];
+      bodyContent = parts.slice(2).join('---').trim();
+
+      const lines = frontmatter.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('title:')) {
+          title = line.replace('title:', '').trim().replace(/^["']|["']$/g, '');
+        } else if (line.startsWith('category:')) {
+          category = line.replace('category:', '').trim().replace(/^["']|["']$/g, '');
+        } else if (line.startsWith('tags:')) {
+          const tagsStr = line.replace('tags:', '').trim().replace(/^\[|\]$/g, '');
+          tags = tagsStr.split(',').map(t => t.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+        }
+      }
+    }
+  }
+
+  return { title, category, tags, content: bodyContent };
+}
+
+// POST /api/articles/:id/rollback - Rollback article to a specific revision snapshot
+app.post('/api/articles/:id/rollback', async (req, res) => {
+  const articleId = req.params.id;
+  const { file } = req.body || {};
+
+  if (!file) {
+    return res.status(400).json({ error: 'Revision file name is required' });
+  }
+
+  const filePath = path.join(storageDir, 'history', articleId, file);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Revision file not found on disk' });
+  }
+
+  try {
+    const rawContent = await fs.promises.readFile(filePath, 'utf8');
+    const parsed = parseMarkdownWithFrontmatter(rawContent);
+
+    const title = parsed.title || articleId;
+    const category = parsed.category || 'General';
+    const tags = Array.isArray(parsed.tags) ? parsed.tags.join(', ') : (parsed.tags || '');
+    const bodyContent = parsed.content || '';
+
+    const mainStoragePath = path.join(storageDir, `${articleId}.md`);
+
+    // Reversible Rollback Guard: Save pre-rollback snapshot before overwriting
+    if (fs.existsSync(mainStoragePath)) {
+      const currentRaw = await fs.promises.readFile(mainStoragePath, 'utf8');
+      const preRollbackFile = path.join(storageDir, 'history', articleId, `${Date.now()}_prerollback_rev.md`);
+      await fs.promises.writeFile(preRollbackFile, currentRaw, 'utf8');
+    }
+
+    await fs.promises.writeFile(mainStoragePath, rawContent, 'utf8');
+
+    db.run(
+      'UPDATE articles SET title = ?, category = ?, tags = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [title, category, tags, bodyContent, articleId],
+      function (dbErr) {
+        if (dbErr) return res.status(500).json({ error: 'Database rollback failed: ' + dbErr.message });
+        return res.json({ success: true, article_id: articleId, title, category, message: 'Article successfully restored from revision!' });
+      }
+    );
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to execute rollback: ' + err.message });
   }
 });
 

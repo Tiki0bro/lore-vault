@@ -98,6 +98,8 @@
             <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">💬 Ask AI Assistant</button>
             <button class="dropdown-item" onclick="window.app.openAISettingsModal(); window.closeToolsMenu();">⚙️ AI Settings</button>
             <button class="dropdown-item" onclick="window.app.openFightSimulatorModal(); window.closeToolsMenu();">⚔️ AI Fight Simulator</button>
+            <button class="dropdown-item" onclick="window.app.openTemplateBuilderModal(); window.closeToolsMenu();">📜 Custom Templates</button>
+            <button class="dropdown-item" onclick="window.app.openThemeStudioDrawer(); window.closeToolsMenu();">🎨 Parchment Theme Studio</button>
             <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">📥 Import World</button>
           </div>
         </div>
@@ -167,6 +169,7 @@
                     <button class="btn btn-secondary toolbar-btn" onclick="openQuickMarketingModal()">📢 Quick Promo Copy</button>
                     <button id="statblock-drawer-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.toggleStatBlockDrawer()" title="TTRPG Stat Block (D&D 5e / PF2e)">🛡️ Stat Block <span id="statblock-badge-indicator" class="statblock-active-dot hidden">●</span></button>
                     <button id="vtt-export-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.openVttExportModal()" title="Export to Virtual Tabletop (Foundry, Owlbear, Roll20, FGU)">🎲 VTT Export <span class="kbd-hint">Ctrl+Shift+V</span></button>
+                    <button id="revision-history-toggle" class="btn btn-secondary toolbar-btn" onclick="window.app.openRevisionHistoryModal()" title="Article Revision History & 1-Click Rollback">📜 Revisions</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleMarkdown()" title="Copy raw WorldAnvil Markdown">📋 Copy MD</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.copyCurrentArticleShareLink()" title="Copy public share link">🔗 Share Link</button>
                     <button class="btn btn-secondary toolbar-btn" onclick="window.app.editCurrentArticle()">✏️ Edit</button>
@@ -1175,6 +1178,119 @@
             <button id="run-fight-btn" class="btn btn-primary" onclick="window.app.runFightSimulation()">⚔️ Simulate Battle</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- CUSTOM ARTICLE TEMPLATE BUILDER MODAL -->
+    <div id="template-builder-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeTemplateBuilderModal()"></div>
+      <div class="modal-card" style="max-width: 650px;">
+        <div class="modal-header">
+          <h2>📜 Custom Article Template Builder</h2>
+          <button class="modal-close" onclick="window.app.closeTemplateBuilderModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Template Name</label>
+            <input type="text" id="tpl-name-input" class="form-control" placeholder="e.g. Magic System, Religion, Spaceship Class" />
+          </div>
+
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:0.75rem; margin-bottom: 0.8rem;">
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Associated Category</label>
+              <input type="text" id="tpl-category-input" class="form-control" placeholder="e.g. Magic, Religion, Technology" />
+            </div>
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Category Icon</label>
+              <input type="text" id="tpl-icon-input" class="form-control" value="📜" placeholder="Emoji" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Custom Sidebar Fields (Comma separated labels)</label>
+            <input type="text" id="tpl-fields-input" class="form-control" placeholder="e.g. Alignment, Founding Date, Power Source, Primary Deity" />
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Boilerplate WorldAnvil Markdown Content</label>
+            <textarea id="tpl-boilerplate-input" class="form-control" rows="5" placeholder="[quote]“A thematic quote” | — Source[/quote]&#10;&#10;[row]&#10;[col]&#10;[h1]Overview[/h1]&#10;Overview text...&#10;[/col]&#10;[col]&#10;[h3]Sidebar Details[/h3]&#10;...&#10;[/col]&#10;[/row]"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="window.app.closeTemplateBuilderModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="window.app.saveCustomTemplate()">💾 Save Template</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOCAL REVISION HISTORY & ROLLBACK MODAL -->
+    <div id="revision-history-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeRevisionHistoryModal()"></div>
+      <div class="modal-card" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+          <h2>📜 Article Revision History & Rollback</h2>
+          <button class="modal-close" onclick="window.app.closeRevisionHistoryModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: grid; grid-template-columns: 240px 1fr; gap: 1rem;">
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.4rem;">Disk Version Snapshots</label>
+              <div id="revision-list-container" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color, #334155); border-radius: 6px; max-height: 320px; overflow-y: auto; padding: 0.5rem;"></div>
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.4rem;">Snapshot Preview</label>
+              <pre id="revision-preview-box" style="background: #090d16; border: 1px solid var(--border-color, #334155); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; color: #a5d6ff; max-height: 320px; overflow-y: auto; white-space: pre-wrap;"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between;">
+          <button class="btn btn-secondary" onclick="window.app.closeRevisionHistoryModal()">Close</button>
+          <button id="rollback-revision-btn" class="btn btn-primary hidden" onclick="window.app.restoreSelectedRevision()">↩ Restore Revision</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARCHMENT & CODEX VISUAL THEME STUDIO DRAWER -->
+    <div id="theme-studio-drawer" class="theme-studio-drawer hidden">
+      <div class="theme-drawer-header">
+        <h3>🎨 Parchment & Codex Theme Studio</h3>
+        <button class="modal-close" onclick="window.app.closeThemeStudioDrawer()">✕</button>
+      </div>
+      <div class="theme-drawer-body">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="font-size:0.8rem; font-weight:700; display:block; margin-bottom:0.4rem;">Genre Theme Presets</label>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.applyThemePreset('ancient_codex')">📜 Ancient Codex</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.applyThemePreset('gothic_grimdark')">🩸 Gothic Grimdark</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.applyThemePreset('aetherpunk')">⚡ Aetherpunk</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.applyThemePreset('scholar_ivory')">🏛️ Scholar Ivory</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+          <label style="font-size:0.8rem; font-weight:700; display:block; margin-bottom:0.3rem;">Primary Accent Color</label>
+          <input type="color" id="theme-accent-picker" class="form-control" value="#f59e0b" style="height: 38px; cursor: pointer;" onchange="window.app.previewCustomTheme()" />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+          <label style="font-size:0.8rem; font-weight:700; display:block; margin-bottom:0.3rem;">Background Color</label>
+          <input type="color" id="theme-bg-picker" class="form-control" value="#0f172a" style="height: 38px; cursor: pointer;" onchange="window.app.previewCustomTheme()" />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+          <label style="font-size:0.8rem; font-weight:700; display:block; margin-bottom:0.3rem;">Header Font Style</label>
+          <select id="theme-font-select" class="form-control" style="width:100%; padding:0.5rem;" onchange="window.app.previewCustomTheme()">
+            <option value="'Cinzel', serif">Cinzel (Epic Classical Serif)</option>
+            <option value="'Lora', Georgia, serif">Lora (Warm Literary Serif)</option>
+            <option value="'Outfit', sans-serif">Outfit (Modern Clean Sans)</option>
+            <option value="'Inter', sans-serif">Inter (Minimal Tech Sans)</option>
+          </select>
+        </div>
+      </div>
+      <div class="theme-drawer-footer" style="display:flex; justify-content:space-between; gap:0.5rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color, #334155);">
+        <button class="btn btn-secondary btn-sm" onclick="window.app.resetThemeDefaults()">↩ Reset Defaults</button>
+        <button class="btn btn-primary btn-sm" onclick="window.app.saveCustomTheme()">💾 Apply & Save</button>
       </div>
     </div>
 

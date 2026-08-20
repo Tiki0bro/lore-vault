@@ -8487,6 +8487,66 @@ body[data-mode="light"] .ai-test-feedback.error {
   color: #5b3300;
 }
 
+/* ==========================================================================
+   PARCHMENT & CODEX THEME STUDIO DRAWER STYLES
+   ========================================================================== */
+
+.theme-studio-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: var(--surface-sidebar, #0f172a);
+  border-left: 1px solid var(--border-color, #334155);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  z-index: 996;
+  padding: 1.25rem;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-studio-drawer.hidden {
+  display: none !important;
+}
+
+.theme-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color, #334155);
+  padding-bottom: 0.75rem;
+}
+
+.theme-drawer-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--accent-primary, #f59e0b);
+}
+
+.revision-snapshot-card {
+  padding: 0.6rem;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+  cursor: pointer;
+  background: rgba(30, 41, 59, 0.4);
+  transition: all 0.15s ease;
+}
+
+.revision-snapshot-card:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+}
+
+.revision-snapshot-card.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
+
 
 
 
