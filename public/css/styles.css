@@ -8022,6 +8022,473 @@ body[data-mode="light"] .ai-test-feedback.error {
   border-color: rgba(220, 38, 38, 0.35);
 }
 
+/* ==========================================================================
+   FEATURE 1: SPATIAL LORE CANVAS & MINDMAP STYLES
+   ========================================================================== */
+.canvas-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-main, #0b1120);
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: var(--surface-sidebar, #0f172a);
+  border-bottom: 1px solid var(--border-color, #334155);
+  z-index: 10;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.canvas-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.canvas-title {
+  font-family: var(--font-heading, sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-primary, #38bdf8);
+}
+
+.canvas-viewport {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.canvas-svg-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.canvas-node-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transform-origin: 0 0;
+}
+
+.canvas-node-card {
+  position: absolute;
+  width: 180px;
+  background: var(--surface-card, #1e293b);
+  border: 1px solid var(--border-color, rgba(56, 189, 248, 0.3));
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  cursor: move;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.canvas-node-card:hover {
+  border-color: var(--accent-primary, #38bdf8);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.25);
+}
+
+.canvas-node-card.is-secret-node {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--accent-amber, #f59e0b);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.node-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary, #f8fafc);
+  margin-bottom: 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-summary {
+  font-size: 0.72rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.3;
+  margin-bottom: 0.4rem;
+}
+
+.node-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
+   FEATURE 2: AI WORLD SIMULATOR STYLES
+   ========================================================================== */
+.simulator-modal {
+  max-width: 720px;
+}
+
+.simulator-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.sim-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sim-results-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color, rgba(56, 189, 248, 0.3));
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.causality-score-badge {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent-amber, #f59e0b);
+  margin-bottom: 0.75rem;
+}
+
+.socratic-probe-card {
+  background: var(--surface-card, #1e293b);
+  border-left: 3px solid #38bdf8;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sim-rumor-chip {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: #fef08a;
+  margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   FEATURE 3: DM SECRETS STYLES
+   ========================================================================== */
+.wa-dm-secret {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px dashed #a855f7;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  position: relative;
+}
+
+.wa-dm-secret-header {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+/* ==========================================================================
+   FEATURE: ONBOARDING SCHOLAR'S SPOTLIGHT TOUR & TOOLTIP CARD
+   ========================================================================== */
+
+.spotlight-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9990;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spotlight-active-ring {
+  position: absolute;
+  border-radius: 8px;
+  border: 2px solid var(--accent-gold, #d4af37);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72), 0 0 20px 4px rgba(212, 175, 55, 0.6), inset 0 0 15px rgba(212, 175, 55, 0.3);
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: ringPulse 2s infinite ease-in-out;
+  z-index: 9995;
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72), 0 0 15px rgba(212, 175, 55, 0.4), inset 0 0 10px rgba(212, 175, 55, 0.2);
+    border-color: var(--accent-gold, #d4af37);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.78), 0 0 28px rgba(212, 175, 55, 0.75), inset 0 0 20px rgba(212, 175, 55, 0.4);
+    border-color: #fce77d;
+  }
+}
+
+.onboarding-tooltip-card {
+  position: absolute;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--accent-gold, #d4af37);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 25px rgba(212, 175, 55, 0.25);
+  z-index: 10000;
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: onboardingCardPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes onboardingCardPop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.onboarding-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.onboarding-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.btn-close-tour {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-tour:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.tour-title {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.tour-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #cbd5e1);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.tour-kbd-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.tour-kbd-container:empty {
+  display: none;
+}
+
+.tour-kbd-container kbd,
+.tour-desc kbd {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.75rem;
+  color: var(--accent-gold, #d4af37);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.onboarding-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+.tour-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-text-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.btn-text-skip:hover {
+  color: var(--text-primary, #f8fafc);
+}
+
+/* Concierge Orientation Tour Banner */
+.concierge-tour-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(56, 189, 248, 0.15));
+  border: 1px solid var(--accent-gold, #d4af37);
+  color: var(--accent-gold, #d4af37);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 0.25rem;
+}
+
+.concierge-tour-banner:hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(56, 189, 248, 0.25));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.25);
+}
+
+.concierge-tour-banner .banner-arrow {
+  font-size: 0.9rem;
+  transition: transform 0.2s ease;
+}
+
+.concierge-tour-banner:hover .banner-arrow {
+  transform: translateX(4px);
+}
+
+/* Light Mode Overrides for Onboarding & Tour */
+[data-mode="light"] .spotlight-active-ring {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 0 20px rgba(168, 93, 22, 0.4);
+  border-color: #a85d16;
+}
+
+[data-mode="light"] .onboarding-tooltip-card {
+  background: var(--bg-surface, #faf6ed);
+  border-color: #d6c5a3;
+  color: #2c221e;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2), 0 0 15px rgba(168, 93, 22, 0.2);
+}
+
+[data-mode="light"] .onboarding-badge {
+  background: rgba(168, 93, 22, 0.12);
+  border-color: rgba(168, 93, 22, 0.3);
+  color: #a85d16;
+}
+
+[data-mode="light"] .tour-title {
+  color: #2c221e;
+}
+
+[data-mode="light"] .tour-desc {
+  color: #5c4e44;
+}
+
+[data-mode="light"] .btn-close-tour {
+  color: #7a6b5d;
+}
+
+[data-mode="light"] .btn-close-tour:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+[data-mode="light"] .btn-text-skip {
+  color: #7a6b5d;
+}
+
+[data-mode="light"] .btn-text-skip:hover {
+  color: #2c221e;
+}
+
+[data-mode="light"] .tour-kbd-container kbd,
+[data-mode="light"] .tour-desc kbd {
+  background: #f0e6d2;
+  border-color: #d6c5a3;
+  color: #a85d16;
+}
+
+[data-mode="light"] .concierge-tour-banner {
+  background: linear-gradient(135deg, #f3e8cf, #e0f2fe);
+  border-color: #bfa15f;
+  color: #7c4a03;
+}
+
+[data-mode="light"] .concierge-tour-banner:hover {
+  background: linear-gradient(135deg, #ede0bf, #bae6fd);
+  border-color: #a85d16;
+  color: #5b3300;
+}
+
+
+
 
 
 

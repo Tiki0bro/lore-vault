@@ -43,6 +43,7 @@
           <button class="tab-btn active" id="tab-library" onclick="window.switchTab('library')"><span class="tab-icon">📚</span> Lore Codex</button>
           <button class="tab-btn" id="tab-frontpage" onclick="window.switchTab('frontpage')"><span class="tab-icon">🌐</span> World Frontpage</button>
           <button class="tab-btn" id="tab-atlas" onclick="window.switchTab('atlas')"><span class="tab-icon">🗺️</span> World Atlas</button>
+          <button class="tab-btn" id="tab-canvas" onclick="window.switchTab('canvas')"><span class="tab-icon">🎨</span> Spatial Canvas</button>
           <button class="tab-btn" id="tab-timeline" onclick="window.switchTab('timeline')"><span class="tab-icon">⏳</span> Timeline</button>
           <button class="nav-tab tab-btn" id="tab-relationships" data-view="view-relationships" onclick="window.switchTab('view-relationships')">⚔️ Relationships</button>
           <button id="narrative-slate-nav-btn" class="nav-tab tab-btn" onclick="window.switchTab('narrative-slate')">📜 Narrative Slate</button>
@@ -54,6 +55,12 @@
 
       <!-- Zone 3: Right (World & Theme Dropdown, Consolidated Tools Dropdown, Primary CTA) -->
       <div class="navbar-zone-right header-actions">
+        <!-- DM Secrets / Player View Toggle -->
+        <button id="dm-mode-toggle" class="btn btn-secondary" title="Toggle DM Secrets / Player View" onclick="window.app.toggleDMMode()"><span id="dm-toggle-icon">🔒</span> <span id="dm-toggle-label">DM Mode</span></button>
+
+        <!-- AI World Simulator & Causality Trigger -->
+        <button id="simulator-nav-btn" class="btn btn-secondary" title="Open AI World Simulator & Causality Engine" onclick="window.app.openSimulatorModal()">🔮 Simulator</button>
+
         <!-- Universal Command Palette Trigger -->
         <button id="cmd-palette-btn" class="btn btn-secondary" title="Open Universal Command Palette" onclick="window.app.toggleCommandPalette()">🔍 <span class="kbd-hint">Ctrl+K</span></button>
 
@@ -90,6 +97,7 @@
             <button class="dropdown-item" onclick="window.app.openMediaVault(); window.closeToolsMenu();">🖼️ Media Vault</button>
             <button class="dropdown-item" onclick="window.toggleAIChatDrawer(); window.closeToolsMenu();">💬 Ask AI Assistant</button>
             <button class="dropdown-item" onclick="window.app.openAISettingsModal(); window.closeToolsMenu();">⚙️ AI Settings</button>
+            <button class="dropdown-item" onclick="window.app.openFightSimulatorModal(); window.closeToolsMenu();">⚔️ AI Fight Simulator</button>
             <button class="dropdown-item" onclick="window.app.openImportModal(); window.closeToolsMenu();">📥 Import World</button>
           </div>
         </div>
@@ -204,6 +212,11 @@
       <!-- TAB 3: WORLD ATLAS -->
       <section id="view-atlas" class="view-panel">
         <div id="atlas-app-root" style="width: 100%; height: calc(100vh - 56px);"></div>
+      </section>
+
+      <!-- TAB SPATIAL CANVAS -->
+      <section id="view-canvas" class="view-panel">
+        <div id="canvas-app-root" style="width: 100%; height: calc(100vh - 56px);"></div>
       </section>
 
       <!-- TAB 4: TIMELINE -->
@@ -1043,6 +1056,123 @@
             <button class="btn btn-secondary" onclick="window.app.closeVttExportModal()">Cancel</button>
             <button class="btn btn-secondary" onclick="window.app.copyVttExportData()">📋 Copy to Clipboard</button>
             <button class="btn btn-primary" onclick="window.app.downloadVttExportPackage()">💾 Download File</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLADIATOR ARENA AI FIGHT SIMULATOR MODAL -->
+    <div id="fight-simulator-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="window.app.closeFightSimulatorModal()"></div>
+      <div class="modal-card" style="max-width: 850px; width: 95%;">
+        <div class="modal-header">
+          <h2>⚔️ Gladiator Arena Fight Simulator</h2>
+          <button class="modal-close" onclick="window.app.closeFightSimulatorModal()">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+            <!-- Combatant A Card -->
+            <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 1rem;">
+              <h3 style="margin-top:0; font-size:1rem; color:#38bdf8;">🗡️ Combatant A</h3>
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size:0.8rem; font-weight:600;">Name / Title</label>
+                <input type="text" id="fight-a-name" class="form-control" value="Sir Cedric the Knight" />
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom: 0.6rem;">
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Hit Points (HP)</label>
+                  <input type="number" id="fight-a-hp" class="form-control" value="45" min="1" />
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Armor Class (AC)</label>
+                  <input type="number" id="fight-a-ac" class="form-control" value="18" min="1" />
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom: 0.6rem;">
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Attack Bonus (+X)</label>
+                  <input type="number" id="fight-a-atk" class="form-control" value="6" />
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Damage Formula</label>
+                  <input type="text" id="fight-a-dmg" class="form-control" value="1d8+4" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Combatant B Card -->
+            <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 1rem;">
+              <h3 style="margin-top:0; font-size:1rem; color:#f59e0b;">🪓 Combatant B</h3>
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size:0.8rem; font-weight:600;">Name / Title</label>
+                <input type="text" id="fight-b-name" class="form-control" value="Gorgar the Orc Warlord" />
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom: 0.6rem;">
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Hit Points (HP)</label>
+                  <input type="number" id="fight-b-hp" class="form-control" value="52" min="1" />
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Armor Class (AC)</label>
+                  <input type="number" id="fight-b-ac" class="form-control" value="15" min="1" />
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom: 0.6rem;">
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Attack Bonus (+X)</label>
+                  <input type="number" id="fight-b-atk" class="form-control" value="5" />
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; font-weight:600;">Damage Formula</label>
+                  <input type="text" id="fight-b-dmg" class="form-control" value="2d6+3" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Environment & Settings Row -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Environment / Battlefield</label>
+              <select id="fight-env-select" class="form-control" style="width:100%; padding:0.5rem;">
+                <option value="Midnight Castle Ramparts">🏰 Midnight Castle Ramparts</option>
+                <option value="Burning Lava Chasm">🌋 Burning Lava Chasm</option>
+                <option value="Dark Enchanted Forest">🌲 Dark Enchanted Forest</option>
+                <option value="Gladiator Colosseum Arena">🏟️ Imperial Colosseum Arena</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Narrative Prose Style</label>
+              <select id="fight-tone-select" class="form-control" style="width:100%; padding:0.5rem;">
+                <option value="high_fantasy">✨ High Fantasy (Epic & Heroic)</option>
+                <option value="grimdark">🩸 Grimdark (Brutal & Visceral)</option>
+                <option value="swashbuckling">⚔️ Swashbuckling (Fast & Daring)</option>
+                <option value="analytical_audit">📊 Mechanics Log Only (No AI Prose)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Live Duel Results Container -->
+          <div id="fight-results-container" class="hidden" style="margin-top: 1rem; border-top: 1px solid var(--border-color, #334155); padding-top: 1rem;">
+            <div id="fight-winner-banner" style="font-size: 1.1rem; font-weight: 800; color: #f59e0b; text-align: center; margin-bottom: 0.75rem;"></div>
+            
+            <div style="margin-bottom: 1rem;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">📜 Cinematic Battle Story Narrative</label>
+              <div id="fight-story-box" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color, #334155); padding: 1rem; border-radius: 8px; font-family: 'Lora', Georgia, serif; line-height: 1.6; max-height: 220px; overflow-y: auto;"></div>
+            </div>
+
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">🎲 Turn-by-Turn Dice Log</label>
+              <pre id="fight-log-box" style="background: #090d16; border: 1px solid var(--border-color, #334155); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; color: #38bdf8; max-height: 150px; overflow-y: auto;"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <button class="btn btn-secondary" onclick="window.app.closeFightSimulatorModal()">Cancel</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="copy-fight-log-btn" class="btn btn-secondary hidden" onclick="window.app.copyFightLog()">📋 Copy Tactical Log</button>
+            <button id="run-fight-btn" class="btn btn-primary" onclick="window.app.runFightSimulation()">⚔️ Simulate Battle</button>
           </div>
         </div>
       </div>
@@ -1962,6 +2092,11 @@
         <p class="concierge-subtitle">Were you planning on bringing your worlds to life or starting your literary journey today?</p>
       </div>
 
+      <div id="concierge-tour-banner" class="concierge-tour-banner" onclick="window.app.startScholarTour()">
+        <span>🎓 New traveler? Take the 2-Minute Scholar's Orientation Tour</span>
+        <span class="banner-arrow">➔</span>
+      </div>
+
       <!-- Preset Intent Cards Grid (0ms instant execution) -->
       <div class="concierge-preset-grid">
         <div class="concierge-preset-card" onclick="window.app.executeConciergePreset('worldbuilder')">
@@ -2134,6 +2269,87 @@
     </div>
   </div>
 
+  <!-- AI WORLD SIMULATOR & CAUSALITY MODAL -->
+  <div id="world-simulator-modal" class="modal-backdrop hidden">
+    <div class="modal-content simulator-modal">
+      <div class="modal-header">
+        <h2>🔮 AI World Simulator & Causality Engine</h2>
+        <button class="modal-close-btn" onclick="window.app.closeSimulatorModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="simulator-tabs">
+          <button id="sim-tab-era" class="btn btn-secondary active" onclick="window.app.switchSimulatorTab('era')">⏳ Era Simulator</button>
+          <button id="sim-tab-causality" class="btn btn-secondary" onclick="window.app.switchSimulatorTab('causality')">🔍 Socratic 5-Whys Audit</button>
+          <button id="sim-tab-rumors" class="btn btn-secondary" onclick="window.app.switchSimulatorTab('rumors')">🍺 Local Rumors</button>
+        </div>
+
+        <!-- ERA SIMULATOR SECTION -->
+        <div id="sim-section-era" class="sim-section">
+          <div class="form-group">
+            <label>Timespan (Years):</label>
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn active" onclick="window.app.setSimTimespan(10, this)">10 Years</button>
+              <button type="button" class="segmented-btn" onclick="window.app.setSimTimespan(50, this)">50 Years</button>
+              <button type="button" class="segmented-btn" onclick="window.app.setSimTimespan(100, this)">100 Years</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Catalyst World Event (Optional):</label>
+            <input type="text" id="sim-catalyst-input" placeholder="e.g. A decade of severe drought, or dragon invasion..." />
+          </div>
+          <button class="btn btn-primary" onclick="window.app.runEraSimulation()">✨ Simulate Era Evolution</button>
+
+          <div id="sim-era-results" class="sim-results-box hidden">
+            <h4>Simulation Summary</h4>
+            <p id="sim-era-summary"></p>
+            <h4>Generated Historical Events</h4>
+            <div id="sim-era-events"></div>
+          </div>
+        </div>
+
+        <!-- CAUSALITY AUDIT SECTION -->
+        <div id="sim-section-causality" class="sim-section hidden">
+          <p>Scans world lore to find causality gaps, economic contradictions, and magic-technology inconsistencies using Arthur's 5-Whys Socratic method.</p>
+          <button class="btn btn-primary" onclick="window.app.runCausalityAudit()">🔍 Run 5-Whys Causality Probe</button>
+
+          <div id="sim-causality-results" class="sim-results-box hidden">
+            <div class="causality-score-badge">Causality Score: <span id="sim-causality-score">92/100</span></div>
+            <h4>Arthur's Socratic Probes:</h4>
+            <div id="sim-causality-probes"></div>
+          </div>
+        </div>
+
+        <!-- LOCAL RUMORS SECTION -->
+        <div id="sim-section-rumors" class="sim-section hidden">
+          <p>Generates active tavern rumors and plot hooks based on your world's current factions and locations.</p>
+          <button class="btn btn-secondary" onclick="window.app.loadWorldRumors()">🍺 Fetch Local Rumors</button>
+          <div id="sim-rumors-list" class="sim-rumors-list" style="margin-top: 1rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding Scholar's Tour Spotlight Overlay -->
+  <div id="onboarding-spotlight-overlay" class="spotlight-overlay hidden">
+    <div id="spotlight-active-ring" class="spotlight-active-ring"></div>
+    <div id="onboarding-tooltip-card" class="onboarding-tooltip-card">
+      <div class="onboarding-card-header">
+        <span class="onboarding-badge" id="tour-step-badge">🎓 SCHOLAR'S TOUR — STEP 1 OF 5</span>
+        <button class="btn-close-tour" title="Skip Tour" onclick="window.app.endScholarTour()">✕</button>
+      </div>
+      <h3 id="tour-step-title" class="tour-title">Welcome to LoreVault</h3>
+      <p id="tour-step-desc" class="tour-desc">Let's take a quick 2-minute tour of your worldbuilding workspace.</p>
+      <div id="tour-step-kbd" class="tour-kbd-container"></div>
+      <div class="onboarding-card-footer">
+        <button id="tour-btn-prev" class="btn btn-secondary btn-sm" onclick="window.app.prevScholarTourStep()">⏮ Back</button>
+        <div class="tour-footer-right">
+          <button class="btn-text-skip" onclick="window.app.endScholarTour()">Skip Tour</button>
+          <button id="tour-btn-next" class="btn btn-primary btn-sm" onclick="window.app.nextScholarTourStep()">Next ➔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
@@ -2149,6 +2365,7 @@
   <script src="js/frontpage-view.js?v=13"></script>
   <script src="js/timeline-view.js?v=13"></script>
   <script src="js/relationship-view.js?v=13"></script>
+  <script src="js/canvas-view.js?v=13"></script>
   <script src="js/app.js?v=13"></script>
 </body>
 </html>
