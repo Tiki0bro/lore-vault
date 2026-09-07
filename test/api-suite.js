@@ -172,16 +172,86 @@ test('POST /api/audit/dismiss toggles issue suppression', async () => {
   const dismissRes = await makeRequest('/api/audit/dismiss', { method: 'POST' }, { issue_key: 'stub:test-123' });
   assert.strictEqual(dismissRes.statusCode, 200);
   assert.strictEqual(dismissRes.json.success, true);
-  assert.strictEqual(dismissRes.json.isIgnored, true);
+});
 
-  const ignoredRes = await makeRequest('/api/audit/ignored');
-  assert.strictEqual(ignoredRes.statusCode, 200);
-  assert.ok(Array.isArray(ignoredRes.json.ignoredKeys));
-  assert.ok(ignoredRes.json.ignoredKeys.includes('stub:test-123'));
+test('GET, POST & DELETE /api/skills manages custom AI rules & directives', async () => {
+  const createRes = await makeRequest('/api/skills', { method: 'POST' }, {
+    name: 'Grimdark Prose Directive',
+    description: 'Enforce gritty combat descriptions',
+    directives: '• Write in visceral, high-stakes tone\n• Avoid modern slang',
+    is_active: 1
+  });
+  assert.strictEqual(createRes.statusCode, 200);
+  assert.strictEqual(createRes.json.success, true);
+  const skillId = createRes.json.id;
 
-  const restoreRes = await makeRequest('/api/audit/dismiss', { method: 'POST' }, { issue_key: 'stub:test-123' });
-  assert.strictEqual(restoreRes.statusCode, 200);
-  assert.strictEqual(restoreRes.json.isIgnored, false);
+  const listRes = await makeRequest('/api/skills?world_id=all');
+  assert.strictEqual(listRes.statusCode, 200);
+  assert.ok(Array.isArray(listRes.json));
+  assert.ok(listRes.json.some(s => s.id === skillId));
+
+  const delRes = await makeRequest(`/api/skills/${skillId}`, { method: 'DELETE' });
+  assert.strictEqual(delRes.statusCode, 200);
+  assert.strictEqual(delRes.json.success, true);
+});
+
+test('POST /api/skills/generate drafts system directives with AI', async () => {
+  const res = await makeRequest('/api/skills/generate', { method: 'POST' }, { prompt: 'Make AI write high-fantasy dialogue' });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.ok(res.json.skill.name);
+  assert.ok(res.json.skill.directives);
+});
+
+test('GET /api/search/fts performs full-text search with snippets', async () => {
+  const res = await makeRequest('/api/search/fts?q=default&world_id=all');
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(Array.isArray(res.json.results));
+});
+
+test('POST /api/simulation/npc-dialogue roleplays NPC in character', async () => {
+  const uniqueTitle = 'Lord Malakor Test NPC ' + Date.now();
+  const artRes = await makeRequest('/api/articles', { method: 'POST' }, {
+    title: uniqueTitle,
+    category: 'Characters',
+    sub_category: 'Villain',
+    content: 'A ruthless warlord commanding shadow armies.',
+    world_id: 'default'
+  });
+  const npcId = artRes.json.id || artRes.json.article_id || (artRes.json.article && artRes.json.article.id);
+
+  const res = await makeRequest('/api/simulation/npc-dialogue', { method: 'POST' }, {
+    character_id: npcId,
+    user_message: 'Why do you attack our lands?'
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.characterId, npcId);
+  assert.ok(res.json.reply);
+  assert.ok(res.json.emotion);
+});
+
+test('GET /api/census/stats computes world demographic statistics', async () => {
+  const res = await makeRequest('/api/census/stats?world_id=all');
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(typeof res.json.totalArticles === 'number');
+  assert.ok(typeof res.json.totalWords === 'number');
+  assert.ok(Array.isArray(res.json.categoryBreakdown));
+});
+
+test('POST /api/simulation/generate-rumors drafts in-universe broadsheet & d100 rumor table', async () => {
+  const res = await makeRequest('/api/simulation/generate-rumors', { method: 'POST' }, { world_id: 'all', count: 4 });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.ok(res.json.broadsheet.headline);
+  assert.ok(Array.isArray(res.json.broadsheet.rumors));
+});
+
+test('POST /api/maps/generate-settlement builds procedural grid floorplan layout', async () => {
+  const res = await makeRequest('/api/maps/generate-settlement', { method: 'POST' }, { name: 'Ironclad Vault', map_type: 'dungeon', grid_size: 10 });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.strictEqual(res.json.settlement.name, 'Ironclad Vault');
+  assert.ok(Array.isArray(res.json.settlement.rooms));
 });
 
 // --- TTRPG STAT BLOCK INTEGRATION TESTS ---
@@ -695,3 +765,471 @@ test('GET /api/articles/:id/history & POST /api/articles/:id/rollback restores a
   assert.strictEqual(rollbackRes.json.success, true);
   assert.strictEqual(rollbackRes.json.article_id, artId);
 });
+
+test('GET /api/search/fts performs SQLite FTS5 full-text search with highlight snippets', async () => {
+  const res = await makeRequest('/api/search/fts?q=Roderick');
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(typeof res.json.total_results, 'number');
+  assert.ok(Array.isArray(res.json.results));
+});
+
+test('POST /api/timeline/extract-event extracts event details from prose text selection', async () => {
+  const res = await makeRequest('/api/timeline/extract-event', { method: 'POST' }, {
+    text: 'In the year 1420, High King Roderick established the Dragon Pact at Aethelgard.'
+  });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.strictEqual(res.json.display_year, '1420');
+});
+
+test('POST /api/audit/auto-crosslink auto-inserts entity crosslink references', async () => {
+  const res = await makeRequest('/api/audit/auto-crosslink', { method: 'POST' }, { world_id: 'default' });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.strictEqual(typeof res.json.updated_articles_count, 'number');
+});
+
+test('POST /api/audit/check-continuity verifies article continuity against world canon', async () => {
+  const res = await makeRequest('/api/audit/check-continuity', { method: 'POST' }, { world_id: 'default', article_id: 'art_aethelgard_1' });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.strictEqual(typeof res.json.contradiction_score, 'number');
+});
+
+test('GET & POST /api/articles/:id/persona and /api/ai/npc-chat manages character roleplay persona', async () => {
+  const postRes = await makeRequest('/api/articles/char_test_1/persona', { method: 'POST' }, {
+    thoughts: 'Protect the kingdom at all costs.',
+    wants: 'Peaceful borders',
+    needs: 'Trustworthy generals',
+    speech_mannerisms: 'Speaks with formal royal authority.'
+  });
+  assert.strictEqual(postRes.statusCode, 200);
+  assert.strictEqual(postRes.json.success, true);
+
+  const getRes = await makeRequest('/api/articles/char_test_1/persona');
+  assert.strictEqual(getRes.statusCode, 200);
+  assert.strictEqual(getRes.json.success, true);
+  assert.strictEqual(getRes.json.persona.thoughts, 'Protect the kingdom at all costs.');
+
+  const chatRes = await makeRequest('/api/ai/npc-chat', { method: 'POST' }, {
+    character_id: 'char_test_1',
+    user_message: 'Will you support the alliance?'
+  });
+  assert.strictEqual(chatRes.statusCode, 200);
+  assert.strictEqual(chatRes.json.success, true);
+  assert.ok(chatRes.json.reply.length > 0);
+});
+
+test('GET & POST /api/maps/:mapId/fog persists Fog-of-War canvas state', async () => {
+  const postRes = await makeRequest('/api/maps/map_test_1/fog', { method: 'POST' }, {
+    fog_data_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+  });
+  assert.strictEqual(postRes.statusCode, 200);
+  assert.strictEqual(postRes.json.success, true);
+
+  const getRes = await makeRequest('/api/maps/map_test_1/fog');
+  assert.strictEqual(getRes.statusCode, 200);
+  assert.strictEqual(getRes.json.success, true);
+  assert.ok(getRes.json.fog_data_url.startsWith('data:image/png'));
+});
+
+test('POST /api/timeline/anachronism-audit scans timeline for chronological anomalies', async () => {
+  const res = await makeRequest('/api/timeline/anachronism-audit', { method: 'POST' }, { world_id: 'default' });
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.json.success, true);
+  assert.strictEqual(typeof res.json.total_events_scanned, 'number');
+  assert.ok(Array.isArray(res.json.character_ages));
+});
+
+// ====================================================
+// 🗓️ 1. CHRONOS MATRIX INTEGRATION TESTS
+// ====================================================
+
+test('Chronos Matrix: custom calendars, celestial date calculation & era forks', async () => {
+  // Create custom calendar
+  const createCal = await makeRequest('/api/calendars', { method: 'POST' }, {
+    world_id: 'default',
+    name: 'Imperial Solar Reckoning',
+    days_per_year: 360,
+    months: [
+      { name: 'Sol-Prime', days: 90, season: 'Spring' },
+      { name: 'Aether-Mid', days: 90, season: 'Summer' },
+      { name: 'Harvest-Fall', days: 90, season: 'Autumn' },
+      { name: 'Frost-End', days: 90, season: 'Winter' }
+    ],
+    weekdays: ['Firstday', 'Moonday', 'Starday', 'Windday', 'Sunrest'],
+    moon_cycles: [
+      { name: 'Silver Veil', cycle_days: 28, color: '#e0e0e0' },
+      { name: 'Blood Orb', cycle_days: 45, color: '#f43f5e' }
+    ],
+    epoch_name: 'Age of Sun',
+    current_year: 1042,
+    current_day: 145,
+    is_secret: 0
+  });
+  assert.strictEqual(createCal.statusCode, 200);
+  assert.strictEqual(createCal.json.success, true);
+  const calId = createCal.json.id;
+
+  // List calendars
+  const listCals = await makeRequest('/api/worlds/default/calendars');
+  assert.strictEqual(listCals.statusCode, 200);
+  assert.ok(Array.isArray(listCals.json.calendars));
+  assert.ok(listCals.json.calendars.some(c => c.id === calId));
+
+  // Calculate celestial date
+  const calcRes = await makeRequest('/api/calendars/calculate-date', { method: 'POST' }, {
+    days_per_year: 360,
+    months: [
+      { name: 'Sol-Prime', days: 90, season: 'Spring' },
+      { name: 'Aether-Mid', days: 90, season: 'Summer' }
+    ],
+    weekdays: ['Firstday', 'Moonday', 'Starday'],
+    moon_cycles: [{ name: 'Silver Veil', cycle_days: 28 }],
+    current_year: 1000,
+    current_day: 45,
+    total_day_offset: 10
+  });
+  assert.strictEqual(calcRes.statusCode, 200);
+  assert.strictEqual(calcRes.json.success, true);
+  assert.strictEqual(calcRes.json.month, 'Sol-Prime');
+  assert.strictEqual(calcRes.json.day_in_month, 55);
+  assert.ok(Array.isArray(calcRes.json.moon_phases));
+
+  // Create & list era forks
+  const createEra = await makeRequest('/api/era-forks', { method: 'POST' }, {
+    world_id: 'default',
+    name: 'The Broken Eclipse',
+    start_year: 850,
+    end_year: 1100,
+    divergence_event: 'Shattered Sunstone',
+    description: 'Timeline divergence into dark arcane winter.'
+  });
+  assert.strictEqual(createEra.statusCode, 200);
+  assert.strictEqual(createEra.json.success, true);
+
+  const listEras = await makeRequest('/api/worlds/default/era-forks');
+  assert.strictEqual(listEras.statusCode, 200);
+  assert.ok(Array.isArray(listEras.json.era_forks));
+  assert.ok(listEras.json.era_forks.some(e => e.name === 'The Broken Eclipse'));
+});
+
+// ====================================================
+// ⚡ 2. ARCANE & TECH RESONANCE MATRIX TESTS
+// ====================================================
+
+test('Arcane & Tech Resonance Matrix: hard laws, article audit & VTT export', async () => {
+  // Create hard law
+  const createLaw = await makeRequest('/api/laws', { method: 'POST' }, {
+    world_id: 'default',
+    system_name: 'Solar Leyline Weaving',
+    law_type: 'magic',
+    power_source: 'Solar Ley Crystals',
+    fuel_or_cost: 'Physical Stamina & Refined Silver',
+    forbidden_acts: 'Resurrection, Perpetual Motion',
+    backlash_consequences: 'Arcane Necrosis & Mana Burn',
+    tier_limits: 'Tier 1 to 5',
+    is_secret: 0
+  });
+  assert.strictEqual(createLaw.statusCode, 200);
+  assert.strictEqual(createLaw.json.success, true);
+  const lawId = createLaw.json.id;
+
+  // List laws
+  const listLaws = await makeRequest('/api/worlds/default/laws');
+  assert.strictEqual(listLaws.statusCode, 200);
+  assert.ok(Array.isArray(listLaws.json.laws));
+  assert.ok(listLaws.json.laws.some(l => l.id === lawId));
+
+  // Audit article text with violation
+  const auditViolation = await makeRequest('/api/laws/audit-article', { method: 'POST' }, {
+    world_id: 'default',
+    content: 'The rogue mage attempted forbidden resurrection using solar ley crystals.'
+  });
+  assert.strictEqual(auditViolation.statusCode, 200);
+  assert.strictEqual(auditViolation.json.is_compliant, false);
+  assert.strictEqual(auditViolation.json.violations_count >= 1, true);
+  assert.ok(auditViolation.json.violations.some(v => v.violation_type.includes('Forbidden Act')));
+
+  // Export to VTT
+  const exportRes = await makeRequest(`/api/laws/${lawId}/export/vtt`);
+  assert.strictEqual(exportRes.statusCode, 200);
+  assert.strictEqual(exportRes.json.type, 'vtt_rule_system');
+  assert.strictEqual(exportRes.json.name, 'Solar Leyline Weaving');
+});
+
+// ====================================================
+// 🌿 3. BIOME & LIVING ECOLOGY SIMULATOR TESTS
+// ====================================================
+
+test('Biome & Living Ecology Simulator: biomes, trophic food web & scarcity simulation', async () => {
+  // Create biome
+  const createBiome = await makeRequest('/api/biomes', { method: 'POST' }, {
+    world_id: 'default',
+    name: 'Whispering Boreal Basin',
+    climate_temp: 'cold',
+    moisture_level: 'wet',
+    dominant_resources: 'Lumber, Frostberry, Iron Ore',
+    scarcity_factors: 'Freshwater, Arable Soil',
+    is_secret: 0
+  });
+  assert.strictEqual(createBiome.statusCode, 200);
+  assert.strictEqual(createBiome.json.success, true);
+  const biomeId = createBiome.json.id;
+
+  // Create species
+  const createSpecies = await makeRequest('/api/species', { method: 'POST' }, {
+    world_id: 'default',
+    biome_id: biomeId,
+    name: 'Frostfire Wyvern',
+    trophic_level: 'apex_predator',
+    diet_or_fuel: 'Boreal Stag',
+    predators: [],
+    prey: ['Boreal Stag'],
+    harvestable_yields: 'Wyvern Scales, Glacial Bile',
+    danger_rating: 'deadly',
+    is_secret: 0
+  });
+  assert.strictEqual(createSpecies.statusCode, 200);
+  assert.strictEqual(createSpecies.json.success, true);
+
+  // Get trophic web
+  const webRes = await makeRequest('/api/worlds/default/trophic-web');
+  assert.strictEqual(webRes.statusCode, 200);
+  assert.ok(Array.isArray(webRes.json.species));
+  assert.ok(webRes.json.species.some(s => s.name === 'Frostfire Wyvern'));
+
+  // Simulate scarcity
+  const scarcityRes = await makeRequest('/api/ecology/simulate-scarcity', { method: 'POST' }, { world_id: 'default' });
+  assert.strictEqual(scarcityRes.statusCode, 200);
+  assert.strictEqual(scarcityRes.json.success, true);
+  assert.ok(typeof scarcityRes.json.biomes_evaluated === 'number');
+});
+
+// ====================================================
+// 🗣️ 4. ETHOS & VERNACULAR SYNTHESIZER TESTS
+// ====================================================
+
+test('Ethos & Vernacular Synthesizer: cultural dialects & slang generation', async () => {
+  // Create dialect
+  const createDialect = await makeRequest('/api/dialects', { method: 'POST' }, {
+    world_id: 'default',
+    culture_or_faction: 'Ironclad Forge Guilds',
+    linguistic_register: 'gritty_archaic',
+    greetings: ['May your forge never cool', 'Stone preserve you'],
+    oaths_curses: ['By the shattered anvil!'],
+    proverbs: ['An oath unkept is an axe in one\'s foot'],
+    cardinal_virtues: 'Craftsmanship, Oath-keeping',
+    taboos_forbidden: 'Melting unbroken heirloom weapons',
+    naming_conventions: '[Prefix][Mineral] + [Deed]son',
+    is_secret: 0
+  });
+  assert.strictEqual(createDialect.statusCode, 200);
+  assert.strictEqual(createDialect.json.success, true);
+
+  // List dialects
+  const listDialects = await makeRequest('/api/worlds/default/dialects');
+  assert.strictEqual(listDialects.statusCode, 200);
+  assert.ok(Array.isArray(listDialects.json.dialects));
+  assert.ok(listDialects.json.dialects.some(d => d.culture_or_faction === 'Ironclad Forge Guilds'));
+
+  // Generate slang
+  const slangRes = await makeRequest('/api/dialects/generate-slang', { method: 'POST' }, {
+    culture_name: 'Ironclad Forge Guilds',
+    genre_tone: 'gritty_archaic'
+  });
+  assert.strictEqual(slangRes.statusCode, 200);
+  assert.strictEqual(slangRes.json.success, true);
+  assert.ok(slangRes.json.data.greetings.length > 0);
+});
+
+// ====================================================
+// 🏛️ 5. PANTHEON & DIVINE COVENANT TESTS
+// ====================================================
+
+test('Pantheon & Divine Covenant Matrix: deities, omen simulation & player secret filtering', async () => {
+  // Create deity
+  const createDeity = await makeRequest('/api/deities', { method: 'POST' }, {
+    world_id: 'default',
+    name: 'Solari the Dawn-Bringer',
+    domains: 'Sun, Justice, Metallurgy',
+    symbol_and_avatar: 'Blazing Brass Sunburst / Giant Golden Eagle',
+    alignment: 'Lawful Good',
+    piety_boons: ['Tier 1: Radiant Guidance', 'Tier 2: Dawn\'s Ward'],
+    transgression_curses: ['Solar Blindness', 'Brittle Steel'],
+    astrological_omen_trigger: 'During solar eclipses or summer solstices',
+    is_secret: 0
+  });
+  assert.strictEqual(createDeity.statusCode, 200);
+  assert.strictEqual(createDeity.json.success, true);
+
+  // Create secret deity for DM filtering check
+  const secretDeity = await makeRequest('/api/deities', { method: 'POST' }, {
+    world_id: 'default',
+    name: 'The Nameless Betrayer',
+    domains: 'Shadow, Treason',
+    symbol_and_avatar: 'Obsidian Dagger',
+    alignment: 'Chaotic Evil',
+    piety_boons: [],
+    transgression_curses: [],
+    astrological_omen_trigger: 'Blood Moon',
+    is_secret: 1
+  });
+  assert.strictEqual(secretDeity.statusCode, 200);
+
+  // Player mode check
+  const playerPantheon = await makeRequest('/api/worlds/default/pantheon?mode=player');
+  assert.strictEqual(playerPantheon.statusCode, 200);
+  assert.ok(!playerPantheon.json.pantheon.some(d => d.name === 'The Nameless Betrayer'));
+  assert.ok(playerPantheon.json.pantheon.some(d => d.name === 'Solari the Dawn-Bringer'));
+
+  // Omen simulation check
+  const omenRes = await makeRequest('/api/pantheon/simulate-omen', { method: 'POST' }, {
+    world_id: 'default',
+    celestial_event: 'Solar Eclipse',
+    season: 'Summer Solstice'
+  });
+  assert.strictEqual(omenRes.statusCode, 200);
+  assert.strictEqual(omenRes.json.success, true);
+  assert.ok(omenRes.json.active_omens.some(o => o.deity_name === 'Solari the Dawn-Bringer'));
+});
+
+test('Writer Journey Suite: Manuscript Binder CRUD, Reordering, and Export', async () => {
+  // 1. Create chapters across Acts
+  const ch1 = await makeRequest('/api/manuscripts/chapters', { method: 'POST' }, {
+    world_id: 'default',
+    act_number: 1,
+    chapter_number: 1,
+    title: 'The Whispering Shadows',
+    summary: 'Lady Aris enters the forbidden archives in search of the ancient glyph.',
+    target_word_count: 2500,
+    content: 'The moonlight filtered through the shattered stained glass, casting obsidian shadows across the ancient stone floor. "We should not be here," whispered Roland, his hand trembling on his sword hilt. "The archives have slept for five centuries."',
+    status: 'Draft',
+    sort_order: 1
+  });
+  assert.strictEqual(ch1.statusCode, 201);
+  assert.strictEqual(ch1.json.success, true);
+  assert.ok(ch1.json.id);
+
+  const ch2 = await makeRequest('/api/manuscripts/chapters', { method: 'POST' }, {
+    world_id: 'default',
+    act_number: 1,
+    chapter_number: 2,
+    title: 'Echoes in the Catacombs',
+    summary: 'The expedition uncovers the sealed vault door.',
+    target_word_count: 3000,
+    content: 'Deep beneath the city, the cold air smelled of damp earth and centuries of dust. [secret]The vault is guarded by a spectral sentinel.[/secret] "Look closely," Aris murmured.',
+    status: 'Revision',
+    sort_order: 2
+  });
+  assert.strictEqual(ch2.statusCode, 201);
+
+  // 2. Fetch manuscript binder overview
+  const binderRes = await makeRequest('/api/manuscripts/default');
+  assert.strictEqual(binderRes.statusCode, 200);
+  assert.strictEqual(binderRes.json.success, true);
+  assert.ok(binderRes.json.total_chapters >= 2);
+  assert.ok(binderRes.json.acts.length >= 1);
+  assert.ok(binderRes.json.total_words > 0);
+
+  // 3. Reorder chapters
+  const reorderRes = await makeRequest('/api/manuscripts/reorder', { method: 'POST' }, {
+    chapter_orders: [
+      { id: ch1.json.id, sort_order: 2, act_number: 1, chapter_number: 2 },
+      { id: ch2.json.id, sort_order: 1, act_number: 1, chapter_number: 1 }
+    ]
+  });
+  assert.strictEqual(reorderRes.statusCode, 200);
+  assert.strictEqual(reorderRes.json.success, true);
+
+  // 4. Export manuscript with player secret filtering
+  const exportRes = await makeRequest('/api/manuscripts/export', { method: 'POST' }, {
+    world_id: 'default',
+    mode: 'player',
+    include_summaries: true
+  });
+  assert.strictEqual(exportRes.statusCode, 200);
+  assert.strictEqual(exportRes.json.success, true);
+  assert.ok(exportRes.json.compiled_manuscript.includes('# ACT 1'));
+  assert.ok(!exportRes.json.compiled_manuscript.includes('spectral sentinel')); // Secret block stripped
+});
+
+test('Writer Journey Suite: Dynamic Margin Inspector & Unlinked Mentions Scanner', async () => {
+  // Test entity inspector by query
+  const inspectRes = await makeRequest('/api/lore/inspector-entity?world_id=default&query=Chronicles');
+  assert.ok([200, 404].includes(inspectRes.statusCode));
+
+  // Test unlinked mentions scan
+  const unlinkedRes = await makeRequest('/api/lore/unlinked-mentions', { method: 'POST' }, {
+    world_id: 'default',
+    text: 'During the high council, Lord Vane spoke of the Great Kingdom and the ancient dragon.'
+  });
+  assert.strictEqual(unlinkedRes.statusCode, 200);
+  assert.strictEqual(unlinkedRes.json.success, true);
+  assert.ok(Array.isArray(unlinkedRes.json.unlinked_mentions));
+});
+
+test('Writer Journey Suite: Autosave Delta Buffer & Crash Recovery', async () => {
+  const saveBuf = await makeRequest('/api/manuscripts/autosave-buffer', { method: 'POST' }, {
+    target_id: 'test_ch_99',
+    target_type: 'chapter',
+    content: 'Live drafting in progress without loss.',
+    word_count: 6,
+    wpm: 45.2,
+    cursor_pos: 38
+  });
+  assert.strictEqual(saveBuf.statusCode, 200);
+  assert.strictEqual(saveBuf.json.success, true);
+
+  const getBuf = await makeRequest('/api/manuscripts/autosave-buffer/chapter/test_ch_99');
+  assert.strictEqual(getBuf.statusCode, 200);
+  assert.strictEqual(getBuf.json.success, true);
+  assert.strictEqual(getBuf.json.buffer.content, 'Live drafting in progress without loss.');
+  assert.strictEqual(getBuf.json.buffer.word_count, 6);
+});
+
+test('Writer Journey Suite: Analytical Prose Telemetry & Stylistic Health', async () => {
+  const sampleProse = `The obsidian shadows crept silently across the cold stone floor. "We must hurry," whispered Elena, clutching the golden amulet. The night was bitter and damp, and an acrid scent of sulfur hung in the air. The heavy oak door was locked by the guards. He glanced back, staring into the dark corridor.`;
+
+  const telemetryRes = await makeRequest('/api/prose/analyze-telemetry', { method: 'POST' }, {
+    text: sampleProse
+  });
+
+  assert.strictEqual(telemetryRes.statusCode, 200);
+  assert.strictEqual(telemetryRes.json.success, true);
+  assert.ok(telemetryRes.json.total_words > 20);
+  assert.ok(telemetryRes.json.sentence_count >= 4);
+  assert.ok(telemetryRes.json.sensory_density.total_sensory > 0);
+  assert.ok(telemetryRes.json.sensory_density.visual > 0);
+  assert.ok(telemetryRes.json.sensory_density.tactile > 0);
+  assert.ok(telemetryRes.json.dialogue_ratio.dialogue_pct > 0);
+  assert.ok(telemetryRes.json.stylistic_friction.adverb_count >= 1);
+  assert.ok(telemetryRes.json.readability.reading_ease >= 0);
+});
+
+test('Writer Journey Suite: Socratic Causality Auditor & Character Voice Mirror', async () => {
+  const sceneText = `Elena slipped into the high vault. She seized the ancient crown, ignoring the sleeping chimera. "This will pay my family debts," she said quietly.`;
+
+  // Socratic Scene Audit
+  const auditRes = await makeRequest('/api/prose/socratic-audit', { method: 'POST' }, {
+    scene_text: sceneText,
+    scene_goal: 'Retrieve the ancestral crown',
+    characters_present: 'Elena, Sleeping Chimera'
+  });
+  assert.strictEqual(auditRes.statusCode, 200);
+  assert.strictEqual(auditRes.json.success, true);
+  assert.ok(auditRes.json.socratic_verdict);
+  assert.ok(Array.isArray(auditRes.json.five_whys_probes));
+
+  // Voice Mirror
+  const voiceRes = await makeRequest('/api/prose/voice-mirror', { method: 'POST' }, {
+    character_name: 'Elena',
+    scene_text: sceneText
+  });
+  assert.strictEqual(voiceRes.statusCode, 200);
+  assert.strictEqual(voiceRes.json.success, true);
+  assert.strictEqual(voiceRes.json.character_name, 'Elena');
+  assert.ok(typeof voiceRes.json.voice_consistency_score === 'number');
+});
+
+

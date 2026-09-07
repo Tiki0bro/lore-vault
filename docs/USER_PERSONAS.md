@@ -236,10 +236,49 @@ This document contains the primary user personas established for **LoreWeaver**.
 
 ---
 
+## 🎨⚡ 11. Studio Kinetic — App Design & Interaction Team
+
+> *"A design isn't finished when it looks beautiful in a mockup—it's finished when every button clicks with purposeful tactile feedback, every module processes real data without stubs, and every layout scales flawlessly across viewports."*
+
+### Background & Profile
+* **Role**: Cross-Disciplinary App Design & Interactive Engineering Guild.
+* **Composition**: A hybrid team uniting creative visual designers, motion specialists, design engineers, and component reliability auditors.
+* **Environment**: Figma design systems, CSS token engines, DOM event delegation trees, responsive layout inspectors, interactive component harnesses, and frontend state stores.
+* **Core Goal**: Bridge high-fidelity aesthetic design with bulletproof technical execution—ensuring every button, modal, drawer, canvas, and data module is visually stunning, ergonomically intuitive, and 100% functionally operative.
+
+### Team Member Roster & Specializations
+1. **🎨 Maya Lin — Lead UI/UX & Design Systems Architect** *(Creative Lead)*:
+   - *Focus*: Visual hierarchy, design token palettes (Ancient Codex & Sci-Fi themes), responsive typography, spacing grids, and anti-clipping container rules.
+2. **⚡ Julian "Volt" Ramirez — Lead Design Engineer & Interactivity Architect** *(Technical Lead)*:
+   - *Focus*: DOM event listeners, event delegation architectures, button click handlers, state machine transitions, keyboard hotkeys (`Ctrl+Shift+*`), modal lifecycles, and component state sync.
+3. **✨ Chloe "Pixel" Moreau — Motion & Micro-Interaction Designer** *(Creative Polish)*:
+   - *Focus*: Tactile feedback, `:active` press scaling (`scale(0.97)`), transition curves, loading states, skeleton screens, pulse badges, glassmorphic depth, and audio-visual cues.
+4. **🔬 Nadia "Trace" Sterling — Module Contract & Reliability Specialist** *(Technical QA & Wiring)*:
+   - *Focus*: Zero-dead-click enforcement, form parameter passthrough (`FormData`/JSON payload audits), DOM visibility assertions (`display !== 'none'`), zero silent stubs, and boundary test validation.
+5. **🧭 Samira Khan — Ergonomics, a11y & UX Flow Strategist** *(UX Flow & Ergonomics)*:
+   - *Focus*: User journey frictionless pathing, progressive disclosure, keyboard navigation (`Tab`, `Escape`, `Enter`), screen-reader accessibility, error boundaries, empty states, and cognitive load reduction.
+
+### Key Pain Points & Failure Modes They Eliminate
+* **Dead Buttons & Broken Event Delegation**: Action buttons that look clickable but do nothing when clicked due to missing event bindings or overwritten innerHTML.
+* **Silent Stubs & Fake Data**: UI forms that accept input but discard parameters or return hardcoded dummy fallback data instead of executing real business logic.
+* **Visual Overflow & Screen Clipping**: Fixed-width flex headers or sidebars causing horizontal scrollbar leaks (`overflow-x`) or pushing critical CTA buttons off-screen.
+* **State Desynchronization**: Modals or drawers opening without reflecting the active world/article state, or failing to close on backdrop click / `Escape`.
+* **Missing Feedback & Dead Reckoning**: Async actions (AI generation, batch export, audit runs) that provide no loading indicator or disabled button state, causing users to double-click and spawn race conditions.
+
+### The Team's 5-Point "Working Buttons & Modules" Quality Contract
+1. **Contract 1 (Event Binding & Zero Dead Clicks)**: Every interactive element (`<button>`, `<a>`, `.chip`, `.segmented-btn`, `<input>`) must be strictly bound to an event listener or delegation handler with tangible UI/state response.
+2. **Contract 2 (Complete Parameter Passthrough)**: All form fields, dropdowns, range sliders, and active filter chips must be captured, validated, and passed through to backend payloads without loss.
+3. **Contract 3 (Zero Silent Stubs & Feedback Loops)**: Async operations must show immediate loading spinners/feedback, disable multi-triggering, and handle both success toasts and structured error alerts.
+4. **Contract 4 (Responsive & Anti-Overflow Guarantee)**: Layouts must dynamically wrap and flex gracefully across resolutions from 1080p laptop displays to ultra-wide 4K monitors without horizontal scrollbars.
+5. **Contract 5 (Multi-Theme Contrast & Cohesion)**: All components must render with crisp contrast, accessible text legibility, and themed aesthetic borders in Fantasy Codex, Sci-Fi Aetherpunk, and Scholar's Light modes.
+
+---
+
 ## 🛠️ Summary Matrix for Feature & QA Evaluation
 
-| Feature / Consideration | Ethen (PO) | Maya (UI/UX) | Riley (QA) | Alex (Dev / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing) | Grant (AI-Forward) | Merryn (Purist) | Arthur (Grill Me) |
+| Feature / Consideration | Ethen (PO) | Studio Kinetic (App Design & Wiring) | Riley (QA) | Alex (Dev / VTT) | Morgan (World Anvil) | Elena (Author) | Marcus (Marketing) | Grant (AI-Forward) | Merryn (Purist) | Arthur (Grill Me) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **Primary Goal** | Balanced Scope & UX | Zero-Overflow & Clean Hierarchy | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality & Lore Distribution | Maximum AI Integration | Craft Ownership & Analytical AI | Expose Assumptions & Stress-Test Designs |
-| **Primary Interface** | Presets & Progressive UI | Streamlined Navbar & Responsive Grids | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Search | Scene Slate & Style Chips | Promo Slates & Excerpt Exports | AI Pipeline & Model Switcher | No-Generate Mode & Auditor | Socratic Q&A & Interactive Grilling |
-| **Key Metric** | User Adoption & Roadmap | Screen Compliance & Zero Clipping | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates & Conversion | AI Feature Coverage | Zero AI Prose & Org Efficiency | Zero Unexamined Assumptions & Robust Specs |
+| **Primary Goal** | Balanced Scope & UX | 100% Functional Buttons, Zero Stubs & Flawless Aesthetics | 100% Stability & Zero Regressions | API Control & Efficiency | Canon Accuracy & Prep Speed | Character Voice & Tone | Virality & Lore Distribution | Maximum AI Integration | Craft Ownership & Analytical AI | Expose Assumptions & Stress-Test Designs |
+| **Primary Interface** | Presets & Progressive UI | Design Systems, Interactive Modals & Event Wiring | Automated Test Suite & Trace Logs | Raw Prompt & JSON Inspection | Category / Tag / Search | Scene Slate & Style Chips | Promo Slates & Excerpt Exports | AI Pipeline & Model Switcher | No-Generate Mode & Auditor | Socratic Q&A & Interactive Grilling |
+| **Key Metric** | User Adoption & Roadmap | Zero Dead Clicks, Complete Passthrough & Fluid UX | Test Coverage & Zero Crashes | Token Efficiency & Format Choice | Cross-Link Resolution & Secrets | Narrative & Tonal Flow | Click-Through Rates & Conversion | AI Feature Coverage | Zero AI Prose & Org Efficiency | Zero Unexamined Assumptions & Robust Specs |
+

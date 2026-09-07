@@ -1,0 +1,1 @@
+Lore text with [secret]Hidden Cultist HQ[/secret] details.

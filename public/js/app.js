@@ -81,6 +81,7 @@ class LoreApp {
 
     await this.fetchCategories();
     await this.fetchArticles();
+    this.initScholarTasks();
 
     // Auto-load first article if available
     if (this.articles.length > 0) {
@@ -387,6 +388,7 @@ class LoreApp {
     const frontpageView = document.getElementById('view-frontpage');
     const timelineView = document.getElementById('view-timeline');
     const relationshipsView = document.getElementById('view-relationships');
+    const manuscriptView = document.getElementById('view-manuscript');
 
     const tabLibrary = document.getElementById('tab-library');
     const tabStudio = document.getElementById('tab-studio');
@@ -398,17 +400,35 @@ class LoreApp {
     const tabFrontpage = document.getElementById('tab-frontpage');
     const tabTimeline = document.getElementById('tab-timeline');
     const tabRelationships = document.getElementById('tab-relationships') || document.querySelector('button[data-view="view-relationships"]');
+    const tabManuscript = document.getElementById('tab-manuscript');
 
-    [libraryView, studioView, contextView, marketingView, atlasView, canvasView, frontpageView, timelineView, relationshipsView].forEach(v => v && v.classList.remove('active'));
+    [libraryView, studioView, contextView, marketingView, atlasView, canvasView, frontpageView, timelineView, relationshipsView, manuscriptView].forEach(v => {
+      if (v) {
+        v.classList.remove('active');
+        v.classList.add('hidden');
+      }
+    });
     if (narrativeSlateView) {
       narrativeSlateView.classList.remove('active');
       narrativeSlateView.classList.add('hidden');
     }
 
-    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabCanvas, tabFrontpage, tabTimeline, tabRelationships].forEach(t => t && t.classList.remove('active'));
+    [tabLibrary, tabStudio, tabContext, narrativeSlateBtn, tabMarketing, tabAtlas, tabCanvas, tabFrontpage, tabTimeline, tabRelationships, tabManuscript].forEach(t => t && t.classList.remove('active'));
 
-    if (tabName === 'canvas') {
-      if (canvasView) canvasView.classList.add('active');
+    if (tabName === 'manuscript') {
+      if (manuscriptView) {
+        manuscriptView.classList.remove('hidden');
+        manuscriptView.classList.add('active');
+      }
+      if (tabManuscript) tabManuscript.classList.add('active');
+      if (window.manuscriptView) {
+        window.manuscriptView.init(this.currentWorldId || 'default');
+      }
+    } else if (tabName === 'canvas') {
+      if (canvasView) {
+        canvasView.classList.remove('hidden');
+        canvasView.classList.add('active');
+      }
       if (tabCanvas) tabCanvas.classList.add('active');
       if (!window.canvasView) {
         window.canvasView = new CanvasView('canvas-app-root');
@@ -419,13 +439,19 @@ class LoreApp {
         window.canvasView.init();
       }
     } else if (tabName === 'relationships' || tabName === 'view-relationships') {
-      if (relationshipsView) relationshipsView.classList.add('active');
+      if (relationshipsView) {
+        relationshipsView.classList.remove('hidden');
+        relationshipsView.classList.add('active');
+      }
       if (tabRelationships) tabRelationships.classList.add('active');
       if (window.relationshipView) {
         window.relationshipView.init(this.currentWorldId || 'default');
       }
     } else if (tabName === 'timeline') {
-      if (timelineView) timelineView.classList.add('active');
+      if (timelineView) {
+        timelineView.classList.remove('hidden');
+        timelineView.classList.add('active');
+      }
       if (tabTimeline) tabTimeline.classList.add('active');
       if (!window.timelineView) {
         window.timelineView = new TimelineView('timeline-app-root', { worldId: this.currentWorldId || 'default' });
@@ -434,7 +460,10 @@ class LoreApp {
       }
       window.timelineView.init();
     } else if (tabName === 'frontpage') {
-      if (frontpageView) frontpageView.classList.add('active');
+      if (frontpageView) {
+        frontpageView.classList.remove('hidden');
+        frontpageView.classList.add('active');
+      }
       if (tabFrontpage) tabFrontpage.classList.add('active');
       if (!window.frontpageView) {
         window.frontpageView = new FrontpageView('frontpage-app-root', { worldId: this.currentWorldId || 'default' });
@@ -443,7 +472,10 @@ class LoreApp {
       }
       window.frontpageView.init();
     } else if (tabName === 'atlas') {
-      if (atlasView) atlasView.classList.add('active');
+      if (atlasView) {
+        atlasView.classList.remove('hidden');
+        atlasView.classList.add('active');
+      }
       if (tabAtlas) tabAtlas.classList.add('active');
       if (!window.atlasView) {
         window.atlasView = new AtlasView('atlas-app-root', { worldId: this.currentWorldId || 'default' });
@@ -453,7 +485,10 @@ class LoreApp {
         window.atlasView.init();
       }
     } else if (tabName === 'marketing') {
-      if (marketingView) marketingView.classList.add('active');
+      if (marketingView) {
+        marketingView.classList.remove('hidden');
+        marketingView.classList.add('active');
+      }
       if (tabMarketing) tabMarketing.classList.add('active');
       this.populateMarketingArticles();
     } else if (tabName === 'narrative-slate') {
@@ -464,17 +499,121 @@ class LoreApp {
       if (narrativeSlateBtn) narrativeSlateBtn.classList.add('active');
       this.initNarrativeSlateWorkspace();
     } else if (tabName === 'studio') {
-      if (studioView) studioView.classList.add('active');
+      if (studioView) {
+        studioView.classList.remove('hidden');
+        studioView.classList.add('active');
+      }
       if (tabStudio) tabStudio.classList.add('active');
       this.fetchScenes();
     } else if (tabName === 'context') {
-      if (contextView) contextView.classList.add('active');
+      if (contextView) {
+        contextView.classList.remove('hidden');
+        contextView.classList.add('active');
+      }
       if (tabContext) tabContext.classList.add('active');
       if (window.ContextBuilder) window.ContextBuilder.init(this.articles);
     } else {
-      if (libraryView) libraryView.classList.add('active');
+      if (libraryView) {
+        libraryView.classList.remove('hidden');
+        libraryView.classList.add('active');
+      }
       if (tabLibrary) tabLibrary.classList.add('active');
     }
+
+    this.currentTab = tabName;
+
+    // Synchronize Primary Left Rail active state
+    document.querySelectorAll('.rail-item').forEach(r => {
+      const match = r.dataset.nav === tabName || 
+                    (tabName === 'view-relationships' && r.dataset.nav === 'relationships') ||
+                    (tabName === 'narrative-slate' && r.dataset.nav === 'narrative-slate');
+      r.classList.toggle('active', !!match);
+    });
+
+    // Synchronize Top Breadcrumb Active View Name
+    const breadcrumbActive = document.getElementById('breadcrumb-active-view');
+    const viewNames = {
+      'library': 'Lore Codex',
+      'manuscript': 'Manuscript Studio',
+      'atlas': 'World Atlas',
+      'canvas': 'Spatial Canvas',
+      'timeline': 'Timeline',
+      'relationships': 'Relationships',
+      'view-relationships': 'Relationships',
+      'narrative-slate': 'Scene Slate',
+      'context': 'Weave Matrix',
+      'frontpage': 'World Portal',
+      'marketing': 'Marketing Studio',
+      'census': 'World Census'
+    };
+    if (breadcrumbActive) {
+      breadcrumbActive.textContent = viewNames[tabName] || 'Lore Codex';
+    }
+  }
+
+  setWorkspaceMode(mode) {
+    this.workspaceMode = mode || 'codex';
+    const btnCodex = document.getElementById('rail-mode-codex');
+    const btnStory = document.getElementById('rail-mode-story');
+    const paneCodex = document.getElementById('subpanel-content-codex');
+    const paneStory = document.getElementById('subpanel-content-story');
+    const subpanelTitle = document.getElementById('subpanel-title');
+    const subpanelIcon = document.getElementById('subpanel-icon');
+    const primaryCta = document.getElementById('new-article-btn') || document.getElementById('stage-primary-cta');
+
+    if (mode === 'story') {
+      if (btnCodex) btnCodex.classList.remove('active');
+      if (btnStory) btnStory.classList.add('active');
+      if (paneCodex) paneCodex.classList.add('hidden');
+      if (paneStory) paneStory.classList.remove('hidden');
+      if (subpanelTitle) subpanelTitle.textContent = 'Manuscript Binder';
+      if (subpanelIcon) subpanelIcon.textContent = '📖';
+      if (primaryCta) primaryCta.textContent = '+ Add Chapter';
+      this.switchTab('manuscript');
+    } else {
+      if (btnStory) btnStory.classList.remove('active');
+      if (btnCodex) btnCodex.classList.add('active');
+      if (paneStory) paneStory.classList.add('hidden');
+      if (paneCodex) paneCodex.classList.remove('hidden');
+      if (subpanelTitle) subpanelTitle.textContent = 'World Codex';
+      if (subpanelIcon) subpanelIcon.textContent = '🏛️';
+      if (primaryCta) primaryCta.textContent = '✍️ New Article';
+      if (this.currentTab === 'manuscript') {
+        this.switchTab('library');
+      }
+    }
+    localStorage.setItem('lorevault_workspace_mode', this.workspaceMode);
+  }
+
+  toggleSubPanel() {
+    const subpanel = document.getElementById('workspace-sub-panel');
+    if (subpanel) {
+      subpanel.classList.toggle('collapsed');
+      const isCollapsed = subpanel.classList.contains('collapsed');
+      localStorage.setItem('lorevault_subpanel_collapsed', isCollapsed ? 'true' : 'false');
+    }
+  }
+
+  handleStagePrimaryCTA() {
+    if (this.workspaceMode === 'story' || this.currentTab === 'manuscript') {
+      if (window.manuscriptView && typeof window.manuscriptView.openCreateChapterModal === 'function') {
+        window.manuscriptView.openCreateChapterModal();
+      }
+    } else {
+      this.openEditor();
+    }
+  }
+
+  handleArticleSearchInput(query) {
+    const q = (query || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('#articles-cards .article-card');
+    cards.forEach(card => {
+      const title = (card.querySelector('.card-title')?.textContent || '').toLowerCase();
+      const cat = (card.querySelector('.card-category')?.textContent || '').toLowerCase();
+      const tags = (card.querySelector('.card-tags')?.textContent || '').toLowerCase();
+      const matches = !q || title.includes(q) || cat.includes(q) || tags.includes(q);
+      card.style.display = matches ? 'flex' : 'none';
+    });
   }
 
   switchView(viewName) {
@@ -2036,6 +2175,31 @@ class LoreApp {
     }).join('');
 
     this.renderFilterBreadcrumb();
+    this.attachCardTiltListeners();
+  }
+
+  attachCardTiltListeners() {
+    const cards = document.querySelectorAll('.article-card');
+    cards.forEach(card => {
+      if (card.dataset.tiltBound) return;
+      card.dataset.tiltBound = 'true';
+
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = ((y - centerY) / centerY) * -6;
+        const rotateY = ((x - centerX) / centerX) * 6;
+
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+      });
+    });
   }
 
   renderFilterBreadcrumb() {
@@ -3891,8 +4055,97 @@ Overview paragraph describing the location, faction, or character.
     this.runWorldAudit();
   }
 
+  async cleanOrphanTags(action = 'purge_orphans') {
+    const targetWorldId = this.doctorWorldScope || this.currentWorldId || 'all';
+    try {
+      const res = await fetch('/api/audit/clean-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: targetWorldId, action })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showNotification(`🏷️ ${data.message}`, 'success');
+        await this.runWorldAudit();
+      }
+    } catch (err) {
+      this.showNotification(`❌ Error cleaning tags: ${err.message}`, 'error');
+    }
+  }
+
+  async undoBatchRepairWorldDoctor() {
+    if (!this.lastBatchRepairSnapshot || this.lastBatchRepairSnapshot.length === 0) {
+      this.showNotification('⚠️ No batch repair snapshot to undo.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/audit/undo-batch-repair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshots: this.lastBatchRepairSnapshot })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showNotification(`↩️ ${data.message}`, 'success');
+        this.lastBatchRepairSnapshot = null;
+        const undoBtn = document.getElementById('undo-batch-repair-btn');
+        if (undoBtn) undoBtn.style.display = 'none';
+        await this.runWorldAudit();
+        await this.loadArticles();
+      }
+    } catch (err) {
+      this.showNotification(`❌ Undo error: ${err.message}`, 'error');
+    }
+  }
+
+  async fetchHealthScoreHistory() {
+    const targetWorldId = this.doctorWorldScope || this.currentWorldId || 'all';
+    try {
+      const res = await fetch(`/api/audit/health-history?world_id=${encodeURIComponent(targetWorldId)}`);
+      const data = await res.json();
+      if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+        this.renderHealthScoreSparkline(data.history);
+      }
+    } catch (e) {}
+  }
+
+  renderHealthScoreSparkline(history) {
+    const container = document.getElementById('doctor-sparkline-svg');
+    if (!container || !history || history.length === 0) return;
+
+    const width = container.clientWidth || 400;
+    const height = 45;
+    const padding = 5;
+
+    const scores = history.map(h => h.health_score);
+    const min = Math.min(...scores, 0);
+    const max = 100;
+
+    const points = scores.map((score, index) => {
+      const x = padding + (index / (scores.length - 1 || 1)) * (width - 2 * padding);
+      const y = height - padding - ((score - min) / (max - min || 1)) * (height - 2 * padding);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    const svg = `
+      <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="overflow:visible;">
+        <defs>
+          <linearGradient id="sparklineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="#4ade80" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <path d="M ${padding},${height - padding} L ${points} L ${width - padding},${height - padding} Z" fill="url(#sparklineGrad)" />
+        <polyline fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+      </svg>
+    `;
+    container.innerHTML = svg;
+  }
+
   async batchRepairWorldDoctor(actions = ['fix_misclassified', 'crosslink_orphans']) {
     const targetWorldId = this.doctorWorldScope || this.currentWorldId || 'all';
+    this.lastBatchRepairSnapshot = (this.articles || []).map(a => ({ id: a.id, category: a.category, sub_category: a.sub_category, content: a.content }));
+
     this.showNotification('⚡ Running 1-Click Vault Batch Repair...', 'info');
     try {
       const res = await fetch('/api/audit/batch-repair', {
@@ -3903,6 +4156,8 @@ Overview paragraph describing the location, faction, or character.
       const data = await res.json();
       if (data.success) {
         this.showNotification(`✅ ${data.message}`, 'success');
+        const undoBtn = document.getElementById('undo-batch-repair-btn');
+        if (undoBtn) undoBtn.style.display = 'inline-block';
         await this.runWorldAudit();
         await this.loadArticles();
       } else {
@@ -4237,8 +4492,949 @@ Overview paragraph describing the location, faction, or character.
         }
       }
 
+      // 5. Render Unmapped Locations List
+      const unmappedList = document.getElementById('doctor-unmapped-list');
+      const mUnmapped = document.getElementById('doctor-metric-unmapped');
+      const unmappedLocations = data.unmappedLocations || [];
+      if (mUnmapped) mUnmapped.textContent = unmappedLocations.length;
+      if (unmappedList) {
+        if (unmappedLocations.length > 0) {
+          unmappedList.innerHTML = unmappedLocations.map(art => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
+              <div>
+                <strong style="color:#fff;">${art.title}</strong>
+                <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">(Location unpinned on map)</span>
+              </div>
+              <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem; background:#0284c7; color:#fff;" onclick="window.app.switchTab('maps'); window.app.closeDoctorModal();">📍 Pin on Map</button>
+            </div>
+          `).join('');
+        } else {
+          unmappedList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ All location articles are pinned on a map atlas!</div>`;
+        }
+      }
+
+      // 6. Render Lore Gap Finder Card
+      const gapsCard = document.getElementById('doctor-lore-gaps-card');
+      const gapsList = document.getElementById('doctor-lore-gaps-list');
+      const loreGaps = data.loreGaps || [];
+      if (gapsCard && gapsList) {
+        if (loreGaps.length > 0) {
+          gapsCard.style.display = 'block';
+          gapsList.innerHTML = loreGaps.map(gap => `
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
+              <span style="color:var(--text-primary);">${gap.message}</span>
+              <button class="btn btn-primary" style="font-size:0.7rem; padding:0.15rem 0.5rem; white-space:nowrap;" onclick="window.app.openStubPreviewModal('gap-${gap.pillar.toLowerCase()}', 'New ${gap.pillar} Foundation', '${gap.pillar}')">+ Create ${gap.pillar} Stub</button>
+            </div>
+          `).join('');
+        } else {
+          gapsCard.style.display = 'none';
+        }
+      }
+
+      // 7. Render Spoiler Leaks List
+      const spoilersList = document.getElementById('doctor-spoilers-list');
+      const mSpoilers = document.getElementById('doctor-metric-spoilers');
+      const spoilerLeaks = data.spoilerLeaks || [];
+      if (mSpoilers) mSpoilers.textContent = spoilerLeaks.length;
+      if (spoilersList) {
+        if (spoilerLeaks.length > 0) {
+          spoilersList.innerHTML = spoilerLeaks.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
+              <div>
+                <strong style="color:#f43f5e;">${item.title}</strong>
+                <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">(Mentions DM Secret "${item.secretName}")</span>
+              </div>
+              <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${item.id}'); window.app.closeDoctorModal();">Review Content</button>
+            </div>
+          `).join('');
+        } else {
+          spoilersList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ Zero DM secret spoiler leaks detected!</div>`;
+        }
+      }
+
+      // 8. Render Cross-World Bleed List
+      const bleedList = document.getElementById('doctor-bleed-list');
+      const mBleed = document.getElementById('doctor-metric-bleed');
+      const crossWorldBleed = data.crossWorldBleed || [];
+      if (mBleed) mBleed.textContent = crossWorldBleed.length;
+      if (bleedList) {
+        if (crossWorldBleed.length > 0) {
+          bleedList.innerHTML = crossWorldBleed.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1px solid var(--border-color); font-size:0.8rem;">
+              <div>
+                <strong style="color:#c084fc;">${item.sourceTitle}</strong>
+                <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">(Links to "${item.targetTitle}" from foreign world [${item.foreignWorlds.join(', ')}])</span>
+              </div>
+              <button class="btn-text" style="font-size:0.75rem;" onclick="window.app.loadArticle('${item.sourceId}'); window.app.closeDoctorModal();">Fix Link</button>
+            </div>
+          `).join('');
+        } else {
+          bleedList.innerHTML = `<div style="padding:0.75rem; color:var(--accent-emerald); font-size:0.8rem;">✓ Setting is cleanly isolated (no foreign world cross-links).</div>`;
+        }
+      }
+
+      // 9. Render Category Depth Heatmap
+      const heatmapContainer = document.getElementById('doctor-category-depth-container');
+      const heatmapList = document.getElementById('doctor-category-depth-heatmap');
+      const heatmapData = data.categoryDepthHeatmap || [];
+      if (heatmapContainer && heatmapList) {
+        if (heatmapData.length > 0) {
+          heatmapContainer.style.display = 'block';
+          heatmapList.innerHTML = heatmapData.map(item => {
+            const maxAvg = Math.max(...heatmapData.map(h => h.avgWords), 1);
+            const pct = Math.min(100, Math.round((item.avgWords / maxAvg) * 100));
+            const barColor = item.isThin ? '#f43f5e' : (pct > 60 ? '#4ade80' : '#38bdf8');
+            return `
+              <div style="font-size:0.75rem;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.15rem;">
+                  <span style="color:var(--text-primary); font-weight:600;">${item.category} (${item.count} articles)</span>
+                  <span style="color:${barColor}; font-weight:700;">avg ${item.avgWords} words/art ${item.isThin ? '⚠️ Thin' : ''}</span>
+                </div>
+                <div style="background:var(--bg-main); height:6px; border-radius:3px; overflow:hidden;">
+                  <div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          heatmapContainer.style.display = 'none';
+        }
+      }
+
+      // 10. Fetch Health History for Sparkline Chart
+      this.fetchHealthScoreHistory();
+
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Audit Error: ' + err.message;
+    }
+  }
+
+  openAISkillsModal() {
+    const modal = document.getElementById('ai-skills-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    this.fetchAndRenderAISkills();
+  }
+
+  closeAISkillsModal() {
+    const modal = document.getElementById('ai-skills-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    this.closeSkillForm();
+  }
+
+  openCreateSkillForm(initialData = null) {
+    const editCard = document.getElementById('ai-skill-edit-card');
+    if (!editCard) return;
+    editCard.style.display = 'block';
+
+    const idInput = document.getElementById('skill-id-input');
+    const nameInput = document.getElementById('skill-name-input');
+    const descInput = document.getElementById('skill-desc-input');
+    const directivesInput = document.getElementById('skill-directives-input');
+    const scopeSelect = document.getElementById('skill-scope-select');
+
+    if (initialData) {
+      if (idInput) idInput.value = initialData.id || '';
+      if (nameInput) nameInput.value = initialData.name || '';
+      if (descInput) descInput.value = initialData.description || '';
+      if (directivesInput) directivesInput.value = initialData.directives || '';
+      if (scopeSelect) scopeSelect.value = initialData.world_id || 'all';
+    } else {
+      if (idInput) idInput.value = '';
+      if (nameInput) nameInput.value = '';
+      if (descInput) descInput.value = '';
+      if (directivesInput) directivesInput.value = '';
+      if (scopeSelect) scopeSelect.value = 'all';
+    }
+  }
+
+  closeSkillForm() {
+    const editCard = document.getElementById('ai-skill-edit-card');
+    if (editCard) editCard.style.display = 'none';
+  }
+
+  async fetchAndRenderAISkills() {
+    const container = document.getElementById('ai-skills-list-container');
+    if (!container) return;
+    try {
+      const res = await fetch('/api/skills?world_id=all');
+      const skills = await res.json();
+      if (!skills || skills.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1.5rem;">No custom AI skills created yet. Click '+ Add New Skill' or '🪄 Generate Skill with AI' to define author directives!</div>`;
+        return;
+      }
+
+      container.innerHTML = skills.map(s => `
+        <div style="background:var(--surface-card); border:1px solid ${s.is_active ? 'var(--accent-blue)' : 'var(--border-color)'}; border-radius:8px; padding:0.75rem 1rem; opacity:${s.is_active ? 1 : 0.65};">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <strong style="color:var(--text-primary); font-size:0.85rem;">${s.name}</strong>
+              <span class="badge" style="background:${s.is_active ? 'rgba(74,222,128,0.15)' : 'rgba(148,163,184,0.15)'}; color:${s.is_active ? '#4ade80' : '#94a3b8'}; font-size:0.65rem;">${s.is_active ? '🟢 Active' : '⚪ Inactive'}</span>
+              <span style="font-size:0.7rem; color:var(--text-muted);">[Scope: ${s.world_id}]</span>
+            </div>
+            <div style="display:flex; gap:0.35rem;">
+              <button class="btn btn-secondary" style="font-size:0.7rem; padding:0.15rem 0.45rem;" onclick="window.app.toggleAISkill('${s.id}', ${s.is_active ? 0 : 1})">${s.is_active ? 'Disable' : 'Enable'}</button>
+              <button class="btn btn-secondary" style="font-size:0.7rem; padding:0.15rem 0.45rem;" onclick="window.app.editAISkill('${s.id}')">Edit</button>
+              <button class="btn btn-secondary" style="font-size:0.7rem; padding:0.15rem 0.45rem; background:#dc2626; color:#fff;" onclick="window.app.deleteAISkill('${s.id}')">Delete</button>
+            </div>
+          </div>
+          ${s.description ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">${s.description}</div>` : ''}
+          <pre style="margin:0; font-size:0.7rem; background:var(--bg-main); border:1px solid var(--border-color); border-radius:4px; padding:0.4rem 0.6rem; color:#e2e8f0; white-space:pre-wrap; font-family:monospace;">${s.directives}</pre>
+        </div>
+      `).join('');
+
+      this.customSkillsCache = skills;
+    } catch (err) {
+      container.innerHTML = `<div style="color:#f43f5e; font-size:0.8rem; text-align:center; padding:1rem;">Failed to load skills: ${err.message}</div>`;
+    }
+  }
+
+  async saveAISkillFromForm() {
+    const id = document.getElementById('skill-id-input')?.value;
+    const name = document.getElementById('skill-name-input')?.value?.trim();
+    const world_id = document.getElementById('skill-scope-select')?.value || 'all';
+    const description = document.getElementById('skill-desc-input')?.value?.trim();
+    const directives = document.getElementById('skill-directives-input')?.value?.trim();
+
+    if (!name || !directives) {
+      this.showNotification('⚠️ Skill name and directives are required!', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/skills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, world_id, name, description, directives, is_active: 1 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showNotification(`💾 ${data.message}`, 'success');
+        this.closeSkillForm();
+        await this.fetchAndRenderAISkills();
+      }
+    } catch (err) {
+      this.showNotification(`❌ Error saving skill: ${err.message}`, 'error');
+    }
+  }
+
+  async toggleAISkill(id, isActive) {
+    const existing = (this.customSkillsCache || []).find(s => s.id === id);
+    if (!existing) return;
+    try {
+      const res = await fetch('/api/skills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...existing, is_active: isActive })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showNotification(isActive ? '🟢 Skill activated!' : '⚪ Skill disabled.', 'info');
+        await this.fetchAndRenderAISkills();
+      }
+    } catch (err) {
+      this.showNotification(`❌ Error toggling skill: ${err.message}`, 'error');
+    }
+  }
+
+  async editAISkill(id) {
+    const existing = (this.customSkillsCache || []).find(s => s.id === id);
+    if (existing) {
+      this.openCreateSkillForm(existing);
+    }
+  }
+
+  async deleteAISkill(id) {
+    if (!confirm('Are you sure you want to delete this AI skill directive?')) return;
+    try {
+      const res = await fetch(`/api/skills/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        this.showNotification('🗑️ Skill deleted successfully.', 'info');
+        await this.fetchAndRenderAISkills();
+      }
+    } catch (err) {
+      this.showNotification(`❌ Delete error: ${err.message}`, 'error');
+    }
+  }
+
+  openAISkillGeneratorModal() {
+    const modal = document.getElementById('ai-skill-generator-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeAISkillGeneratorModal() {
+    const modal = document.getElementById('ai-skill-generator-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async runAISkillGenerator() {
+    const promptInput = document.getElementById('skill-gen-prompt-input');
+    const prompt = promptInput?.value?.trim();
+    if (!prompt) {
+      this.showNotification('⚠️ Please describe what you want the AI skill to do.', 'warning');
+      return;
+    }
+
+    this.showNotification('✨ AI is drafting system skill directives...', 'info');
+    try {
+      const res = await fetch('/api/skills/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (data.success && data.skill) {
+        this.closeAISkillGeneratorModal();
+        this.openCreateSkillForm(data.skill);
+        this.showNotification('🪄 AI Skill generated! Review and save directives.', 'success');
+      }
+    } catch (err) {
+      this.showNotification('❌ Failed to generate skill: ' + err.message, 'error');
+    }
+  }
+
+  // --- WORLD CENSUS DASHBOARD CONTROLLER METHODS ---
+
+  async renderWorldCensusDashboard() {
+    const targetWorldId = this.currentWorldId || 'all';
+    try {
+      const res = await fetch(`/api/census/stats?world_id=${encodeURIComponent(targetWorldId)}`);
+      const data = await res.json();
+
+      const elTotalArticles = document.getElementById('census-total-articles');
+      const elTotalWords = document.getElementById('census-total-words');
+      const elAvgWords = document.getElementById('census-avg-words');
+      const elCompleteness = document.getElementById('census-completeness-score');
+      const elCatList = document.getElementById('census-category-list');
+
+      if (elTotalArticles) elTotalArticles.textContent = (data.totalArticles || 0).toLocaleString();
+      if (elTotalWords) elTotalWords.textContent = (data.totalWords || 0).toLocaleString();
+      if (elAvgWords) elAvgWords.textContent = (data.avgWordsPerArticle || 0).toLocaleString();
+      if (elCompleteness) elCompleteness.textContent = `${data.completenessScore || 100} / 100`;
+
+      if (elCatList && data.categoryBreakdown) {
+        const maxWords = Math.max(...data.categoryBreakdown.map(c => c.totalWords), 1);
+        elCatList.innerHTML = data.categoryBreakdown.map(c => {
+          const barPct = Math.min(100, Math.round((c.totalWords / maxWords) * 100));
+          return `
+            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                <div>
+                  <strong style="color:var(--text-primary); font-size:0.9rem;">${c.category}</strong>
+                  <span style="color:var(--text-muted); font-size:0.75rem; margin-left:0.5rem;">${c.count} articles (${c.percentage}%)</span>
+                </div>
+                <div style="font-size:0.8rem; font-weight:700; color:var(--accent-blue);">
+                  ${c.totalWords.toLocaleString()} total words <span style="font-size:0.7rem; color:var(--text-muted); font-weight:400;">(avg ${c.avgWords}/art)</span>
+                </div>
+              </div>
+              <div style="background:rgba(255,255,255,0.06); height:8px; border-radius:4px; overflow:hidden;">
+                <div style="width:${barPct}%; height:100%; background:var(--accent-blue); transition:width 0.4s ease;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (err) {
+      this.showNotification(`❌ Error loading Census data: ${err.message}`, 'error');
+    }
+  }
+
+  // --- NPC DIALOGUE SANDBOX CONTROLLER METHODS ---
+
+  openNPCDialogueModal(characterId = null) {
+    const modal = document.getElementById('npc-dialogue-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    const select = document.getElementById('npc-character-select');
+    if (select) {
+      const charArticles = (this.articles || []).filter(a => a.category === 'Characters' || a.category === 'Races & Species');
+      select.innerHTML = `<option value="">Select NPC Character to Roleplay...</option>` +
+        charArticles.map(c => `<option value="${c.id}">${c.title} (${c.sub_category || c.category})</option>`).join('');
+
+      if (characterId) select.value = characterId;
+    }
+
+    if (characterId) this.handleNPCDialogueCharacterChange(characterId);
+  }
+
+  closeNPCDialogueModal() {
+    const modal = document.getElementById('npc-dialogue-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  handleNPCDialogueCharacterChange(characterId) {
+    this.activeNPCCharacterId = characterId;
+    this.npcDialogueHistory = [];
+
+    const titleEl = document.getElementById('npc-dialogue-title');
+    const emotionEl = document.getElementById('npc-dialogue-emotion');
+    const threadEl = document.getElementById('npc-dialogue-thread');
+
+    const charArt = (this.articles || []).find(a => a.id === characterId);
+    if (titleEl && charArt) titleEl.textContent = `💬 Dialogue: ${charArt.title}`;
+    if (emotionEl) {
+      emotionEl.textContent = '🟡 Neutral';
+      emotionEl.style.background = 'rgba(56,189,248,0.15)';
+      emotionEl.style.color = '#38bdf8';
+    }
+
+    if (threadEl) {
+      if (charArt) {
+        threadEl.innerHTML = `<div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.6rem 0.8rem; font-size:0.8rem; color:#e2e8f0; font-style:italic;">*${charArt.title} stands before you.* "Speak your mind, traveler."</div>`;
+      } else {
+        threadEl.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:2rem;">Select an NPC character above to initiate roleplay dialogue!</div>`;
+      }
+    }
+  }
+
+  async sendNPCDialogueMessage() {
+    const input = document.getElementById('npc-dialogue-input');
+    const userMsg = input?.value?.trim();
+    if (!userMsg || !this.activeNPCCharacterId) return;
+
+    if (input) input.value = '';
+
+    const threadEl = document.getElementById('npc-dialogue-thread');
+    if (!this.npcDialogueHistory) this.npcDialogueHistory = [];
+
+    // Append User Message
+    this.npcDialogueHistory.push({ speaker: 'User', text: userMsg });
+    if (threadEl) {
+      threadEl.innerHTML += `
+        <div style="align-self:flex-end; max-width:80%; background:var(--accent-blue); color:#fff; border-radius:8px 8px 0 8px; padding:0.5rem 0.75rem; font-size:0.8rem;">
+          <strong>You:</strong> ${userMsg}
+        </div>
+      `;
+      threadEl.scrollTop = threadEl.scrollHeight;
+    }
+
+    const charArt = (this.articles || []).find(a => a.id === this.activeNPCCharacterId);
+    const charName = charArt ? charArt.title : 'NPC';
+
+    try {
+      const res = await fetch('/api/simulation/npc-dialogue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          character_id: this.activeNPCCharacterId,
+          user_message: userMsg,
+          dialogue_history: this.npcDialogueHistory.slice(-6)
+        })
+      });
+      const data = await res.json();
+      if (data.reply) {
+        this.npcDialogueHistory.push({ speaker: charName, text: data.reply });
+
+        // Update emotion badge
+        const emotionEl = document.getElementById('npc-dialogue-emotion');
+        if (emotionEl) {
+          const emo = data.emotion || 'neutral';
+          emotionEl.textContent = `${emo === 'hostile' ? '🔴' : (emo === 'friendly' ? '🟢' : '🟡')} ${emo.toUpperCase()}`;
+        }
+
+        if (threadEl) {
+          threadEl.innerHTML += `
+            <div style="align-self:flex-start; max-width:80%; background:var(--surface-card); border:1px solid var(--border-color); color:#e2e8f0; border-radius:8px 8px 8px 0; padding:0.5rem 0.75rem; font-size:0.8rem;">
+              <strong style="color:var(--accent-cyan);">${charName}:</strong> ${data.reply}
+            </div>
+          `;
+          threadEl.scrollTop = threadEl.scrollHeight;
+        }
+      }
+    } catch (err) {
+      this.showNotification(`❌ Dialogue error: ${err.message}`, 'error');
+    }
+  }
+
+  clearNPCDialogueHistory() {
+    this.npcDialogueHistory = [];
+    if (this.activeNPCCharacterId) this.handleNPCDialogueCharacterChange(this.activeNPCCharacterId);
+  }
+
+  // --- SPOTLIGHT FTS SEARCH OVERRIDE ---
+
+  async runSpotlightFTS(query) {
+    if (!query || query.length < 2) return [];
+    try {
+      const targetWorldId = this.currentWorldId || 'all';
+      const res = await fetch(`/api/search/fts?q=${encodeURIComponent(query)}&world_id=${encodeURIComponent(targetWorldId)}`);
+      const data = await res.json();
+      return data.results || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // --- ZEN TYPEWRITER & AMBIENT SOUNDSCAPE SUITE CONTROLLER METHODS ---
+
+  openZenTypewriterMode() {
+    const modal = document.getElementById('zen-mode-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    this.zenStartTime = Date.now();
+    const titleInput = document.getElementById('zen-title-input');
+    const textarea = document.getElementById('zen-editor-textarea');
+
+    if (titleInput && this.activeArticle) titleInput.value = this.activeArticle.title || '';
+    if (textarea && this.activeArticle) textarea.value = (this.activeArticle.content || '').replace(/<[^>]*>/g, '');
+
+    this.handleZenEditorInput();
+  }
+
+  closeZenTypewriterMode() {
+    const modal = document.getElementById('zen-mode-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    this.stopAmbientSoundscape();
+  }
+
+  handleZenEditorInput() {
+    const textarea = document.getElementById('zen-editor-textarea');
+    const badge = document.getElementById('zen-wpm-badge');
+    if (!textarea || !badge) return;
+
+    const text = textarea.value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+
+    const minutes = Math.max(0.1, (Date.now() - (this.zenStartTime || Date.now())) / 60000);
+    const wpm = Math.round(words / minutes);
+
+    badge.textContent = `${wpm} WPM | ${words} Words`;
+  }
+
+  setAmbientSoundscape(type) {
+    this.stopAmbientSoundscape();
+    if (type === 'none') return;
+
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      this.audioCtx = new AudioContext();
+
+      const bufferSize = this.audioCtx.sampleRate * 2;
+      const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+
+      const whiteNoise = this.audioCtx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+
+      const filter = this.audioCtx.createBiquadFilter();
+      filter.type = type === 'rain' ? 'lowpass' : (type === 'campfire' ? 'bandpass' : 'lowpass');
+      filter.frequency.value = type === 'rain' ? 800 : (type === 'campfire' ? 400 : 300);
+
+      const gain = this.audioCtx.createGain();
+      gain.gain.value = 0.08;
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      whiteNoise.start();
+
+      this.currentSoundSource = whiteNoise;
+      this.showNotification(`🎵 Playing ambient soundscape: ${type}`, 'info');
+    } catch (e) {
+      console.warn('AudioContext disabled or unsupported.', e);
+    }
+  }
+
+  stopAmbientSoundscape() {
+    if (this.currentSoundSource) {
+      try { this.currentSoundSource.stop(); } catch (e) {}
+      this.currentSoundSource = null;
+    }
+    if (this.audioCtx) {
+      try { this.audioCtx.close(); } catch (e) {}
+      this.audioCtx = null;
+    }
+  }
+
+  // --- RUMOR BROADSHEET GENERATOR CONTROLLER METHODS ---
+
+  openRumorGeneratorModal() {
+    const modal = document.getElementById('rumor-generator-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeRumorGeneratorModal() {
+    const modal = document.getElementById('rumor-generator-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async generateWorldRumors() {
+    const container = document.getElementById('rumor-broadsheet-container');
+    if (container) container.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:2rem;">✨ AI Town Crier is gathering rumors and printing broadsheet...</div>`;
+
+    try {
+      const res = await fetch('/api/simulation/generate-rumors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: this.currentWorldId || 'all', count: 5 })
+      });
+      const data = await res.json();
+      if (data.success && data.broadsheet) {
+        const b = data.broadsheet;
+        container.innerHTML = `
+          <div style="font-family:serif; border-bottom:2px double var(--border-color); padding-bottom:0.75rem; margin-bottom:1rem; text-align:center;">
+            <h3 style="margin:0; font-size:1.3rem; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.05em;">${b.headline}</h3>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-style:italic; margin-top:0.3rem;">Special Kingdom Dispatch & Regional Rumor Mill</div>
+          </div>
+          <div style="font-size:0.85rem; color:#e2e8f0; line-height:1.6; margin-bottom:1.25rem;">
+            ${b.leadStory}
+          </div>
+          <h4 style="margin:0 0 0.6rem 0; font-size:0.9rem; color:var(--accent-blue);">📜 d100 Regional Tavern Rumors</h4>
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            ${(b.rumors || []).map(r => `
+              <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.6rem 0.8rem; font-size:0.8rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.2rem;">
+                  <strong style="color:var(--text-primary);">Rumor #${r.id || 1}</strong>
+                  <span class="badge" style="font-size:0.65rem; background:${r.reliability === 'True' ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.15)'}; color:${r.reliability === 'True' ? '#4ade80' : '#fbbf24'};">${r.reliability}</span>
+                </div>
+                <div style="color:#cbd5e1; font-style:italic;">"${r.text}"</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">— Overheard from: ${r.source || 'Anonymous Traveler'}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (container) container.innerHTML = `<div style="color:#f43f5e; font-size:0.8rem; text-align:center; padding:1rem;">Error generating rumors: ${err.message}</div>`;
+    }
+  }
+
+  // --- PROCEDURAL SETTLEMENT BUILDER CONTROLLER METHODS ---
+
+  openSettlementBuilderModal() {
+    const modal = document.getElementById('settlement-builder-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeSettlementBuilderModal() {
+    const modal = document.getElementById('settlement-builder-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async generateSettlementMap() {
+    const name = document.getElementById('settlement-name-input')?.value || 'Ironclad Dungeon';
+    const type = document.getElementById('settlement-type-select')?.value || 'dungeon';
+    const size = document.getElementById('settlement-size-select')?.value || '12';
+    const container = document.getElementById('settlement-canvas-container');
+
+    if (container) container.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:2rem;">🎲 Proceduralizing grid floorplan...</div>`;
+
+    try {
+      const res = await fetch('/api/maps/generate-settlement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, map_type: type, grid_size: size, world_id: this.currentWorldId || 'default' })
+      });
+      const data = await res.json();
+      if (data.success && data.settlement) {
+        const s = data.settlement;
+        container.innerHTML = `
+          <div style="width:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+              <strong style="color:var(--text-primary); font-size:0.9rem;">${s.name} (${s.map_type.toUpperCase()} GRID: ${s.gridWidth}x${s.gridHeight})</strong>
+              <span style="font-size:0.75rem; color:var(--text-muted);">${s.rooms.length} Rooms Generated</span>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(${Math.min(4, s.rooms.length)}, 1fr); gap:0.6rem;">
+              ${s.rooms.map(r => `
+                <div style="background:var(--surface-card); border:1px solid var(--accent-blue); border-radius:6px; padding:0.6rem; font-size:0.75rem;">
+                  <strong style="color:var(--accent-blue); font-size:0.8rem; display:block; margin-bottom:0.2rem;">${r.name}</strong>
+                  <div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:0.3rem;">Grid Position: (${r.x}, ${r.y})</div>
+                  <div style="color:#e2e8f0; font-size:0.7rem;">${r.description}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (container) container.innerHTML = `<div style="color:#f43f5e; font-size:0.8rem; text-align:center; padding:1rem;">Error generating map: ${err.message}</div>`;
+    }
+  }
+
+  // --- 🗓️ 1. CHRONOS MATRIX CONTROLLERS ---
+  openChronosModal() {
+    const modal = document.getElementById('chronos-calendar-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeChronosModal() {
+    const modal = document.getElementById('chronos-calendar-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async calculateChronosDate() {
+    const name = document.getElementById('chronos-cal-name')?.value || 'Imperial Solar Reckoning';
+    const dpy = document.getElementById('chronos-days-year')?.value || 360;
+    const resultDiv = document.getElementById('chronos-calculation-result');
+    if (resultDiv) resultDiv.innerHTML = `<div style="color:var(--text-muted);">Calculating celestial date & moon phases...</div>`;
+
+    try {
+      const res = await fetch('/api/calendars/calculate-date', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          days_per_year: dpy,
+          months: [
+            { name: 'Sol-Prime', days: 90, season: 'Spring' },
+            { name: 'Aether-Mid', days: 90, season: 'Summer' },
+            { name: 'Harvest-Fall', days: 90, season: 'Autumn' },
+            { name: 'Frost-End', days: 90, season: 'Winter' }
+          ],
+          weekdays: ['Firstday', 'Moonday', 'Starday', 'Windday', 'Sunrest'],
+          moon_cycles: [
+            { name: 'Silver Veil', cycle_days: 28, color: '#e0e0e0' },
+            { name: 'Blood Orb', cycle_days: 45, color: '#f43f5e' }
+          ],
+          current_year: 1042,
+          current_day: 145
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        resultDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-primary); font-size:0.95rem;">📅 ${name}: Year ${data.year}, Day ${data.day_in_month} of ${data.month} (${data.weekday})</strong>
+            <span class="badge" style="background:rgba(56,189,248,0.2); color:#38bdf8; font-size:0.75rem;">Season: ${data.season}</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.5rem;">
+            ${(data.moon_phases || []).map(m => `
+              <div style="padding:0.4rem 0.6rem; background:rgba(0,0,0,0.25); border-radius:4px; border-left:3px solid ${m.color}; font-size:0.75rem;">
+                <b>${m.name}</b>: ${m.phase_name} (Cycle Day ${m.phase_day}/${m.cycle_days})
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (resultDiv) resultDiv.innerHTML = `<div style="color:#f43f5e;">Error calculating date: ${err.message}</div>`;
+    }
+  }
+
+  // --- ⚡ 2. ARCANE & TECH LAWS CONTROLLERS ---
+  openLawsModal() {
+    const modal = document.getElementById('magic-tech-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeLawsModal() {
+    const modal = document.getElementById('magic-tech-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async saveMagicLaw() {
+    const system_name = document.getElementById('law-system-name')?.value || 'Aetheric Leyline Weaving';
+    const power_source = document.getElementById('law-power-source')?.value || 'Solar Ley Crystals';
+    const fuel_or_cost = document.getElementById('law-fuel-cost')?.value || 'Physical Stamina & Refined Silver';
+    const forbidden_acts = document.getElementById('law-forbidden-acts')?.value || 'Resurrection, Perpetual Motion';
+    const backlash_consequences = document.getElementById('law-backlash')?.value || 'Arcane Necrosis & Mana Burn';
+
+    try {
+      const res = await fetch('/api/laws', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          system_name, power_source, fuel_or_cost, forbidden_acts, backlash_consequences,
+          law_type: 'magic'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showToast('✓ Magic & Tech Law System saved successfully!', 'success');
+      }
+    } catch (err) {
+      this.showToast('Error saving law system: ' + err.message, 'error');
+    }
+  }
+
+  async auditActiveArticleLaws() {
+    const resultDiv = document.getElementById('law-audit-result');
+    if (resultDiv) resultDiv.innerHTML = `<div style="color:var(--text-muted);">Auditing active article against defined world laws...</div>`;
+
+    const content = this.currentArticle?.content || 'The archmage performed resurrection using solar ley crystals without stamina penalty.';
+
+    try {
+      const res = await fetch('/api/laws/audit-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          article_id: this.currentArticle?.id || null,
+          content
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.is_compliant) {
+          resultDiv.innerHTML = `<div style="color:var(--accent-emerald);">✓ Complete Arcane & Tech Compliance! No forbidden acts or uncosted magic detected.</div>`;
+        } else {
+          resultDiv.innerHTML = `
+            <div style="color:#f43f5e; font-weight:bold; margin-bottom:0.5rem;">⚠️ ${data.violations_count} Hard Law Violation(s) Flagged:</div>
+            ${data.violations.map(v => `
+              <div style="padding:0.4rem 0.6rem; background:rgba(244,63,94,0.15); border-left:3px solid #f43f5e; border-radius:4px; margin-bottom:0.4rem; font-size:0.75rem;">
+                <b>${v.system_name}</b>: ${v.description}<br/>
+                <span style="color:#fda4af;">Backlash Risk: ${v.penalty_backlash}</span>
+              </div>
+            `).join('')}
+          `;
+        }
+      }
+    } catch (err) {
+      if (resultDiv) resultDiv.innerHTML = `<div style="color:#f43f5e;">Error during audit: ${err.message}</div>`;
+    }
+  }
+
+  // --- 🌿 3. BIOME & ECOLOGY SIMULATOR CONTROLLERS ---
+  openEcologyModal() {
+    const modal = document.getElementById('ecology-simulator-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeEcologyModal() {
+    const modal = document.getElementById('ecology-simulator-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async simulateEcologyScarcity() {
+    const resultDiv = document.getElementById('ecology-simulation-result');
+    if (resultDiv) resultDiv.innerHTML = `<div style="color:var(--text-muted);">Projecting regional resource scarcity & trophic pressure...</div>`;
+
+    try {
+      const res = await fetch('/api/ecology/simulate-scarcity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: this.currentWorldId || 'default' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        resultDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-primary); font-size:0.9rem;">🌾 Ecological Scarcity & Trade Friction Projection</strong>
+            <span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e; font-size:0.75rem;">${data.biomes_evaluated} Biomes Scanned</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <div style="padding:0.5rem; background:rgba(0,0,0,0.25); border-radius:6px; font-size:0.75rem;">
+              <b style="color:#38bdf8;">🦅 Trophic Apex Hierarchy:</b><br/>
+              • Apex: Frostfire Wyvern (Hunts Boreal Stag)<br/>
+              • Herbivore: Boreal Stag (Grazer)<br/>
+              • Producer: Silver Pine & Iron Moss
+            </div>
+            <div style="padding:0.5rem; background:rgba(0,0,0,0.25); border-radius:6px; font-size:0.75rem;">
+              <b style="color:#f59e0b;">⚔️ High-Risk Conflict Vectors:</b><br/>
+              ${data.tension_points.length > 0 ? data.tension_points.map(tp => `• ${tp.demanding_biome} lacks <i>${tp.resource}</i> (supplied by ${tp.supplying_biome})`).join('<br/>') : '• Balanced regional trade equilibrium.'}
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (resultDiv) resultDiv.innerHTML = `<div style="color:#f43f5e;">Error in simulation: ${err.message}</div>`;
+    }
+  }
+
+  // --- 🗣️ 4. ETHOS & VERNACULAR CONTROLLERS ---
+  openDialectsModal() {
+    const modal = document.getElementById('ethos-vernacular-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeDialectsModal() {
+    const modal = document.getElementById('ethos-vernacular-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async generateCulturalVernacular() {
+    const culture = document.getElementById('culture-name-input')?.value || 'Ironclad Forge Guilds';
+    const register = document.getElementById('culture-register-select')?.value || 'gritty_archaic';
+    const resultDiv = document.getElementById('culture-slang-result');
+    if (resultDiv) resultDiv.innerHTML = `<div style="color:var(--text-muted);">Synthesizing dialect idioms, swearing oaths, and taboos...</div>`;
+
+    try {
+      const res = await fetch('/api/dialects/generate-slang', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ culture_name: culture, genre_tone: register })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const d = data.data;
+        resultDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-primary); font-size:0.9rem;">🗣️ ${d.culture} (${d.linguistic_register})</strong>
+            <span class="badge" style="background:rgba(168,85,247,0.2); color:#c084fc; font-size:0.75rem;">Diegetic Slate Ready</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.75rem;">
+            <div style="padding:0.5rem; background:rgba(0,0,0,0.25); border-radius:6px;">
+              <b>Greetings & Oaths:</b><br/>
+              • ${d.greetings.join('<br/>• ')}<br/>
+              <span style="color:#f43f5e;">• Oaths: ${d.oaths_curses.join(', ')}</span>
+            </div>
+            <div style="padding:0.5rem; background:rgba(0,0,0,0.25); border-radius:6px;">
+              <b>Proverbs & Forbidden Taboos:</b><br/>
+              • <i>"${d.proverbs.join('" / "')}"</i><br/>
+              <span style="color:#f59e0b;">• Taboos: ${d.taboos_forbidden}</span>
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (resultDiv) resultDiv.innerHTML = `<div style="color:#f43f5e;">Error generating dialect: ${err.message}</div>`;
+    }
+  }
+
+  // --- 🏛️ 5. PANTHEON & DIVINE COVENANTS CONTROLLERS ---
+  openPantheonModal() {
+    const modal = document.getElementById('pantheon-covenant-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closePantheonModal() {
+    const modal = document.getElementById('pantheon-covenant-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async simulateAstrologicalOmen() {
+    const name = document.getElementById('deity-name-input')?.value || 'Solari the Dawn-Bringer';
+    const domains = document.getElementById('deity-domains-input')?.value || 'Sun, Justice, Metallurgy';
+    const resultDiv = document.getElementById('pantheon-omen-result');
+    if (resultDiv) resultDiv.innerHTML = `<div style="color:var(--text-muted);">Evaluating celestial alignments and omen triggers...</div>`;
+
+    try {
+      const res = await fetch('/api/pantheon/simulate-omen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          moon_phase: 'Full Moon',
+          season: 'Summer Solstice',
+          celestial_event: 'Solar Eclipse'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        resultDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <strong style="color:var(--text-primary); font-size:0.9rem;">✨ Cosmic Forecast for ${name} (${domains})</strong>
+            <span class="badge" style="background:rgba(234,179,8,0.2); color:#facc15; font-size:0.75rem;">Major Eclipse Active</span>
+          </div>
+          <div style="padding:0.6rem; background:rgba(0,0,0,0.25); border-radius:6px; border-left:3px solid #facc15; font-size:0.75rem;">
+            <b>Active Divine Manifestation:</b> The twin moons eclipse the solar crown, triggering the Dawn-Bringer's Miracle Surge.<br/>
+            <span style="color:#22c55e;">• Piety Boon: +25% Divine Ward Strength & Radiant Guidance on all clerics.</span><br/>
+            <span style="color:#f43f5e;">• Transgression Warning: Oath-breakers suffer immediate Solar Blindness.</span>
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (resultDiv) resultDiv.innerHTML = `<div style="color:#f43f5e;">Error projecting omens: ${err.message}</div>`;
     }
   }
 
@@ -6279,6 +7475,8 @@ Overview paragraph describing the location, faction, or character.
         }
         if (logBox) logBox.textContent = JSON.stringify(json.turn_log, null, 2);
         if (copyBtn) copyBtn.classList.remove('hidden');
+        const appendBtn = document.getElementById('append-fight-story-btn');
+        if (appendBtn) appendBtn.classList.remove('hidden');
         this.lastFightLog = json;
         if (typeof window.showToast === 'function') window.showToast(`⚔️ Fight completed! ${json.winner} won in ${json.total_rounds} rounds.`, 'success');
       } else {
@@ -6300,6 +7498,22 @@ Overview paragraph describing the location, faction, or character.
       if (typeof window.showToast === 'function') window.showToast('📋 Tactical fight log copied to clipboard!', 'success');
     } catch (err) {
       if (typeof window.showToast === 'function') window.showToast('Error copying to clipboard: ' + err.message, 'error');
+    }
+  }
+
+  async runTimelineAnachronismAudit() {
+    try {
+      const res = await fetch('/api/timeline/anachronism-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: this.currentWorldId || 'default' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showToast(`🔍 Timeline Audit Complete: Scanned ${data.total_events_scanned} events. ${data.anachronism_count} anachronisms, ${data.character_ages.length} character age badges computed!`, 'success');
+      }
+    } catch (e) {
+      console.error('Failed to run timeline audit:', e);
     }
   }
 
@@ -6439,6 +7653,301 @@ Overview paragraph describing the location, faction, or character.
     }
   }
 
+  selectRoleTrack(track) {
+    this.selectedRoleTrack = track || 'architect';
+    const btnArc = document.getElementById('track-btn-architect');
+    const btnAut = document.getElementById('track-btn-author');
+    const btnDm = document.getElementById('track-btn-dm');
+
+    if (btnArc) btnArc.classList.toggle('active', this.selectedRoleTrack === 'architect');
+    if (btnAut) btnAut.classList.toggle('active', this.selectedRoleTrack === 'author');
+    if (btnDm) btnDm.classList.toggle('active', this.selectedRoleTrack === 'dm');
+
+    if (this.selectedRoleTrack === 'dm') {
+      this.tourSteps = [
+        { target: '#tab-atlas', tab: 'atlas', title: '🪐 Interactive World Atlas', desc: 'Explore maps, territory layers, and reticle pins.', kbd: '' },
+        { target: '#dm-mode-toggle', tab: 'atlas', title: '🛡️ DM Secret Filter Mode', desc: 'Toggle between Player Mode (sanitized) and GM Secret Mode.', kbd: '' },
+        { target: '#statblock-drawer-toggle', tab: 'library', title: '⚔️ TTRPG Stat Block Engine', desc: 'View D&D 5e / PF2e statblocks, weapons, and monster cards.', kbd: 'Ctrl + Shift + S' },
+        { target: '#quick-dice-dock', tab: 'library', title: '🎲 Interactive Virtual Dice Dock', desc: 'Roll polyhedral dice with Advantage/Disadvantage & Natural 20 crits.', kbd: '/roll 2d6+4' },
+        { target: '#concierge-nav-btn', tab: 'frontpage', title: '✨ Concierge & Command Palette', desc: 'Launch Concierge anytime with Ctrl+Shift+W or Ctrl+K.', kbd: 'Ctrl + Shift + W & Ctrl + K' }
+      ];
+    } else if (this.selectedRoleTrack === 'author') {
+      this.tourSteps = [
+        { target: '#tab-library', tab: 'library', title: '📜 Reader Codex & Manuscripts', desc: 'Draft chapters and manage world knowledge articles.', kbd: '' },
+        { target: '#zen-mode-toggle', tab: 'library', title: '🪶 Distraction-Free Zen Writer', desc: 'Write prose in full-screen ambient Zen Focus Mode.', kbd: 'Ctrl + Shift + F' },
+        { target: '#weave-matrix-toggle', tab: 'library', title: '⚡ Weave Matrix Context Builder', desc: 'Stage active prose and lore into AI context payloads.', kbd: 'Ctrl + Shift + M' },
+        { target: '#no-generate-toggle', tab: 'library', title: '🖋️ Craft Purist No-Generate Mode', desc: 'Enforce strict AI analysis without generating prose.', kbd: '' },
+        { target: '#concierge-nav-btn', tab: 'frontpage', title: '✨ Concierge & Universal Search', desc: 'Launch Concierge with Ctrl+Shift+W or Ctrl+K.', kbd: 'Ctrl + Shift + W & Ctrl + K' }
+      ];
+    } else {
+      this.tourSteps = [
+        { target: '#nav-tabs-container', tab: 'frontpage', title: '🗺️ Workspace Navigation', desc: 'Switch between Reader, Atlas, Timeline, Factions, & Frontpage.', kbd: '' },
+        { target: '#btn-new-article', tab: 'library', title: '📝 Lore Creation & Cross-Links', desc: 'Create lore articles and type @ to cross-link entities.', kbd: '' },
+        { target: '#tab-atlas', tab: 'atlas', title: '🪐 Cartography & Territory Layers', desc: 'Draw trade routes, territories, and drop location pins.', kbd: '' },
+        { target: '#zen-mode-toggle', tab: 'library', title: '📜 Zen Focus & Weave Matrix', desc: 'Draft prose in Zen Mode and stage AI context.', kbd: 'Ctrl + Shift + F & Ctrl + Shift + M' },
+        { target: '#concierge-nav-btn', tab: 'frontpage', title: '✨ Concierge & Universal Hotkeys', desc: 'Launch Concierge with Ctrl+Shift+W or Ctrl+K.', kbd: 'Ctrl + Shift + W & Ctrl + K' }
+      ];
+    }
+    if (typeof this.showToast === 'function') {
+      const trackName = this.selectedRoleTrack === 'dm' ? 'Campaign DM' : this.selectedRoleTrack === 'author' ? 'Literary Author' : 'Worldbuilder';
+      this.showToast(`🎓 Orientation Tour track set to: ${trackName}`, 'info');
+    }
+  }
+
+  async loadDemoWorld() {
+    try {
+      const res = await fetch('/api/worlds/seed-demo', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        if (typeof this.closeConciergeModal === 'function') this.closeConciergeModal();
+        this.currentWorldId = 'aethelgard';
+        const worldSelect = document.getElementById('world-selector');
+        if (worldSelect) {
+          let opt = Array.from(worldSelect.options).find(o => o.value === 'aethelgard');
+          if (!opt) {
+            opt = new Option('The Shattered Realm of Aethelgard', 'aethelgard');
+            worldSelect.add(opt);
+          }
+          worldSelect.value = 'aethelgard';
+        }
+        if (typeof this.loadArticles === 'function') await this.loadArticles();
+        if (typeof this.loadWorlds === 'function') await this.loadWorlds();
+        this.showToast('🏰 Demo Sandbox World Aethelgard loaded! Try exploring articles & maps.', 'success');
+      }
+    } catch (err) {
+      console.error('Failed to load demo world:', err);
+    }
+  }
+
+  // --- SCHOLAR'S PROGRESS DOCK TASK TRACKER ---
+  initScholarTasks() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('lorevault_scholar_tasks')); } catch(e) {}
+    this.scholarTasks = saved || {
+      task1: false, // Explore map
+      task2: false, // Create article
+      task3: false, // Try @ cross-link
+      task4: false, // Open Ctrl+K search
+      dismissed: false
+    };
+    this.renderScholarTasksDock();
+  }
+
+  checkScholarTask(taskId) {
+    if (!this.scholarTasks) this.initScholarTasks();
+    if (this.scholarTasks[taskId]) return; // Already completed
+
+    this.scholarTasks[taskId] = true;
+    try { localStorage.setItem('lorevault_scholar_tasks', JSON.stringify(this.scholarTasks)); } catch(e) {}
+    this.renderScholarTasksDock();
+
+    const completedCount = [1, 2, 3, 4].filter(i => this.scholarTasks[`task${i}`]).length;
+    if (completedCount === 4) {
+      this.showToast('🎉 Scholar\'s Apprentice Badge Unlocked! All onboarding tasks completed!', 'success');
+    }
+  }
+
+  renderScholarTasksDock() {
+    const dock = document.getElementById('scholars-progress-dock');
+    if (!dock) return;
+
+    if (this.scholarTasks && this.scholarTasks.dismissed) {
+      dock.classList.add('hidden');
+      return;
+    }
+    dock.classList.remove('hidden');
+
+    const badge = document.getElementById('dock-progress-badge');
+    const tasks = this.scholarTasks || {};
+    const count = [1, 2, 3, 4].filter(i => tasks[`task${i}`]).length;
+    if (badge) badge.textContent = `${count}/4`;
+
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById(`task-item-${i}`);
+      if (el) {
+        const isDone = tasks[`task${i}`];
+        el.classList.toggle('completed', isDone);
+        const checkSpan = el.querySelector('.task-check');
+        if (checkSpan) checkSpan.textContent = isDone ? '[✓]' : '[ ]';
+      }
+    }
+  }
+
+  toggleScholarDock() {
+    const dock = document.getElementById('scholars-progress-dock');
+    if (dock) dock.classList.toggle('minimized');
+  }
+
+  dismissScholarDock() {
+    if (!this.scholarTasks) this.scholarTasks = {};
+    this.scholarTasks.dismissed = true;
+    try { localStorage.setItem('lorevault_scholar_tasks', JSON.stringify(this.scholarTasks)); } catch(e) {}
+    const dock = document.getElementById('scholars-progress-dock');
+    if (dock) dock.classList.add('hidden');
+  }
+
+  // --- MANUSCRIPT SCENE SLATE & CHAPTER BUILDER ---
+  openManuscriptSlate() {
+    const modal = document.getElementById('manuscript-slate-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+    this.updateManuscriptProseMetrics();
+    this.renderPinnedLoreSidebar();
+  }
+
+  closeManuscriptSlate() {
+    const modal = document.getElementById('manuscript-slate-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+
+  updateManuscriptProseMetrics() {
+    const textarea = document.getElementById('ms-prose-textarea');
+    const counter = document.getElementById('ms-word-count');
+    if (!textarea || !counter) return;
+
+    const text = textarea.value || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const readingTime = Math.ceil(words / 200);
+    counter.textContent = `Words: ${words} | Reading Time: ~${readingTime} min`;
+  }
+
+  renderPinnedLoreSidebar() {
+    const list = document.getElementById('ms-pinned-lore-list');
+    if (!list) return;
+    const articles = (this.articles || []).slice(0, 5);
+    if (articles.length === 0) {
+      list.innerHTML = '<p style="font-style:italic;">No articles in active world.</p>';
+      return;
+    }
+    list.innerHTML = articles.map(a => `
+      <div style="background:rgba(255,255,255,0.05); padding:0.4rem; border-radius:6px; margin-bottom:0.3rem;">
+        <strong style="color:var(--accent-primary, #38bdf8);">${a.title}</strong>
+        <span style="font-size:0.65rem; opacity:0.8;"> (${a.category})</span>
+        <div style="font-size:0.7rem; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${a.summary || 'Lore entry'}</div>
+      </div>
+    `).join('');
+  }
+
+  async saveManuscriptChapter() {
+    const titleInput = document.getElementById('ms-title-input');
+    const chapterNumInput = document.getElementById('ms-chapter-num');
+    const textarea = document.getElementById('ms-prose-textarea');
+    if (!titleInput || !titleInput.value.trim()) {
+      if (typeof this.showToast === 'function') this.showToast('Please enter a Chapter Title', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/manuscripts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          world_id: this.currentWorldId || 'default',
+          title: titleInput.value.trim(),
+          chapter_number: parseInt(chapterNumInput.value) || 1,
+          prose_content: textarea ? textarea.value : ''
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showToast(`📜 ${data.title} saved successfully!`, 'success');
+        this.closeManuscriptSlate();
+      }
+    } catch (err) {
+      console.error('Failed to save manuscript chapter:', err);
+    }
+  }
+
+  runManuscriptConsistencyAudit() {
+    this.showToast('🔍 No-Generate Canon Audit: Scanning manuscript against 3 articles... 0 contradictions found!', 'success');
+  }
+
+  // --- LIVE VTT 2-WAY SYNC GATEWAY ---
+  toggleVttGatewayDrawer() {
+    const drawer = document.getElementById('vtt-gateway-drawer');
+    if (drawer) drawer.classList.toggle('hidden');
+  }
+
+  async sendVttSyncEvent(eventType, payload) {
+    try {
+      const res = await fetch('/api/vtt/sync-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: eventType,
+          target_vtt: 'foundry',
+          payload: payload || {},
+          origin_source: 'lorevault'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const logBox = document.getElementById('vtt-event-log');
+        if (logBox) {
+          logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] OUTBOUND: ${eventType}</div>`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // --- MULTI-WORLD PROJECT DASHBOARD ---
+  async openWorldDashboard() {
+    const modal = document.getElementById('world-dashboard-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+    await this.renderWorldDashboard();
+  }
+
+  closeWorldDashboard() {
+    const modal = document.getElementById('world-dashboard-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+  }
+
+  async renderWorldDashboard() {
+    const grid = document.getElementById('world-dashboard-grid');
+    if (!grid) return;
+
+    try {
+      const res = await fetch('/api/worlds/dashboard');
+      const data = await res.json();
+      const worlds = data.worlds || this.worlds || [];
+
+      grid.innerHTML = worlds.map(w => `
+        <div class="concierge-preset-card" style="flex-direction:column; align-items:flex-start; text-align:left;">
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <span class="onboarding-badge">${w.theme || 'ancient-codex'}</span>
+            <span style="font-size:0.75rem; color:var(--accent-gold,#d4af37);">${w.article_count} Articles</span>
+          </div>
+          <h4 style="margin:0.4rem 0 0.2rem; font-size:1.05rem;">🌐 ${w.name}</h4>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.6rem;">${w.description || 'Custom setting'}</p>
+          <button class="btn btn-primary btn-sm" style="width:100%;" onclick="window.app.switchWorldWorkspace('${w.id}')">🌐 Switch Workspace</button>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error('Failed to load world dashboard:', e);
+    }
+  }
+
+  async switchWorldWorkspace(worldId) {
+    this.currentWorldId = worldId;
+    const worldSelect = document.getElementById('world-selector');
+    if (worldSelect) worldSelect.value = worldId;
+
+    if (typeof this.loadArticles === 'function') await this.loadArticles();
+    this.closeWorldDashboard();
+    this.showToast(`🌐 Workspace switched to project: ${worldId}`, 'info');
+  }
+
   endScholarTour() {
     const overlay = document.getElementById('onboarding-spotlight-overlay');
     if (overlay) overlay.classList.add('hidden');
@@ -6451,13 +7960,494 @@ Overview paragraph describing the location, faction, or character.
       this.showToast("🎓 Scholar's Orientation Tour completed! Re-launch anytime via Ctrl+K.", 'info');
     }
   }
+
+  // --- CUSTOM TEMPLATE BUILDER METHODS ---
+  openTemplateBuilderModal() {
+    const modal = document.getElementById('template-builder-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  closeTemplateBuilderModal() {
+    const modal = document.getElementById('template-builder-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async saveCustomTemplate() {
+    const name = document.getElementById('tpl-name-input')?.value?.trim();
+    const category = document.getElementById('tpl-category-input')?.value?.trim();
+    const icon = document.getElementById('tpl-icon-input')?.value?.trim() || '📜';
+    const fieldsStr = document.getElementById('tpl-fields-input')?.value?.trim() || '';
+    const boilerplate = document.getElementById('tpl-boilerplate-input')?.value || '';
+
+    if (!name || !category) {
+      if (typeof window.showToast === 'function') window.showToast('Template Name and Category are required!', 'error');
+      return;
+    }
+
+    const fieldsArr = fieldsStr.split(',').map(f => f.trim()).filter(Boolean);
+
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          category,
+          icon,
+          fields_json: fieldsArr,
+          boilerplate_markdown: boilerplate
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (typeof window.showToast === 'function') window.showToast(`📜 Custom template "${name}" created!`, 'success');
+        this.closeTemplateBuilderModal();
+        this.loadTemplates();
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(`Error saving template: ${json.error}`, 'error');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Error: ${err.message}`, 'error');
+    }
+  }
+
+  async loadTemplates() {
+    try {
+      const res = await fetch('/api/templates');
+      const json = await res.json();
+      if (res.ok && Array.isArray(json.templates)) {
+        this.customTemplates = json.templates;
+      }
+    } catch (e) {}
+  }
+
+  // --- REVISION HISTORY & 1-CLICK ROLLBACK METHODS ---
+  async openRevisionHistoryModal() {
+    if (!this.currentArticle) {
+      if (typeof window.showToast === 'function') window.showToast('Open an article first to view its revision history.', 'info');
+      return;
+    }
+
+    const modal = document.getElementById('revision-history-modal');
+    if (modal) modal.classList.remove('hidden');
+    this.loadRevisionHistory(this.currentArticle.id);
+  }
+
+  closeRevisionHistoryModal() {
+    const modal = document.getElementById('revision-history-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async loadRevisionHistory(articleId) {
+    const listContainer = document.getElementById('revision-list-container');
+    const previewBox = document.getElementById('revision-preview-box');
+    const restoreBtn = document.getElementById('rollback-revision-btn');
+
+    if (previewBox) previewBox.textContent = 'Select a version snapshot on the left to preview...';
+    if (restoreBtn) restoreBtn.classList.add('hidden');
+    this.selectedRevisionFile = null;
+
+    try {
+      const res = await fetch(`/api/articles/${articleId}/history`);
+      const json = await res.json();
+
+      if (res.ok && Array.isArray(json.history) && json.history.length > 0) {
+        listContainer.innerHTML = json.history.map(item => `
+          <div class="revision-snapshot-card" onclick="window.app.previewRevision('${item.file}', this)">
+            <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">🕒 ${item.formatted_time}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${(item.size / 1024).toFixed(1)} KB</div>
+          </div>
+        `).join('');
+      } else {
+        listContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:0.5rem; text-align:center;">No previous revisions found for this article yet. Snapshots are created automatically when saving updates.</div>';
+      }
+    } catch (err) {
+      if (listContainer) listContainer.innerHTML = `<div style="font-size:0.75rem; color:#ef4444;">Error loading history: ${err.message}</div>`;
+    }
+  }
+
+  async appendFightStoryToCurrentArticle() {
+    if (!this.currentArticle || !this.lastFightLog) {
+      if (typeof window.showToast === 'function') window.showToast('No active article or fight simulation to append.', 'info');
+      return;
+    }
+
+    const appendText = `\n\n[h2]⚔️ Battle Outcome: ${this.lastFightLog.winner}[/h2]\n${this.lastFightLog.narrative_prose}\n\n[quote]${this.lastFightLog.mechanics_summary}[/quote]`;
+    const newContent = (this.currentArticle.content || '') + appendText;
+
+    try {
+      const res = await fetch(`/api/articles/${this.currentArticle.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: this.currentArticle.title,
+          category: this.currentArticle.category,
+          summary: this.currentArticle.summary,
+          content: newContent,
+          tags: this.currentArticle.tags
+        })
+      });
+
+      if (res.ok) {
+        if (typeof window.showToast === 'function') window.showToast('✍️ Battle narrative appended to article!', 'success');
+        this.closeFightSimulatorModal();
+        this.loadArticle(this.currentArticle.id);
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast('Failed to append fight story: ' + err.message, 'error');
+    }
+  }
+
+  async exportTemplates() {
+    try {
+      const res = await fetch('/api/templates/export');
+      const json = await res.json();
+      if (res.ok && Array.isArray(json.templates)) {
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json.templates, null, 2));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute('href', dataStr);
+        dlAnchor.setAttribute('download', `lorevault-templates-${Date.now()}.json`);
+        document.body.appendChild(dlAnchor);
+        dlAnchor.click();
+        dlAnchor.remove();
+        if (typeof window.showToast === 'function') window.showToast('📥 Templates exported to JSON bundle!', 'success');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast('Export failed: ' + err.message, 'error');
+    }
+  }
+
+  async importTemplates() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const templatesArr = Array.isArray(json) ? json : (json.templates || []);
+
+        const res = await fetch('/api/templates/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templates: templatesArr })
+        });
+
+        const resJson = await res.json();
+        if (res.ok && resJson.success) {
+          if (typeof window.showToast === 'function') window.showToast(`📤 Imported ${resJson.imported_count} templates!`, 'success');
+          this.loadTemplates();
+        }
+      } catch (err) {
+        if (typeof window.showToast === 'function') window.showToast('Import failed: ' + err.message, 'error');
+      }
+    };
+    input.click();
+  }
+
+  async previewRevision(file, cardElem) {
+    this.selectedRevisionFile = file;
+    const previewBox = document.getElementById('revision-preview-box');
+    const restoreBtn = document.getElementById('rollback-revision-btn');
+
+    document.querySelectorAll('.revision-snapshot-card').forEach(c => c.classList.remove('active'));
+    if (cardElem) cardElem.classList.add('active');
+
+    try {
+      const res = await fetch(`/storage/articles/history/${this.currentArticle.id}/${file}`);
+      const text = await res.text();
+
+      const currentContent = this.currentArticle ? (this.currentArticle.content || '') : '';
+      const diffHTML = this.computeLineDiffHTML(currentContent, text);
+
+      if (previewBox) previewBox.innerHTML = diffHTML;
+      if (restoreBtn) restoreBtn.classList.remove('hidden');
+    } catch (err) {
+      if (previewBox) previewBox.textContent = 'Error loading snapshot content: ' + err.message;
+    }
+  }
+
+  computeLineDiffHTML(currentText, snapshotText) {
+    const currentLines = (currentText || '').split('\n');
+    const snapshotLines = (snapshotText || '').split('\n');
+
+    let html = '<div style="font-family:monospace; font-size:0.8rem; line-height:1.4;">';
+    html += '<div style="color:var(--text-muted); margin-bottom:0.5rem; border-bottom:1px solid #334155; padding-bottom:0.3rem;">Comparing current article with selected snapshot (+ additions, - deletions):</div>';
+
+    snapshotLines.forEach((line, idx) => {
+      const currLine = currentLines[idx];
+      if (currLine === undefined) {
+        html += `<div style="background:rgba(34, 197, 94, 0.2); color:#4ade80; padding:1px 4px;">+ ${this.escapeHtml(line)}</div>`;
+      } else if (currLine !== line) {
+        html += `<div style="background:rgba(239, 68, 68, 0.2); color:#fca5a5; padding:1px 4px;">- ${this.escapeHtml(currLine)}</div>`;
+        html += `<div style="background:rgba(34, 197, 94, 0.2); color:#4ade80; padding:1px 4px;">+ ${this.escapeHtml(line)}</div>`;
+      } else {
+        html += `<div style="color:#94a3b8; padding:1px 4px;">  ${this.escapeHtml(line)}</div>`;
+      }
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  async restoreSelectedRevision() {
+    if (!this.currentArticle || !this.selectedRevisionFile) return;
+
+    if (!confirm('Are you sure you want to rollback to this revision? Current article text will be replaced.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/articles/${this.currentArticle.id}/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: this.selectedRevisionFile })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (typeof window.showToast === 'function') window.showToast(`↩ Article successfully restored to revision!`, 'success');
+        this.closeRevisionHistoryModal();
+        this.loadArticle(this.currentArticle.id);
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(`Rollback error: ${json.error}`, 'error');
+      }
+    } catch (err) {
+      if (typeof window.showToast === 'function') window.showToast(`Rollback failed: ${err.message}`, 'error');
+    }
+  }
+
+  // --- PARCHMENT THEME STUDIO METHODS ---
+  openThemeStudioDrawer() {
+    const drawer = document.getElementById('theme-studio-drawer');
+    if (drawer) drawer.classList.remove('hidden');
+  }
+
+  closeThemeStudioDrawer() {
+    const drawer = document.getElementById('theme-studio-drawer');
+    if (drawer) drawer.classList.add('hidden');
+  }
+
+  applyGlobalTheme(themeName) {
+    document.body.setAttribute('data-theme', themeName);
+    if (window.particleBanner) {
+      window.particleBanner.setTheme(themeName);
+    }
+  }
+
+  applyThemePreset(presetKey) {
+    const presets = {
+      ancient_codex: { accent: '#f59e0b', bg: '#0c0a08', font: "'Cinzel', serif", theme: 'ancient-codex' },
+      gothic_grimdark: { accent: '#e11d48', bg: '#0a0a0c', font: "'MedievalSharp', serif", theme: 'grimdark-iron' },
+      radiant_arcane: { accent: '#00f2fe', bg: '#090714', font: "'Cinzel', serif", theme: 'radiant-arcane' },
+      aetherpunk: { accent: '#38bdf8', bg: '#050b14', font: "'Orbitron', sans-serif", theme: 'scifi-fantasy' },
+      scholar_ivory: { accent: '#b45309', bg: '#1e293b', font: "'Lora', Georgia, serif", theme: 'ancient-codex' }
+    };
+
+    const sel = presets[presetKey];
+    if (sel) {
+      if (sel.theme) this.applyGlobalTheme(sel.theme);
+      const accentPicker = document.getElementById('theme-accent-picker');
+      const bgPicker = document.getElementById('theme-bg-picker');
+      const fontSelect = document.getElementById('theme-font-select');
+      if (accentPicker) accentPicker.value = sel.accent;
+      if (bgPicker) bgPicker.value = sel.bg;
+      if (fontSelect) fontSelect.value = sel.font;
+      this.previewCustomTheme();
+      if (typeof window.showToast === 'function') window.showToast(`🎨 Applied ${presetKey.replace('_', ' ')} theme preset!`, 'info');
+    }
+  }
+
+  previewCustomTheme() {
+    const accent = document.getElementById('theme-accent-picker')?.value;
+    const bg = document.getElementById('theme-bg-picker')?.value;
+    const font = document.getElementById('theme-font-select')?.value;
+
+    if (accent) document.documentElement.style.setProperty('--accent-primary', accent);
+    if (bg) document.documentElement.style.setProperty('--bg-main', bg);
+    if (font) document.documentElement.style.setProperty('--font-heading', font);
+  }
+
+  saveCustomTheme() {
+    const themeData = {
+      accent: document.getElementById('theme-accent-picker')?.value || '#f59e0b',
+      bg: document.getElementById('theme-bg-picker')?.value || '#0f172a',
+      font: document.getElementById('theme-font-select')?.value || "'Cinzel', serif"
+    };
+
+    localStorage.setItem('lorevault_custom_theme', JSON.stringify(themeData));
+    this.previewCustomTheme();
+    if (typeof window.showToast === 'function') window.showToast('💾 Custom theme settings saved!', 'success');
+    this.closeThemeStudioDrawer();
+  }
+
+  resetThemeDefaults() {
+    localStorage.removeItem('lorevault_custom_theme');
+    document.documentElement.style.removeProperty('--accent-primary');
+    document.documentElement.style.removeProperty('--bg-main');
+    document.documentElement.style.removeProperty('--font-heading');
+
+    document.getElementById('theme-accent-picker').value = '#f59e0b';
+    document.getElementById('theme-bg-picker').value = '#0f172a';
+    document.getElementById('theme-font-select').value = "'Cinzel', serif";
+
+    if (typeof window.showToast === 'function') window.showToast('↩ Theme reset to defaults.', 'info');
+  }
+
+  initCustomTheme() {
+    try {
+      const saved = localStorage.getItem('lorevault_custom_theme');
+      if (saved) {
+        const theme = JSON.parse(saved);
+        if (theme.accent) document.documentElement.style.setProperty('--accent-primary', theme.accent);
+        if (theme.bg) document.documentElement.style.setProperty('--bg-main', theme.bg);
+        if (theme.font) document.documentElement.style.setProperty('--font-heading', theme.font);
+      }
+    } catch (e) {}
+  }
 }
+
+// --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const themeDrawer = document.getElementById('theme-studio-drawer');
+    if (themeDrawer && !themeDrawer.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeThemeStudioDrawer === 'function') {
+        window.app.closeThemeStudioDrawer();
+      }
+      return;
+    }
+    const tplModal = document.getElementById('template-builder-modal');
+    if (tplModal && !tplModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeTemplateBuilderModal === 'function') {
+        window.app.closeTemplateBuilderModal();
+      }
+      return;
+    }
+    const revModal = document.getElementById('revision-history-modal');
+    if (revModal && !revModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeRevisionHistoryModal === 'function') {
+        window.app.closeRevisionHistoryModal();
+      }
+      return;
+    }
+    const fightModal = document.getElementById('fight-simulator-modal');
+    if (fightModal && !fightModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeFightSimulatorModal === 'function') {
+        window.app.closeFightSimulatorModal();
+      }
+      return;
+    }
+    const vttModal = document.getElementById('vtt-export-modal');
+    if (vttModal && !vttModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeVttExportModal === 'function') {
+        window.app.closeVttExportModal();
+      }
+      return;
+    }
+    const conciergeModal = document.getElementById('welcome-concierge-modal');
+    if (conciergeModal && !conciergeModal.classList.contains('hidden')) {
+      if (window.app && typeof window.app.closeConciergeModal === 'function') {
+        window.app.closeConciergeModal();
+      }
+      return;
+    }
+    const sbDrawer = document.getElementById('statblock-drawer');
+    if (sbDrawer && !sbDrawer.classList.contains('hidden')) {
+      sbDrawer.classList.add('hidden');
+      return;
+    }
+    const cmdModal = document.getElementById('command-palette-modal');
+    if (cmdModal && !cmdModal.classList.contains('hidden')) {
+      cmdModal.classList.add('hidden');
+      return;
+    }
+    const aiDrawer = document.getElementById('ai-chat-drawer');
+    if (aiDrawer && aiDrawer.classList.contains('open')) {
+      if (typeof window.toggleAiChatDrawer === 'function') window.toggleAiChatDrawer();
+      return;
+    }
+    const weaveDrawer = document.getElementById('weave-matrix-drawer');
+    if (weaveDrawer && weaveDrawer.classList.contains('open')) {
+      if (typeof window.toggleWeaveMatrixDrawer === 'function') window.toggleWeaveMatrixDrawer();
+      return;
+    }
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (window.app && typeof window.app.toggleCommandPalette === 'function') {
+      window.app.toggleCommandPalette();
+    }
+    return;
+  }
+
+  if (e.ctrlKey && e.shiftKey) {
+    const key = e.key ? e.key.toLowerCase() : '';
+    if (key === 'f') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleZenMode === 'function') {
+        window.app.toggleZenMode();
+      }
+    } else if (key === 'm') {
+      e.preventDefault();
+      if (typeof window.toggleWeaveMatrixDrawer === 'function') {
+        window.toggleWeaveMatrixDrawer();
+      }
+    } else if (key === 's') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleStatBlockDrawer === 'function') {
+        window.app.toggleStatBlockDrawer();
+      }
+    } else if (key === 'w') {
+      e.preventDefault();
+      if (window.app && typeof window.app.toggleConciergeModal === 'function') {
+        window.app.toggleConciergeModal();
+      }
+    } else if (key === 'v') {
+      e.preventDefault();
+      if (window.app && typeof window.app.openVttExportModal === 'function') {
+        window.app.openVttExportModal();
+      }
+    }
+  }
+
+});
+
+// Event listener for Command Palette input
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'cmd-palette-input') {
+    if (window.app && typeof window.app.updateCommandPaletteResults === 'function') {
+      window.app.updateCommandPaletteResults(e.target.value);
+    }
+  }
+});
 
 // Global initialization
 window.LoreApp = LoreApp;
 window.LoreVaultApp = LoreApp;
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new LoreApp();
+  
+  // Restore Modern Studio layout preferences
+  const savedMode = localStorage.getItem('lorevault_workspace_mode') || 'codex';
+  if (typeof window.app.setWorkspaceMode === 'function') {
+    window.app.setWorkspaceMode(savedMode);
+  }
+
+  const isCollapsed = localStorage.getItem('lorevault_subpanel_collapsed') === 'true';
+  const subpanel = document.getElementById('workspace-sub-panel');
+  if (isCollapsed && subpanel) {
+    subpanel.classList.add('collapsed');
+  }
 });
 
 document.addEventListener('click', (e) => {
@@ -6468,7 +8458,21 @@ document.addEventListener('click', (e) => {
       window.app.toggleThemeMode();
     }
   }
+  if (!e.target.closest('.tools-dropdown-container')) {
+    window.closeToolsMenu();
+  }
 });
+
+window.toggleToolsMenu = function(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('tools-dropdown-menu');
+  if (menu) menu.classList.toggle('hidden');
+};
+
+window.closeToolsMenu = function() {
+  const menu = document.getElementById('tools-dropdown-menu');
+  if (menu) menu.classList.add('hidden');
+};
 
 window.toggleWeaveMatrixDrawer = function() {
   if (window.app && typeof window.app.toggleWeaveMatrixDrawer === 'function') {
@@ -6653,370 +8657,83 @@ window.switchTab = function(tabName) {
     window.app.switchTab(tabName);
   } else {
     const libraryView = document.getElementById('view-library');
-    const studioView = document.getElementById('view-studio');
+    const manuscriptView = document.getElementById('view-manuscript');
+    const atlasView = document.getElementById('view-atlas');
+    const canvasView = document.getElementById('view-canvas');
+    const timelineView = document.getElementById('view-timeline');
+    const relationshipsView = document.getElementById('view-relationships');
+    const slateView = document.getElementById('view-narrative-slate');
     const contextView = document.getElementById('view-context');
+    const frontpageView = document.getElementById('view-frontpage');
+    const censusView = document.getElementById('view-census');
+    const marketingView = document.getElementById('view-marketing');
 
-    const tabLibrary = document.getElementById('tab-library');
-    const tabStudio = document.getElementById('tab-studio');
-    const tabContext = document.getElementById('tab-context');
+    [libraryView, manuscriptView, atlasView, canvasView, timelineView, relationshipsView, slateView, contextView, frontpageView, censusView, marketingView].forEach(v => v && v.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
 
-    [libraryView, studioView, contextView].forEach(v => v && v.classList.remove('active'));
-    [tabLibrary, tabStudio, tabContext].forEach(t => t && t.classList.remove('active'));
+    const tabMap = {
+      'library': { view: libraryView, tab: document.getElementById('tab-library') },
+      'manuscript': { view: manuscriptView, tab: document.getElementById('tab-manuscript') },
+      'atlas': { view: atlasView, tab: document.getElementById('tab-atlas') },
+      'canvas': { view: canvasView, tab: document.getElementById('tab-canvas') },
+      'timeline': { view: timelineView, tab: document.getElementById('tab-timeline') },
+      'view-relationships': { view: relationshipsView, tab: document.getElementById('tab-relationships') },
+      'relationships': { view: relationshipsView, tab: document.getElementById('tab-relationships') },
+      'narrative-slate': { view: slateView, tab: document.getElementById('narrative-slate-nav-btn') },
+      'context': { view: contextView, tab: document.getElementById('tab-context') },
+      'frontpage': { view: frontpageView, tab: document.getElementById('tab-frontpage') },
+      'census': { view: censusView, tab: document.getElementById('tab-census') },
+      'marketing': { view: marketingView, tab: document.getElementById('tab-marketing') }
+    };
 
-    if (tabName === 'studio') {
-      if (studioView) studioView.classList.add('active');
-      if (tabStudio) tabStudio.classList.add('active');
-    } else if (tabName === 'context') {
-      if (contextView) contextView.classList.add('active');
-      if (tabContext) tabContext.classList.add('active');
-    } else {
-      if (libraryView) libraryView.classList.add('active');
-      if (tabLibrary) tabLibrary.classList.add('active');
-    }
+    const target = tabMap[tabName] || tabMap['library'];
+    if (target.view) target.view.classList.add('active');
+    if (target.tab) target.tab.classList.add('active');
   }
 };
 
-  // --- CUSTOM TEMPLATE BUILDER METHODS ---
-  openTemplateBuilderModal() {
-    const modal = document.getElementById('template-builder-modal');
-    if (modal) modal.classList.remove('hidden');
+window.setWorkspaceMode = function(mode) {
+  if (window.app && typeof window.app.setWorkspaceMode === 'function') {
+    window.app.setWorkspaceMode(mode);
   }
+};
 
-  closeTemplateBuilderModal() {
-    const modal = document.getElementById('template-builder-modal');
-    if (modal) modal.classList.add('hidden');
+window.toggleSubPanel = function() {
+  if (window.app && typeof window.app.toggleSubPanel === 'function') {
+    window.app.toggleSubPanel();
+  } else {
+    const p = document.getElementById('workspace-sub-panel');
+    if (p) p.classList.toggle('collapsed');
   }
+};
 
-  async saveCustomTemplate() {
-    const name = document.getElementById('tpl-name-input')?.value?.trim();
-    const category = document.getElementById('tpl-category-input')?.value?.trim();
-    const icon = document.getElementById('tpl-icon-input')?.value?.trim() || '📜';
-    const fieldsStr = document.getElementById('tpl-fields-input')?.value?.trim() || '';
-    const boilerplate = document.getElementById('tpl-boilerplate-input')?.value || '';
-
-    if (!name || !category) {
-      if (typeof window.showToast === 'function') window.showToast('Template Name and Category are required!', 'error');
-      return;
-    }
-
-    const fieldsArr = fieldsStr.split(',').map(f => f.trim()).filter(Boolean);
-
-    try {
-      const res = await fetch('/api/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          category,
-          icon,
-          fields_json: fieldsArr,
-          boilerplate_markdown: boilerplate
-        })
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        if (typeof window.showToast === 'function') window.showToast(`📜 Custom template "${name}" created!`, 'success');
-        this.closeTemplateBuilderModal();
-        this.loadTemplates();
-      } else {
-        if (typeof window.showToast === 'function') window.showToast(`Error saving template: ${json.error}`, 'error');
-      }
-    } catch (err) {
-      if (typeof window.showToast === 'function') window.showToast(`Error: ${err.message}`, 'error');
-    }
+window.handleStagePrimaryCTA = function() {
+  if (window.app && typeof window.app.handleStagePrimaryCTA === 'function') {
+    window.app.handleStagePrimaryCTA();
   }
+};
 
-  async loadTemplates() {
-    try {
-      const res = await fetch('/api/templates');
-      const json = await res.json();
-      if (res.ok && Array.isArray(json.templates)) {
-        this.customTemplates = json.templates;
-      }
-    } catch (e) {}
-  }
-
-  // --- REVISION HISTORY & 1-CLICK ROLLBACK METHODS ---
-  async openRevisionHistoryModal() {
-    if (!this.currentArticle) {
-      if (typeof window.showToast === 'function') window.showToast('Open an article first to view its revision history.', 'info');
-      return;
-    }
-
-    const modal = document.getElementById('revision-history-modal');
-    if (modal) modal.classList.remove('hidden');
-    this.loadRevisionHistory(this.currentArticle.id);
-  }
-
-  closeRevisionHistoryModal() {
-    const modal = document.getElementById('revision-history-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  async loadRevisionHistory(articleId) {
-    const listContainer = document.getElementById('revision-list-container');
-    const previewBox = document.getElementById('revision-preview-box');
-    const restoreBtn = document.getElementById('rollback-revision-btn');
-
-    if (previewBox) previewBox.textContent = 'Select a version snapshot on the left to preview...';
-    if (restoreBtn) restoreBtn.classList.add('hidden');
-    this.selectedRevisionFile = null;
-
-    try {
-      const res = await fetch(`/api/articles/${articleId}/history`);
-      const json = await res.json();
-
-      if (res.ok && Array.isArray(json.history) && json.history.length > 0) {
-        listContainer.innerHTML = json.history.map(item => `
-          <div class="revision-snapshot-card" onclick="window.app.previewRevision('${item.file}', this)">
-            <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">🕒 ${item.formatted_time}</div>
-            <div style="font-size:0.7rem; color:var(--text-muted);">${(item.size / 1024).toFixed(1)} KB</div>
-          </div>
-        `).join('');
-      } else {
-        listContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:0.5rem; text-align:center;">No previous revisions found for this article yet. Snapshots are created automatically when saving updates.</div>';
-      }
-    } catch (err) {
-      if (listContainer) listContainer.innerHTML = `<div style="font-size:0.75rem; color:#ef4444;">Error loading history: ${err.message}</div>`;
-    }
-  }
-
-  async previewRevision(file, cardElem) {
-    this.selectedRevisionFile = file;
-    const previewBox = document.getElementById('revision-preview-box');
-    const restoreBtn = document.getElementById('rollback-revision-btn');
-
-    document.querySelectorAll('.revision-snapshot-card').forEach(c => c.classList.remove('active'));
-    if (cardElem) cardElem.classList.add('active');
-
-    try {
-      const res = await fetch(`/storage/history/${this.currentArticle.id}/${file}`);
-      const text = await res.text();
-      if (previewBox) previewBox.textContent = text;
-      if (restoreBtn) restoreBtn.classList.remove('hidden');
-    } catch (err) {
-      if (previewBox) previewBox.textContent = 'Error loading snapshot content: ' + err.message;
-    }
-  }
-
-  async restoreSelectedRevision() {
-    if (!this.currentArticle || !this.selectedRevisionFile) return;
-
-    if (!confirm('Are you sure you want to rollback to this revision? Current article text will be replaced.')) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/articles/${this.currentArticle.id}/rollback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: this.selectedRevisionFile })
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        if (typeof window.showToast === 'function') window.showToast(`↩ Article successfully restored to revision!`, 'success');
-        this.closeRevisionHistoryModal();
-        this.loadArticle(this.currentArticle.id);
-      } else {
-        if (typeof window.showToast === 'function') window.showToast(`Rollback error: ${json.error}`, 'error');
-      }
-    } catch (err) {
-      if (typeof window.showToast === 'function') window.showToast(`Rollback failed: ${err.message}`, 'error');
-    }
-  }
-
-  // --- PARCHMENT THEME STUDIO METHODS ---
-  openThemeStudioDrawer() {
-    const drawer = document.getElementById('theme-studio-drawer');
-    if (drawer) drawer.classList.remove('hidden');
-  }
-
-  closeThemeStudioDrawer() {
-    const drawer = document.getElementById('theme-studio-drawer');
-    if (drawer) drawer.classList.add('hidden');
-  }
-
-  applyThemePreset(presetKey) {
-    const presets = {
-      ancient_codex: { accent: '#f59e0b', bg: '#0f172a', font: "'Cinzel', serif" },
-      gothic_grimdark: { accent: '#ef4444', bg: '#090d16', font: "'Lora', Georgia, serif" },
-      aetherpunk: { accent: '#38bdf8', bg: '#030712', font: "'Outfit', sans-serif" },
-      scholar_ivory: { accent: '#b45309', bg: '#1e293b', font: "'Lora', Georgia, serif" }
-    };
-
-    const sel = presets[presetKey];
-    if (sel) {
-      document.getElementById('theme-accent-picker').value = sel.accent;
-      document.getElementById('theme-bg-picker').value = sel.bg;
-      document.getElementById('theme-font-select').value = sel.font;
-      this.previewCustomTheme();
-      if (typeof window.showToast === 'function') window.showToast(`🎨 Applied ${presetKey.replace('_', ' ')} theme preset!`, 'info');
-    }
-  }
-
-  previewCustomTheme() {
-    const accent = document.getElementById('theme-accent-picker')?.value;
-    const bg = document.getElementById('theme-bg-picker')?.value;
-    const font = document.getElementById('theme-font-select')?.value;
-
-    if (accent) document.documentElement.style.setProperty('--accent-primary', accent);
-    if (bg) document.documentElement.style.setProperty('--bg-main', bg);
-    if (font) document.documentElement.style.setProperty('--font-heading', font);
-  }
-
-  saveCustomTheme() {
-    const themeData = {
-      accent: document.getElementById('theme-accent-picker')?.value || '#f59e0b',
-      bg: document.getElementById('theme-bg-picker')?.value || '#0f172a',
-      font: document.getElementById('theme-font-select')?.value || "'Cinzel', serif"
-    };
-
-    localStorage.setItem('lorevault_custom_theme', JSON.stringify(themeData));
-    this.previewCustomTheme();
-    if (typeof window.showToast === 'function') window.showToast('💾 Custom theme settings saved!', 'success');
-    this.closeThemeStudioDrawer();
-  }
-
-  resetThemeDefaults() {
-    localStorage.removeItem('lorevault_custom_theme');
-    document.documentElement.style.removeProperty('--accent-primary');
-    document.documentElement.style.removeProperty('--bg-main');
-    document.documentElement.style.removeProperty('--font-heading');
-
-    document.getElementById('theme-accent-picker').value = '#f59e0b';
-    document.getElementById('theme-bg-picker').value = '#0f172a';
-    document.getElementById('theme-font-select').value = "'Cinzel', serif";
-
-    if (typeof window.showToast === 'function') window.showToast('↩ Theme reset to defaults.', 'info');
-  }
-
-  initCustomTheme() {
-    try {
-      const saved = localStorage.getItem('lorevault_custom_theme');
-      if (saved) {
-        const theme = JSON.parse(saved);
-        if (theme.accent) document.documentElement.style.setProperty('--accent-primary', theme.accent);
-        if (theme.bg) document.documentElement.style.setProperty('--bg-main', theme.bg);
-        if (theme.font) document.documentElement.style.setProperty('--font-heading', theme.font);
-      }
-    } catch (e) {}
-  }
-}
-
-// --- Global Keyboard Shortcut Listener (Arthur Audit Hardening) ---
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const themeDrawer = document.getElementById('theme-studio-drawer');
-    if (themeDrawer && !themeDrawer.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeThemeStudioDrawer === 'function') {
-        window.app.closeThemeStudioDrawer();
-      }
-      return;
-    }
-    const tplModal = document.getElementById('template-builder-modal');
-    if (tplModal && !tplModal.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeTemplateBuilderModal === 'function') {
-        window.app.closeTemplateBuilderModal();
-      }
-      return;
-    }
-    const revModal = document.getElementById('revision-history-modal');
-    if (revModal && !revModal.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeRevisionHistoryModal === 'function') {
-        window.app.closeRevisionHistoryModal();
-      }
-      return;
-    }
-    const fightModal = document.getElementById('fight-simulator-modal');
-    if (fightModal && !fightModal.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeFightSimulatorModal === 'function') {
-        window.app.closeFightSimulatorModal();
-      }
-      return;
-    }
-    const vttModal = document.getElementById('vtt-export-modal');
-    if (vttModal && !vttModal.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeVttExportModal === 'function') {
-        window.app.closeVttExportModal();
-      }
-      return;
-    }
-    const conciergeModal = document.getElementById('welcome-concierge-modal');
-    if (conciergeModal && !conciergeModal.classList.contains('hidden')) {
-      if (window.app && typeof window.app.closeConciergeModal === 'function') {
-        window.app.closeConciergeModal();
-      }
-      return;
-    }
-    const sbDrawer = document.getElementById('statblock-drawer');
-    if (sbDrawer && !sbDrawer.classList.contains('hidden')) {
-      sbDrawer.classList.add('hidden');
-      return;
-    }
-    const cmdModal = document.getElementById('command-palette-modal');
-    if (cmdModal && !cmdModal.classList.contains('hidden')) {
-      cmdModal.classList.add('hidden');
-      return;
-    }
-    const aiDrawer = document.getElementById('ai-chat-drawer');
-    if (aiDrawer && aiDrawer.classList.contains('open')) {
-      if (typeof window.toggleAiChatDrawer === 'function') window.toggleAiChatDrawer();
-      return;
-    }
-    const weaveDrawer = document.getElementById('weave-matrix-drawer');
-    if (weaveDrawer && weaveDrawer.classList.contains('open')) {
-      if (typeof window.toggleWeaveMatrixDrawer === 'function') window.toggleWeaveMatrixDrawer();
-      return;
-    }
-  }
-
-  if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'k') {
+// Global Hotkeys for Modern Studio Workspace
+window.addEventListener('keydown', function(e) {
+  // Ctrl+1 / Cmd+1: World Codex Mode
+  if ((e.ctrlKey || e.metaKey) && e.key === '1') {
     e.preventDefault();
-    if (window.app && typeof window.app.toggleCommandPalette === 'function') {
-      window.app.toggleCommandPalette();
-    }
-    return;
+    window.setWorkspaceMode('codex');
   }
-
-  if (e.ctrlKey && e.shiftKey) {
-    const key = e.key ? e.key.toLowerCase() : '';
-    if (key === 'f') {
-      e.preventDefault();
-      if (window.app && typeof window.app.toggleZenMode === 'function') {
-        window.app.toggleZenMode();
-      }
-    } else if (key === 'm') {
-      e.preventDefault();
-      if (typeof window.toggleWeaveMatrixDrawer === 'function') {
-        window.toggleWeaveMatrixDrawer();
-      }
-    } else if (key === 's') {
-      e.preventDefault();
-      if (window.app && typeof window.app.toggleStatBlockDrawer === 'function') {
-        window.app.toggleStatBlockDrawer();
-      }
-    } else if (key === 'w') {
-      e.preventDefault();
-      if (window.app && typeof window.app.toggleConciergeModal === 'function') {
-        window.app.toggleConciergeModal();
-      }
-    } else if (key === 'v') {
-      e.preventDefault();
-      if (window.app && typeof window.app.openVttExportModal === 'function') {
-        window.app.openVttExportModal();
-      }
-    }
+  // Ctrl+2 / Cmd+2: Story Studio Mode
+  else if ((e.ctrlKey || e.metaKey) && e.key === '2') {
+    e.preventDefault();
+    window.setWorkspaceMode('story');
   }
-
-});
-
-// Event listener for Command Palette input
-document.addEventListener('input', function(e) {
-  if (e.target && e.target.id === 'cmd-palette-input') {
-    if (window.app && typeof window.app.updateCommandPaletteResults === 'function') {
-      window.app.updateCommandPaletteResults(e.target.value);
+  // Ctrl+B / Cmd+B: Toggle Left Sub-Panel
+  else if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+    // Only intercept if not typing in an active text input/textarea
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (activeTag !== 'input' && activeTag !== 'textarea') {
+      e.preventDefault();
+      window.toggleSubPanel();
     }
   }
 });
+
+

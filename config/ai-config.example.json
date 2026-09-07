@@ -1,0 +1,10 @@
+{
+  "provider": "gemini",
+  "apiKey": "YOUR_GEMINI_API_KEY_HERE",
+  "model": "gemini-2.0-flash",
+  "use_custom_provider": false,
+  "custom_provider": "gemini",
+  "custom_api_key": "",
+  "custom_model": "gemini-2.0-flash",
+  "ollama_url": "http://localhost:11434"
+}

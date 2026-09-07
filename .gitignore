@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment & Sensitive Config
+.env
+.env.local
+config/ai-config.json
+
+# SQLite temporary and lock files
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backup archives
+*.zip
+lore-vault-full-backup.zip
+
+# Scratch scripts
+scratch/
+

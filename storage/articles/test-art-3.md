@@ -1,1 +1,1 @@
-Contains dangerous dark magic.
+Contains dangerous dark @[Magic](template:2fb7fd89-0e02-4e47-bef5-bf09bcc4e52b).

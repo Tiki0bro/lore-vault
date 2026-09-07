@@ -1,1 +1,1 @@
-Lord Corvus Ravenwing was born in the western forests. He leads House Ravenwing and wields shadow magic.
+Lord Corvus Ravenwing was born in the western forests. He leads House Ravenwing and wields shadow @[Magic](template:2fb7fd89-0e02-4e47-bef5-bf09bcc4e52b).

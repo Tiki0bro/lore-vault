@@ -35,7 +35,8 @@ class TimelineView {
             <h2>⏳ World Chronology Timeline</h2>
             <span class="badge"><strong>${this.events.length}</strong> Events Recorded</span>
           </div>
-          <div class="timeline-header-right">
+          <div class="timeline-header-right" style="display:flex; gap:0.5rem;">
+            <button id="scan-anachronisms-btn" class="tool-btn secondary" onclick="if(window.app && typeof window.app.runTimelineAnachronismAudit === 'function') window.app.runTimelineAnachronismAudit();"><i class="fa-solid fa-magnifying-glass"></i> 🔍 Scan Anachronisms</button>
             <button id="add-timeline-event-btn" class="tool-btn primary"><i class="fa-solid fa-plus"></i> Add Event</button>
           </div>
         </div>
