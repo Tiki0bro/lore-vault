@@ -219,16 +219,17 @@ export const KnowledgeCanvasView: React.FC = () => {
       return e.category.toLowerCase() === categoryFilter.toLowerCase();
     });
 
-    // Radial layout calculation
+    // Organized Grid Matrix layout by default for readability when entity count is high
     const count = filtered.length;
-    const centerX = 450;
-    const centerY = 320;
-    const radius = Math.max(260, count * 35);
+    const cols = Math.ceil(Math.sqrt(count * 1.5));
+    const nodeWidth = 320;
+    const nodeHeight = 220;
 
     return filtered.map((e, idx) => {
-      const angle = (2 * Math.PI * idx) / count;
-      const x = Math.round(centerX + radius * Math.cos(angle));
-      const y = Math.round(centerY + radius * Math.sin(angle));
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = 80 + col * nodeWidth;
+      const y = 60 + row * nodeHeight;
 
       return {
         id: e.id,
