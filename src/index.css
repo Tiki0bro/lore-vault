@@ -1,0 +1,605 @@
+@import "tailwindcss";
+
+@layer base {
+  /* =========================================================================
+     1. ANCIENT CODEX (Gilded Relic & Candlelit Obsidian Parchment)
+     ========================================================================= */
+  :root,
+  html[data-theme="ancient-codex"],
+  [data-theme="ancient-codex"] {
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme Abstract Tokens */
+    --theme-bg-canvas: #0b0907;
+    --theme-bg-surface: #14110d;
+    --theme-bg-elevated: #1e1913;
+    --theme-border: #2e251b;
+    --theme-border-accent: #78350f;
+    --theme-accent: #f59e0b;
+    --theme-accent-hover: #d97706;
+    --theme-accent-subtle: rgba(245, 158, 11, 0.15);
+    --theme-text-primary: #faf5ed;
+    --theme-text-secondary: #d6c6b2;
+    --theme-text-muted: #8c775d;
+    --theme-ring: rgba(245, 158, 11, 0.45);
+    --theme-ambient-glow: rgba(245, 158, 11, 0.15);
+
+    /* Tailwind Palette Overrides: Antique Warm Umber & Obsidian Vellum */
+    --color-zinc-950: #0b0907; /* Deepest warm candlelit obsidian canvas */
+    --color-zinc-900: #14110d; /* Aged dark parchment surface / sidebar */
+    --color-zinc-800: #1e1913; /* Warm dark leather/wood elevated card */
+    --color-zinc-700: #2e251b; /* Antique brass / leather binding border */
+    --color-zinc-600: #473a2c; /* Subtle divider */
+    --color-zinc-500: #8c775d; /* Warm muted antique text */
+    --color-zinc-400: #b59f84; /* Soft illuminated vellum secondary text */
+    --color-zinc-300: #d6c6b2; /* Illuminated silver-gold text */
+    --color-zinc-200: #ede3d4; /* Warm candlelight parchment body */
+    --color-zinc-100: #faf5ed; /* Gilded parchment title white */
+
+    /* Tailwind Palette Overrides: Molten Gold Leaf Accents */
+    --color-amber-900: #451a03;
+    --color-amber-800: #78350f;
+    --color-amber-700: #a16207;
+    --color-amber-600: #c97e06;
+    --color-amber-500: #f59e0b; /* Rich molten gold */
+    --color-amber-400: #fbbf24; /* Radiant gold highlight */
+    --color-amber-300: #fcd34d; /* Bright gold leaf */
+    --color-amber-200: #fef08a; /* Shimmering gold reflection */
+    --color-amber-100: #fef9c3; /* Gilded crest white */
+
+    color-scheme: dark;
+  }
+
+  /* =========================================================================
+     2. RADIANT ARCANE (Astral Glass & Ethereal Leylines)
+     ========================================================================= */
+  html[data-theme="radiant-arcane"],
+  [data-theme="radiant-arcane"] {
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme Abstract Tokens */
+    --theme-bg-canvas: #02040a;
+    --theme-bg-surface: #070d1e;
+    --theme-bg-elevated: #0d1733;
+    --theme-border: #17284f;
+    --theme-border-accent: #0284c7;
+    --theme-accent: #00d8f6;
+    --theme-accent-hover: #0891b2;
+    --theme-accent-subtle: rgba(0, 216, 246, 0.16);
+    --theme-text-primary: #f0f6ff;
+    --theme-text-secondary: #b9caf0;
+    --theme-text-muted: #647caa;
+    --theme-ring: rgba(0, 216, 246, 0.5);
+    --theme-ambient-glow: rgba(0, 216, 246, 0.18);
+
+    /* Tailwind Palette Overrides: Deep Astral Indigo & Starlight Glass */
+    --color-zinc-950: #02040a; /* Abyssal cosmic midnight void */
+    --color-zinc-900: #070d1e; /* Deep astral indigo midnight surface */
+    --color-zinc-800: #0d1733; /* Luminous crystalline mana slate cards */
+    --color-zinc-700: #17284f; /* Glowing rune conduit borders */
+    --color-zinc-600: #23396c; /* Subtle starlight divider */
+    --color-zinc-500: #647caa; /* Dim celestial nebula muted text */
+    --color-zinc-400: #8da4d6; /* Ethereal ice secondary text */
+    --color-zinc-300: #b9caf0; /* Mana crystal silver text */
+    --color-zinc-200: #e0e9fa; /* Radiant starlight body text */
+    --color-zinc-100: #f0f6ff; /* Blinding supernova white */
+
+    /* Tailwind Palette Overrides: Luminescent Aether Cyan & Electric Starlight */
+    --color-amber-900: #023e8a;
+    --color-amber-800: #0077b6;
+    --color-amber-700: #0096c7;
+    --color-amber-600: #00b4d8;
+    --color-amber-500: #00d8f6; /* Hyper-vibrant pure aether cyan */
+    --color-amber-400: #38e1ff; /* Electric starlight glow */
+    --color-amber-300: #7aeaff; /* Mana beam cyan */
+    --color-amber-200: #bbf4ff; /* Crystal prism sheen */
+    --color-amber-100: #e0f9ff; /* Pure aether white */
+
+    color-scheme: dark;
+  }
+
+  /* =========================================================================
+     3. GRIMDARK IRON (Visceral Crimson, Cold Iron & Smoldering Ash)
+     ========================================================================= */
+  html[data-theme="grimdark-iron"],
+  [data-theme="grimdark-iron"] {
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme Abstract Tokens */
+    --theme-bg-canvas: #080607;
+    --theme-bg-surface: #110d0f;
+    --theme-bg-elevated: #1b1518;
+    --theme-border: #292025;
+    --theme-border-accent: #9f1239;
+    --theme-accent: #f43f5e;
+    --theme-accent-hover: #e11d48;
+    --theme-accent-subtle: rgba(244, 63, 94, 0.16);
+    --theme-text-primary: #f8f6f7;
+    --theme-text-secondary: #cfc2c8;
+    --theme-text-muted: #7d6872;
+    --theme-ring: rgba(244, 63, 94, 0.5);
+    --theme-ambient-glow: rgba(225, 29, 72, 0.17);
+
+    /* Tailwind Palette Overrides: Volcanic Basalt, Iron Soot & Blood Char */
+    --color-zinc-950: #080607; /* Blood-charred volcanic obsidian canvas */
+    --color-zinc-900: #110d0f; /* Cold iron soot surface / sidebar */
+    --color-zinc-800: #1b1518; /* Dark crucible iron cards */
+    --color-zinc-700: #2b2126; /* Forged cold-iron / dried gore borders */
+    --color-zinc-600: #42333b; /* Rusted iron divider */
+    --color-zinc-500: #7d6872; /* Ash gray muted text */
+    --color-zinc-400: #a8949e; /* Tarnished steel secondary text */
+    --color-zinc-300: #cfc2c8; /* Clean bone white text */
+    --color-zinc-200: #eae4e7; /* Pallid skin text */
+    --color-zinc-100: #f8f6f7; /* Bleached skull white */
+
+    /* Tailwind Palette Overrides: Fresh Arterial Blood Crimson */
+    --color-amber-900: #4c0519;
+    --color-amber-800: #881337;
+    --color-amber-700: #9f1239;
+    --color-amber-600: #be123c;
+    --color-amber-500: #e11d48; /* Fresh arterial blood crimson */
+    --color-amber-400: #fb7185; /* Glowing crimson blade edge */
+    --color-amber-300: #fda4af; /* Blood mist */
+    --color-amber-200: #fecdd3; /* Pale gore reflection */
+    --color-amber-100: #ffe4e6; /* Crimson pearl */
+
+    color-scheme: dark;
+  }
+
+  /* =========================================================================
+     4. SCHOLAR'S PARCHMENT (Ivory Vellum & Deep Espresso Ink - Light Mode)
+     ========================================================================= */
+  html[data-theme="scholars-parchment"],
+  [data-theme="scholars-parchment"] {
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme Abstract Tokens */
+    --theme-bg-canvas: #faf6ed;
+    --theme-bg-surface: #f4ede0;
+    --theme-bg-elevated: #ede2cf;
+    --theme-border: #d6c5a3;
+    --theme-border-accent: #b45309;
+    --theme-accent: #b45309;
+    --theme-accent-hover: #92400e;
+    --theme-accent-subtle: rgba(180, 83, 9, 0.12);
+    --theme-text-primary: #1c1917;
+    --theme-text-secondary: #292524;
+    --theme-text-muted: #78716c;
+    --theme-ring: rgba(180, 83, 9, 0.4);
+    --theme-ambient-glow: rgba(180, 83, 9, 0.07);
+
+    /* Tailwind Palette Overrides: Aged Manuscript Vellum & Deep Ink */
+    --color-zinc-950: #faf6ed; /* Main ivory vellum canvas */
+    --color-zinc-900: #f4ede0; /* Soft parchment surface / sidebar */
+    --color-zinc-800: #ede2cf; /* Elevated pressed paper cards */
+    --color-zinc-700: #dfd2b9; /* Ink rule borders & dividers */
+    --color-zinc-600: #a89f91; /* Subtle border */
+    --color-zinc-500: #78716c; /* Muted quill ink text */
+    --color-zinc-400: #57534e; /* Secondary ink text */
+    --color-zinc-300: #44403c; /* Subtitle espresso ink */
+    --color-zinc-200: #292524; /* Body manuscript ink */
+    --color-zinc-100: #1c1917; /* Deepest black-brown title ink */
+
+    /* Tailwind Palette Overrides: Burnished Leather & Antique Bronze */
+    --color-amber-900: #c4b18b;
+    --color-amber-800: #d6c5a3;
+    --color-amber-700: #78350f;
+    --color-amber-600: #92400e;
+    --color-amber-500: #b45309; /* Rich saddle leather amber */
+    --color-amber-400: #92400e;
+    --color-amber-300: #78350f; /* High-contrast readable accent text */
+    --color-amber-200: #451a03;
+    --color-amber-100: #2b1102; /* Deepest bronze ink */
+
+    color-scheme: light;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-zinc-950);
+    color: var(--color-zinc-100);
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: 0.025em;
+  }
+}
+
+/* =========================================================================
+   Atmospheric Lighting & Glow Effects
+   ========================================================================= */
+
+/* Selected item glow */
+[data-theme="ancient-codex"] .bg-amber-500\/15 {
+  box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.22), inset 0 1px 0 rgba(251, 191, 36, 0.2);
+}
+
+[data-theme="radiant-arcane"] .bg-amber-500\/15 {
+  box-shadow: 0 0 18px -2px rgba(0, 216, 246, 0.26), inset 0 1px 0 rgba(56, 225, 255, 0.25);
+}
+
+[data-theme="grimdark-iron"] .bg-amber-500\/15 {
+  box-shadow: 0 0 18px -2px rgba(225, 29, 72, 0.26), inset 0 1px 0 rgba(251, 113, 133, 0.2);
+}
+
+[data-theme="scholars-parchment"] .bg-amber-500\/15 {
+  box-shadow: 0 1px 4px rgba(180, 83, 9, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Themed Subtle Card Shadows & Edge Highlights */
+[data-theme="ancient-codex"] .shadow-xl,
+[data-theme="ancient-codex"] .shadow-2xl {
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="radiant-arcane"] .shadow-xl,
+[data-theme="radiant-arcane"] .shadow-2xl {
+  box-shadow: 0 8px 32px -4px rgba(2, 4, 10, 0.85), 0 0 1px 1px rgba(0, 216, 246, 0.18), 0 0 20px -5px rgba(0, 216, 246, 0.1);
+}
+
+[data-theme="grimdark-iron"] .shadow-xl,
+[data-theme="grimdark-iron"] .shadow-2xl {
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.9), 0 0 1px 1px rgba(225, 29, 72, 0.18), 0 0 20px -5px rgba(225, 29, 72, 0.12);
+}
+
+[data-theme="scholars-parchment"] .shadow-xl,
+[data-theme="scholars-parchment"] .shadow-2xl {
+  box-shadow: 0 8px 25px -4px rgba(78, 67, 53, 0.15), 0 0 1px 1px rgba(180, 83, 9, 0.08);
+}
+
+/* =========================================================================
+   Typography Overrides for Light Mode (Scholar's Parchment)
+   ========================================================================= */
+html[data-theme="scholars-parchment"] .prose,
+html[data-theme="scholars-parchment"] .prose-invert {
+  --tw-prose-body: var(--color-zinc-200);
+  --tw-prose-headings: var(--color-zinc-100);
+  --tw-prose-lead: var(--color-zinc-300);
+  --tw-prose-links: var(--color-amber-500);
+  --tw-prose-bold: var(--color-zinc-100);
+  --tw-prose-counters: var(--color-zinc-500);
+  --tw-prose-bullets: var(--color-zinc-400);
+  --tw-prose-hr: var(--color-zinc-700);
+  --tw-prose-quotes: var(--color-zinc-200);
+  --tw-prose-quote-borders: var(--color-amber-500);
+  --tw-prose-captions: var(--color-zinc-500);
+  --tw-prose-code: var(--color-zinc-100);
+  --tw-prose-pre-code: var(--color-zinc-200);
+  --tw-prose-pre-bg: var(--color-zinc-800);
+  --tw-prose-th-borders: var(--color-zinc-700);
+  --tw-prose-td-borders: var(--color-zinc-700);
+  color: var(--color-zinc-200) !important;
+}
+
+/* Secret blocks in light mode */
+html[data-theme="scholars-parchment"] .secret-block {
+  background-color: rgba(225, 29, 72, 0.08) !important;
+  border-color: #f43f5e !important;
+  color: #881337 !important;
+}
+
+/* Custom scrollbars responsive to active theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-zinc-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-zinc-700);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-amber-500);
+}
+
+/* =========================================================================
+   Tactile Micro-Interactions & Button Animations
+   ========================================================================= */
+
+/* Primary & Action Buttons: Gentle lift on hover, spring compression on click */
+.btn-tactile {
+  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 140ms ease,
+              background-color 140ms ease,
+              border-color 140ms ease,
+              color 140ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+.btn-tactile:hover {
+  transform: translateY(-1.5px);
+}
+.btn-tactile:active {
+  transform: translateY(0.5px) scale(0.97);
+}
+
+/* Nav Tabs & Ribbon Pills: Quick responsive scale press */
+.btn-pill {
+  transition: transform 100ms cubic-bezier(0.2, 0, 0, 1),
+              background-color 120ms ease,
+              color 120ms ease,
+              border-color 120ms ease,
+              box-shadow 140ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+.btn-pill:hover {
+  transform: scale(1.02);
+}
+.btn-pill:active {
+  transform: scale(0.95);
+}
+
+/* Icon Buttons: Gentle bounce / tilt */
+.btn-icon {
+  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 120ms ease,
+              color 120ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+.btn-icon:hover {
+  transform: scale(1.08);
+}
+.btn-icon:active {
+  transform: scale(0.92);
+}
+
+/* Codex Binder & Chapter List Cards: Drawer pull slide effect */
+.binder-item {
+  transition: transform 140ms cubic-bezier(0.2, 0, 0, 1),
+              background-color 140ms ease,
+              border-color 140ms ease,
+              box-shadow 140ms ease;
+  cursor: pointer;
+}
+.binder-item:hover {
+  transform: translateX(3px);
+}
+.binder-item:active {
+  transform: translateX(1px) scale(0.99);
+}
+
+/* Dice Roll Action Button: Shudder pulse micro-animation */
+@keyframes dice-shudder {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(0.95) rotate(-6deg); }
+  50% { transform: scale(1.04) rotate(5deg); }
+  75% { transform: scale(0.98) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-dice-roll {
+  animation: dice-shudder 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* =========================================================================
+   Lore Article Inline Images & Media Styles
+   ========================================================================= */
+.prose img,
+.article-image {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.75), 0 0 15px -3px rgba(245, 158, 11, 0.15);
+  max-height: 520px;
+  width: auto;
+  max-width: 100%;
+  object-fit: cover;
+  margin: 1.5rem auto;
+  display: block;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.prose img:hover,
+.article-image:hover {
+  transform: scale(1.01);
+  box-shadow: 0 14px 40px -5px rgba(0, 0, 0, 0.85), 0 0 25px -2px rgba(245, 158, 11, 0.25);
+}
+
+.prose figure {
+  margin: 1.5rem auto;
+  text-align: center;
+}
+
+.prose figcaption {
+  font-family: var(--font-heading, serif);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--color-zinc-400);
+  margin-top: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+/* World Anvil / Codex Float & Layout Classes */
+.article-img-float-left,
+figure.article-img-float-left {
+  float: left;
+  margin: 0.5rem 1.75rem 1.25rem 0 !important;
+  max-width: 320px;
+  clear: left;
+}
+
+.article-img-float-right,
+figure.article-img-float-right {
+  float: right;
+  margin: 0.5rem 0 1.25rem 1.75rem !important;
+  max-width: 320px;
+  clear: right;
+}
+
+.article-img-center,
+figure.article-img-center {
+  margin: 1.75rem auto !important;
+  display: block;
+  clear: both;
+}
+
+.article-img-banner,
+figure.article-img-banner {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 2rem 0 !important;
+  clear: both;
+}
+
+.article-img-sm,
+figure.article-img-sm img {
+  max-width: 200px !important;
+  max-height: 240px !important;
+}
+
+.article-img-md,
+figure.article-img-md img {
+  max-width: 320px !important;
+  max-height: 380px !important;
+}
+
+.article-img-lg,
+figure.article-img-lg img {
+  max-width: 480px !important;
+  max-height: 520px !important;
+}
+
+.article-img-full,
+figure.article-img-full img {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 600px !important;
+}
+
+/* Portrait & Gilded Relic Vignette Frames */
+.article-img-portrait-frame,
+figure.article-img-portrait-frame img {
+  border: 2px solid var(--theme-border-accent, #78350f) !important;
+  border-radius: 1rem !important;
+  padding: 4px;
+  background: var(--theme-bg-surface, #14110d);
+  box-shadow: 0 12px 35px -6px rgba(0, 0, 0, 0.8), 0 0 20px -3px var(--theme-ring, rgba(245, 158, 11, 0.3)) !important;
+}
+
+/* =========================================================================
+   Rich Code Blocks & Terminal Callouts
+   ========================================================================= */
+.prose pre,
+pre.codex-code-block {
+  background-color: #0b0907 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  border-radius: 0.75rem !important;
+  padding: 1.1rem 1.25rem !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 0.85rem !important;
+  line-height: 1.65 !important;
+  color: #ede3d4 !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow-x: auto;
+  margin: 1.5rem 0 !important;
+}
+
+.prose pre code,
+pre.codex-code-block code {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  display: block;
+}
+
+/* Inline code tags */
+.prose :not(pre) > code {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: var(--color-amber-300, #fcd34d) !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 0.825em !important;
+  padding: 0.15em 0.4em !important;
+  border-radius: 0.35rem !important;
+  font-weight: 500 !important;
+}
+
+/* =========================================================================
+   World Anvil Published Layout Aesthetics
+   ========================================================================= */
+.published-article-container {
+  font-family: var(--font-body);
+}
+
+.published-prose {
+  font-family: 'Cinzel', serif;
+}
+
+.published-prose p {
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 1.25rem;
+  line-height: 1.85;
+  color: var(--color-zinc-200);
+  font-size: 1.05rem;
+}
+
+.published-prose p:first-of-type::first-letter {
+  font-family: var(--font-heading, serif);
+  font-size: 3.5rem;
+  float: left;
+  line-height: 0.85;
+  margin-right: 0.6rem;
+  margin-top: 0.2rem;
+  color: var(--color-amber-400);
+  text-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+  font-weight: 700;
+}
+
+.published-prose h2 {
+  font-family: var(--font-heading, serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-amber-200);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+  padding-bottom: 0.4rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.published-prose h3 {
+  font-family: var(--font-heading, serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-amber-300);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.published-prose blockquote {
+  border-left: 3px solid var(--color-amber-500);
+  padding: 0.75rem 1.25rem;
+  margin: 1.5rem 0;
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+  color: var(--color-zinc-300);
+}
+
+.published-prose blockquote p {
+  font-family: var(--font-heading, serif);
+  font-size: 1.05rem;
+  margin-bottom: 0;
+}
+

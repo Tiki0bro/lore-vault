@@ -1,0 +1,731 @@
+{
+  "version": "2.0",
+  "worlds": [
+    {
+      "id": "world-silverhawks-campaign",
+      "name": "The Silverhawks Campaign",
+      "description": "Campaign ledger, session logs, covert mission briefings, and tactical encounters for the Silverhawks covert operative unit in the Duchy of Redcliff.",
+      "genre": "Dark Fantasy",
+      "createdAt": "2022-08-10T00:00:00.000Z"
+    }
+  ],
+  "articles": [
+    {
+      "id": "article-0aa0441c-5c80-458a-a7bb-dcbf3ed98097",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Silverhawk Emblem",
+      "category": "Item",
+      "summary": "The Silverhawk Emblem is an emblem given to those who serve under the @[Silverhawks] corp. Those who bear this emblem are under direct orders from the King himself, this emblem provides rights and aut",
+      "content": "<p>The Silverhawk Emblem is an emblem given to those who serve under the @[Silverhawks] corp. Those who bear this emblem are under direct orders from the King himself, this emblem provides rights and authorities to act in the kings name.</p><p>The Emblem is a small palm sized talisman made of gold and silver, with the head of hawk engraved into the talisman.</p><h2>Additional Details & Attributes</h2><p>Item type</p><p>Clothing / Accessory</p><p>In response to the prompt [Write about a uniform in your world: what is it for and what does it represent?](https://www.worldanvil.com/worldbuilding-prompts/write-about-a-uniform-worldbuilding-prompt)</p>",
+      "tags": [
+        "Item",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "7 Aug, 2022",
+      "coverImageUrl": "/images/dalari/items/Silverhawk_Emblem.png",
+      "coverImagePrompt": "Silverhawk Emblem, Item illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-silverhawk_emblem-1",
+          "url": "/images/dalari/items/Silverhawk_Emblem.png",
+          "caption": "Silverhawk Emblem",
+          "prompt": "Silverhawk Emblem illustration: Silverhawk Emblem",
+          "createdAt": "7 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-25e2946b-f272-43fa-9a05-7f8fbd28db93",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Crossing the Ingerrey River",
+      "category": "Event",
+      "summary": "\"Sure, i'll take you across the river, i owe you that much, please wait a while as i get the boat ready.\" You watch as he unties the boat from the wharf and grab his oar: \"I can only take 3 at a time,",
+      "content": "<p>\"Sure, i'll take you across the river, i owe you that much, please wait a while as i get the boat ready.\"</p><p>You watch as he unties the boat from the wharf and grab his oar: \"I can only take 3 at a time, otherwise we might sink, so whose first?</p><p>POV 1 You hop into the boat and boat starts to shake and bob up and down under the combined weight of you 3. Aaron begins rowing across the river your smooth sailing is interrupted by a bit of a bang as if you have hit a rock or something, Aaron stops rowing \"what was that?\" he exclaimed, he looks around however does not immediately, he holds his lantern out over the water and sees the light being reflected along the surface of the water.</p>",
+      "tags": [
+        "Military Conflict",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022",
+      "coverImageUrl": "/images/dalari/locations/Stillwharf.png",
+      "coverImagePrompt": "Crossing the Ingerrey River, Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-crossing_the_ingerrey_river-1",
+          "url": "/images/dalari/locations/Stillwharf.png",
+          "caption": "Stillwharf",
+          "prompt": "Crossing the Ingerrey River illustration: Stillwharf",
+          "createdAt": "10 Sep, 2022"
+        },
+        {
+          "id": "img-crossing_the_ingerrey_river-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "Crossing the Ingerrey River illustration: Dalari World Cover",
+          "createdAt": "10 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-3ea8ecb8-9508-4055-920d-4dadc4d25630",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Lord Ceowulf",
+      "category": "Character",
+      "summary": "Maximilain Ceowulf. A distinguished commander and current @[Duke of Redcliff]",
+      "content": "<p>Maximilain Ceowulf.</p><p>A distinguished commander and current @[Duke of Redcliff]</p><h2>Relationships</h2><ul><li><strong>@[Lady Amelia]</strong> (Wife)</li></ul>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "13 Aug, 2022",
+      "coverImageUrl": "/images/dalari/characters/Lord_Ceowulf.png",
+      "coverImagePrompt": "Lord Ceowulf, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-lord_ceowulf-1",
+          "url": "/images/dalari/characters/Lord_Ceowulf.png",
+          "caption": "Lord Ceowulf",
+          "prompt": "Lord Ceowulf illustration: Lord Ceowulf",
+          "createdAt": "13 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-471f609b-d1d2-4c5a-880d-19afac944b5e",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Sailissa Tabor",
+      "category": "Character",
+      "summary": "A young half-elf girl, 8 years old. Her house was attacked by @[Raven Warriors] and she was left hidden under the floor boards. Her father is a fisherman down at @[Whitefront Fisheries] named @[Aaron ",
+      "content": "<p>A young half-elf girl, 8 years old.</p><p>Her house was attacked by @[Raven Warriors] and she was left hidden under the floor boards.</p><p>Her father is a fisherman down at @[Whitefront Fisheries] named @[Aaron Tabor].</p><h2>Relationships</h2><ul><li><strong>@[Aaron Tabor]</strong> (Parent)</li></ul>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022",
+      "coverImageUrl": "/images/dalari/characters/Sailissa_Tabor.png",
+      "coverImagePrompt": "Sailissa Tabor, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-sailissa_tabor-1",
+          "url": "/images/dalari/characters/Sailissa_Tabor.png",
+          "caption": "Sailissa Tabor",
+          "prompt": "Sailissa Tabor illustration: Sailissa Tabor",
+          "createdAt": "6 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-5cc3db10-e323-41f2-a6ca-942cba5c45f6",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Meeting Aaron Tabor",
+      "category": "Event",
+      "summary": "You can see the reflection of the moon dance on the surface of the water, you can see the lights of the few makeshift houses that sit along the bank of the river, you also can see wooden platforms and",
+      "content": "<p>You can see the reflection of the moon dance on the surface of the water, you can see the lights of the few makeshift houses that sit along the bank of the river, you also can see wooden platforms and bridges linking to houses that sit ontop of the water held in place by massive wooden beams that you can only assume have been embedded into the rivers floor. Since it late at night you don't see anyone outside and the atmosphere is quiet. You see a few boats tied to a wharf slowly bobbing up and down as the rivers current tries to take the boats down stream. As you walk along the wooden floorboards you start to feel the wood creak and bend under th combined weight of the party.</p><p>(If @[Sailissa Tabor] is in the party she will lead you to her fathers place)</p><p>You see a few houses, however you cannot see any particular house that would be Aaron's obvious residence. (What do you do?)</p><p>You knock on the door \"Rack off\" a stern lady yells from beyond the door. \"he lives over there out on the water, now leave me be\" she screams from beyond the door.</p><p>You cross more wooden platforms and walk along a makeshift bridge to a house situated out along the water, this makeshift house creaks and gently sways underneath your steps. Its almost as if you were standing on the deck of a ship rocking back and forth over the waves. The door is shut and no light can be seen from within. If you look from the outside you can see various gaps within the wood and looking inside you see in the darkness a man sleeping inside a blanket. He is silent and still not making a noise.</p><p>He grumbles before getting up quickly, he shuffles his way towards the door (@[Aaron Tabor]), The door swings open and with a loud screech you notice the door has scrapped itself along the bottom of the floor and you can see that there are marks as well, telling you that the weight of this dinky door is too much for the doors hinges to handle. \"What do you want\" The man asks.</p><p>Through the door you can see clothes strewn about and there is a damp smell and the smell of rotting wood.</p><p>\"Sailissa my little princess, what are you doing with these strange men?\" he says as he instinctively reaches out and pulls her towards him. He looks towards the party in hostility and also in fear.</p><p>\"Don't worry father, these men saved me\"</p><p>\"What do you mean they saved you\" He looks again towards the party and goes \"Explain to me what she is talking about\" \"Where is my mother?, is she okay?\" You see as the fear in his begin to turn to worries as he awaits your reply.</p><p>\"Oh no.... mother\" he begins to cry and then composes himself.</p><p>\"Thank you for bringing my daughter to me, I don't know what I would have done had i lost her, You have my gratitude, I don't have much money, I am barely able to make ends meet, however if there is anything within my power to do believe me, I will do it.\"</p><p>You want me to ferry you accross the water, Since you saved my daughter I will take you across, however I can only take 3 at a time, my boat won't hold us all\" he says as he points to a boat tied up against one of the wooden beams. Where would you like me to go, he brings up the map of the river for you to mark you destination.</p><p>\"I do know of a secret entrance to the city, its not really a secret however it is a sewer system that runs beneath Fort redcliff, however there has been lots of rumours of dark creatures living deep within the sewer system, so enter at your own risk.</p><p>\"Once again, thank you for saving my daughter, you have no idea how much she means to me, ever since my wife died its just been me and her and my mum, however I lost my money gambling and making terrible decisions which Is why I live here along the water as It is my best chance at making money. The fisheries is no place for a little girl.</p>",
+      "tags": [
+        "Plot",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "9 Sep, 2022",
+      "coverImageUrl": "/images/dalari/world/Travelers_in_the_night.png",
+      "coverImagePrompt": "Meeting Aaron Tabor, Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-meeting_aaron_tabor-1",
+          "url": "/images/dalari/world/Travelers_in_the_night.png",
+          "caption": "Travelers in the night",
+          "prompt": "Meeting Aaron Tabor illustration: Travelers in the night",
+          "createdAt": "9 Sep, 2022"
+        },
+        {
+          "id": "img-meeting_aaron_tabor-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "Meeting Aaron Tabor illustration: Dalari World Cover",
+          "createdAt": "9 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-5dae67da-f394-4571-97e9-3cb8abb2e0a8",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Silverhawks",
+      "category": "Faction",
+      "summary": "Silverhawks are an elite and secretive army corp for the kingdom of Artilian. Silverhawks are selected and recruited from some of the best warriors in the kingdom. Silverhawks undertake dangerous miss",
+      "content": "<p>Silverhawks are an elite and secretive army corp for the kingdom of Artilian. Silverhawks are selected and recruited from some of the best warriors in the kingdom. Silverhawks undertake dangerous missions at the request of the King and have often times throughout history have become the unsung heroes of the Kingdom. Although there are many who know of the silver hawks, very few have ever seen them, if you do see them... run the other way.</p><p>Although silverhawks fight for glory and the welfare of the kingdom, they are still in fact just vessels to carry out the Kings personal orders whether they be honorable or whether are selfish.</p><h2>Additional Details & Attributes</h2><p>If you see that shiny silver emblem, you better hope they are only looking for information - Concerned Citizen</p>",
+      "tags": [
+        "Organization",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022",
+      "coverImageUrl": "/images/dalari/factions/Silverhawks.png",
+      "coverImagePrompt": "Silverhawks, Faction illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-silverhawks-1",
+          "url": "/images/dalari/factions/Silverhawks.png",
+          "caption": "Silverhawks",
+          "prompt": "Silverhawks illustration: Silverhawks",
+          "createdAt": "11 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-6789f62b-7d98-4b2f-83a1-598ecad6b075",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Aaron Tabor",
+      "category": "Character",
+      "summary": "Is a fisherman down at @[Whitefront Fisheries]. He is @[Sailissa Tabor]'s Human Father. He is a tubby man around 45 years of age with grey hair and a grey beard, he has small beady eyes and a rugged l",
+      "content": "<p>Is a fisherman down at @[Whitefront Fisheries].</p><p>He is @[Sailissa Tabor]'s Human Father.</p><p>He is a tubby man around 45 years of age with grey hair and a grey beard, he has small beady eyes and a rugged look to him, dressed in a blue longsleeve shirt with som fishing waders on, he isn't wearing any boots at the moment.</p><h2>🔒 GM Secrets</h2><p>[Edit](https://www.worldanvil.com/p/desktop?entityClass=secret&action=edit&identifier=9632029c-d9d0-4aa2-9275-49f8a9196864)</p><h3>The Ferryman</h3><p>6 Sep, 2022</p>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": true,
+      "updatedAt": "9 Sep, 2022",
+      "coverImageUrl": "/images/dalari/characters/Aaron_Tabor.png",
+      "coverImagePrompt": "Aaron Tabor, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-aaron_tabor-1",
+          "url": "/images/dalari/characters/Aaron_Tabor.png",
+          "caption": "Aaron Tabor",
+          "prompt": "Aaron Tabor illustration: Aaron Tabor",
+          "createdAt": "9 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-699e4222-a222-4203-aee6-7a6ea4d6dd45",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Twinpine Garrison (Encounter)",
+      "category": "Event",
+      "summary": "You walk along the stoney road up to the Garrison you notice the walls are a mix of both wooden beams and stone blocks. You can see 2 guards standing at attention in front of an open gate. On top of t",
+      "content": "<p>You walk along the stoney road up to the Garrison you notice the walls are a mix of both wooden beams and stone blocks. You can see 2 guards standing at attention in front of an open gate. On top of the gate and behind the wooden walls you see 2 guards armed with longbows looking down towards you. As you approach closer the guards move to block your way.</p><p>\"Not another step, who are you and why are you here?\"</p><p>\"I am not at liberty to tell you whether the knight guard captain is here or not, what business do you have with him?\"</p><p>\"Well he is on official business and is not to be disturbed, sorry friend, but you came all the way here in vain, I suggest you turn around now and make an official appointment in fort redcliff\"</p><p>\"Please step back, you do not want this trouble\" the guard says in an intimidating tone.</p><p>\"You are too late friends, the Captain Semarel has already left, however this news of an attack on @[Merton] is quite a concern, Its best you come talk to the Marshall @[Brum Montague]</p>",
+      "tags": [
+        "Military Conflict",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022",
+      "coverImageUrl": "/images/dalari/locations/Twinpine_Garrison.png",
+      "coverImagePrompt": "Twinpine Garrison (Encounter), Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-twinpine_garrison_encounter-1",
+          "url": "/images/dalari/locations/Twinpine_Garrison.png",
+          "caption": "Twinpine Garrison",
+          "prompt": "Twinpine Garrison (Encounter) illustration: Twinpine Garrison",
+          "createdAt": "10 Sep, 2022"
+        },
+        {
+          "id": "img-twinpine_garrison_encounter-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "Twinpine Garrison (Encounter) illustration: Dalari World Cover",
+          "createdAt": "10 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-762b2e63-dc7c-4f1a-814f-70f588b7d9b4",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Ambushed in Merton",
+      "category": "Event",
+      "summary": "You once again embark on your way towards redcliff. As you follow the road you begin to make out lights as you notice some houses up ahead. You notice bloody footprints along the road as you get close",
+      "content": "<p>You once again embark on your way towards redcliff. As you follow the road you begin to make out lights as you notice some houses up ahead. You notice bloody footprints along the road as you get closer into view of the houses. The lights that offered you a sense of comfort quickly became a source of despair as you all witness the scene around you. You see bodies littered across the street with some bodies looking shrivelled and devoid of moisture with skin hanging off the bone. Bodies with limbs missing hung in door frames.</p><p>Through the smashed windows and broken doors you can see bodies of children dead whilst being in the arms of mothers and fathers hoping to protect them. You see no end to the carnage as you look around. As you follow the road through the town you move slowly and watch as flames flicker as you see houses burning all around you.</p><p>You hear a scream come from a house ahead of you.  followed by the sound of wood crashing and some muffled male voices.</p><p>As you approach the house you see a house almost at the brink of collapsing front door wide open which seems irrelevant due to the fact the the walls have been destroyed and the interior exposed already, you peer into the house and you see two Aya-la males ripping out the floor boards whilst also pulling out a little girl from the hole in the floor boards. “You’re a feisty one aren’t yah, got a bit of life left in yah, Unfortunately for you, you’ve seen our face so you must die.” And they draw on the power of darkness to manifest a blade of pure shadows and they attempt to strike her down.</p><p>Katie quickly aims her crossbow and with insane accuracy manages to hit the male holding on to the child through the back of the head causing his body to explode in a puff of dark smoke.</p><p>Zezur holds up his shield in front of him charging towards the other enemy, however the enemy was too quick side stepping out of the way causing Zezur to to charge straight into the ruined wall behind him with a loud crash he brings the wall tumbling down before finding himself.</p><p>After dodging the shield charge the enemy sees two ethereal bells in front of him each bell chiming at alternate intervals. The sound waves of the bells became visible and almost tangible as they assaulted the enemy causing him to explode into a puff of smoke and darkness. Varyn and Eleas both look at each other and nod at each other in acknowledgement of there combined spell force.</p><p>Ignis hearing the sound of fighting comes around the corner winding up his super sonic punch and aims at the nearest living thing which happens to be a girl, however this girl was not any of ignis's concern and he lined up his strike before hearing zezur shouting out to cease and desist. Ignis reluctantly listens and turns away walking into the distance.</p><p>More enemies decide to rock up and ambush the party, the party was prepared however, as Aloyisius warns zezur of incoming danger. The enemies appeared through the use of nearby shadow emerging behind each party member, but the party was armed and ready for battle, they took out the attackers without so much as breaking a sweat.</p><p>After defeating the enemies the party chat with the little girl named @[Sailissa Tabor] The young girl looks around 8 years old and you can see her ears whilst human in appearance begin to point like that of an elf, Judging her to be a half-elf. She has long dark hair that looks messy due to her previous struggle. You see as snot and tears fill her face as she is sobbing.</p><p>\"My name is Sailissa and I live here with my grandmother, but shes dead, they killed her.\" As she says this you notice the corpse of an older lady sprawled out towards the back of the room. Sailissa runs to the corpse and starts to hug it whilst crying.</p><p>Jiminy seeing this has a flash of inspiration and cast's \"speak with the dead\" on the dead grandmother, they asked the grandmother questions about what had happened to which she replied \"3 shadowy figures appeared in village asking us questions about whether we had seen anything strange happenings as of late. However they were dissappointed with our answers and decided to slaughter us, they were then surrounded by many powerful magic and began to lay waste to the village. My friends my family all destroyed by those monsters. She then offered some encouraging words to her granddaughter and then requested that the party deliver the girl back to her father down by the fishing village</p><p>As you depart the small village of merton you turn to watch as the ruined village begins to fade back into the darkness as you travel onwards.</p><h2>Gallery</h2><p><img src=\"/images/dalari/events/Ambushed_in_Merton_corpses.png\" alt=\"corpses.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_Merton_Ruined.png\" alt=\"Merton Ruined.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_Shadowy_warriors.jpg\" alt=\"Shadowy warriors.jpg\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_zezur_shiel_bashing_a_wall.png\" alt=\"zezur shiel bashing a wall.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_Toll_of_the_dead.png\" alt=\"Toll of the dead.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_Raven_warriors_emerging.png\" alt=\"Raven warriors emerging.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_Sailissa_crying.png\" alt=\"Sailissa crying.png\" /></p><p><img src=\"/images/dalari/events/Ambushed_in_Merton_speak_to_the_dead.png\" alt=\"speak to the dead.png\" /></p>",
+      "tags": [
+        "Military Conflict",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Nov, 2022",
+      "coverImageUrl": "/images/dalari/events/Ambushed_in_Merton_Merton_Ruined.png",
+      "coverImagePrompt": "Ambushed in Merton, Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-ambushed_in_merton-1",
+          "url": "/images/dalari/events/Ambushed_in_Merton_Merton_Ruined.png",
+          "caption": "Ambushed in Merton Merton Ruined",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton Merton Ruined",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-2",
+          "url": "/images/dalari/events/Ambushed_in_Merton_corpses.png",
+          "caption": "Ambushed in Merton corpses",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton corpses",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-3",
+          "url": "/images/dalari/events/Ambushed_in_Merton_Raven_warriors_emerging.png",
+          "caption": "Ambushed in Merton Raven warriors emerging",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton Raven warriors emerging",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-4",
+          "url": "/images/dalari/events/Ambushed_in_Merton_Sailissa_crying.png",
+          "caption": "Ambushed in Merton Sailissa crying",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton Sailissa crying",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-5",
+          "url": "/images/dalari/events/Ambushed_in_Merton_Shadowy_warriors.jpg",
+          "caption": "Ambushed in Merton Shadowy warriors",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton Shadowy warriors",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-6",
+          "url": "/images/dalari/events/Ambushed_in_Merton_speak_to_the_dead.png",
+          "caption": "Ambushed in Merton speak to the dead",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton speak to the dead",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-7",
+          "url": "/images/dalari/events/Ambushed_in_Merton_Toll_of_the_dead.png",
+          "caption": "Ambushed in Merton Toll of the dead",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton Toll of the dead",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-8",
+          "url": "/images/dalari/events/Ambushed_in_Merton_zezur_shiel_bashing_a_wall.png",
+          "caption": "Ambushed in Merton zezur shiel bashing a wall",
+          "prompt": "Ambushed in Merton illustration: Ambushed in Merton zezur shiel bashing a wall",
+          "createdAt": "21 Nov, 2022"
+        },
+        {
+          "id": "img-ambushed_in_merton-9",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "Ambushed in Merton illustration: Dalari World Cover",
+          "createdAt": "21 Nov, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-78c0e0f6-7e28-492c-827e-6ac666e7763d",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Letter to Vadith",
+      "category": "Item",
+      "summary": "“Vadith my love, The Drow, Sylvian was seen in thistle wood by an agent of ours, investigate and eliminate him, We can’t have the silver hawks interfering with our plan. Once I return to redcliff I wi",
+      "content": "<p>“Vadith my love, The Drow, Sylvian was seen in thistle wood by an agent of ours, investigate and eliminate him, We can’t have the silver hawks interfering with our plan. Once I return to redcliff I will seek thee out. But may the goddess bless you and may darkness lead you forward. Yours always Saori”</p>",
+      "tags": [
+        "Item",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "1 Sep, 2022",
+      "coverImageUrl": "/images/dalari/items/Letter_to_Vadith.png",
+      "coverImagePrompt": "Letter to Vadith, Item illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-letter_to_vadith-1",
+          "url": "/images/dalari/items/Letter_to_Vadith.png",
+          "caption": "Letter to Vadith",
+          "prompt": "Letter to Vadith illustration: Letter to Vadith",
+          "createdAt": "1 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-a15b0947-cb2d-44bf-9101-f360c3f3b1dc",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Alwin",
+      "category": "Character",
+      "summary": "@[Lord Ceowulf]s youngest son. He is 14 years old.",
+      "content": "<p>@[Lord Ceowulf]s youngest son. He is 14 years old.</p><h2>Relationships</h2><ul><li><strong>@[Stark]</strong> (Brother)</li><li><strong>@[Lord Ceowulf]</strong> (Parent)</li></ul>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022",
+      "coverImageUrl": "/images/dalari/characters/Alwin.png",
+      "coverImagePrompt": "Alwin, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-alwin-1",
+          "url": "/images/dalari/characters/Alwin.png",
+          "caption": "Alwin",
+          "prompt": "Alwin illustration: Alwin",
+          "createdAt": "19 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-a1c8eb4d-d362-4ceb-8a82-f464b6abe7f4",
+      "worldId": "world-silverhawks-campaign",
+      "title": "The Gathering of the Silverhawks",
+      "category": "Lore",
+      "summary": "Night Its darkness covers this land like a thin velvet blanket. Although it was night upon the land, the moon was out in all its glory. Shedding dim light to those unfortunate enough to be travelling ",
+      "content": "<p>Night Its darkness covers this land like a thin velvet blanket. Although it was night upon the land, the moon was out in all its glory. Shedding dim light to those unfortunate enough to be travelling at this hour. The stars adorned the sky like jewels on a queens neck, bringing splendour and wonder to the skys canvas. The stars look down in wonder watching and waiting only to set their gazes on a lone weary traveller making his way along the lonely road to a small house.</p><p>Varyn: After a long arduous journey from your home, you have finally arrived to the designated meeting point. A small inconspicuous house in thistle wood a small town just outside the large walls of fort red cliff. You open the door and enter. You see the interior of what looks like a normal house wooden walls with a high ceiling with wooden beams above you. The lighting is somewhat dim as you only see a few candles lit to provide light. You can see a few chairs unevenly spaced out in what looks to have been the houses living room. In the centre of the room, you see a large square wooden table. On top the table you can see a map and behind the table a silver haired drow seemingly engrossed in his studies of this map. It only takes a second for him to notice your arrival, he looks up and smiles at you.</p><p>You only now take notice of his androgenous facial feature, his bright blue eyes which bring a stark contrast to the darkness of his skin. His smile is bright and charismatic and friendly “You must be master Varyn, Please have yourself a seat, the others should be arriving soon” as he motions for you to take a seat. “In the meantime, If you have any questions please let me know” He then goes back to studying the map sprawled out on the table.</p><p>You look around the room and immediately spot the others who had arrived before you. You see 2 halflings in conversation towards the back right of the room, One of which has a lute strapped to his back and is wearing fine clothes, the other however is the complete opposite. With a greataxe which looks way to big when comparing it to this halflings size leaned up against the table this halfling seems to be topless wearing only pauldrons and leather pants. No shoes as you can see his big hairy feet dangling from the chair without touching the ground. You can see a Tiefling leaned up against the wall to the back left, clasping a spear in his arms. His eyes seem to be closed as if he is trying to get some quick rest in before the briefing. As you take a seat a few minutes pass Halfling with the lute notices your arrival as well and begins to make his way towards you. However just as he is walking towards you the door opens.</p><p>Katie As you open to enter the meeting place you only have about a second or too before you hear a loud “Katie, You made it !!” you look to your right and can see a familiar halfling walking towards you with a big grin. As he makes his way over you also notice everyone in the room.  You see that the Tiefling whose eyes were closed a second earlier was staring directly at you both. His dark red eyes which look like they held a sea of lave within there gaze. “Katie, come sit down, I have a friend I would like you to meet” the halfling says as he grabs your hand seemingly excited to lead you.</p><p>The Drow man notices you enter however can see that you are currently being lead by the hand and goes back to looking at the map whilst also scribbling some notes. As Katie makes her way to the table a knock is heard at the door.</p><p>The Drow man looks up and with a wave of his hand the door opens wide and standing at the door perplexed is another halfling. “Well are going to come in… Or do you need me to roll out the red carpet?”</p><p>Jiminy, you also notice everything that has already been mentioned. The group of halflings look excited to see you standing there.</p><p>As you begin to move you feel a hand on your shoulder “Excuse me little boy, I must enter this abode” and as you look up you see a 7ft tall shirtless elf walk in with a greataxe strapped to his back. As he enters he has to duck in order to fit through the door. This dude is jacked…. His arms and abs look like they were chiselled out of rocks.</p><p>“Well this is depressing” he says as he walks in. “Wheres the mead” “Shut up and take a seat you oversized monkey shit” The Tiefling says as he begins to stand upright. “Morilius, the demon spawn…Stop spouting nonsense… Or I will take your other horn” “You Mother Fucker….. Come outside, I’ve been wanting to test my new rune on you” “Oh yes your mighty runes… Rune this… Rune that.. where was your mighty runes when your mother was getting bested by the demon…..” “Quiet.. Both of you…. It is not the time or the place to be pissing around, Now sit down and shut your mouths. Or I will remove it for good this time” Sylvian says as he looks directly at the large Elf still standing near the doorway.</p><p>A little further down the road a Fully armoured half orc was walking down the road taking a leisurely pace. Zezur. You look up and see as Aloysius who had been flying above you recently swoops down into the trees. You assume it has found something nice to hunt and leave him be you notice the road mentioned in the our letter and proceed to travel down it. However as you walk you see a small Halfling emerge from out of the trees just ahead of you on the road. You can see Ignis Just ahead of you and see that on his arm Aloysius is perched calmly and peacefully.</p><p>Ignis and Zezur exchange a few words and they both arrive at the house and walk in together. Ignis, you notice a group of halflings who are staring at you with wide eyed happy expressions as one more Halfing to add to Katies Harem. Zezur as you enter you also have to duck down to avoid hitting your head on the door. You hear a voice “Glad you were able to make it Zezur, Oh and is that Ignis, right... now we are all here, take a seat and I’ll begin the mission briefing” Sylvian says authoritivaley. “But aren’t we waiting for one more person. “Shadow of Artilian” Jesus what a pretentious name” Morilius says as he takes a seat. “Nope. He was the first to arrive.” The drow replied pointing to the corner of the room.</p><p>The shadows start to move and contort and just like a blur the darkness separates and a human steps out into the light and you see a shadowy human figure.</p><p>“Now that we are all here, lets talk business.” Sylvians hands flash with a bit of light and a projection of an image appears before everyone.</p><p>“This is Lord Ceowulf, Our Kings Cousin. Now there have been reports and evidence that Lord Ceowulf has been secretly plotting against his majesty for some time now. This news has caused our king a great amount of stress and he has ordered us to assassinate Lord Ceowulfs sons Alwin and Stark and find damning evidence of Lord Ceowulfs betrayal along with any information we can about his possible allies amongst the nobles and report that to the king. Now normally the king would just have them executed, however the nobles would not take too kindly to the Kings vengeance and use this controversy to usurp the throne somehow, Human politics continue to baffle me. We have been ordered not act in our capacity as Silver Hawks to avoid all suspicion being thrown on the King and we are to leave Lord Ceowulf alive at all costs. These are our orders. Now since we can’t flash our @[Silverhawk Emblem] around to get where we need to go this time, We will need to do this the old school way. We will split into two groups. One group will need to enter the city posing as traveling merchants and ask around for information and the other group will need to find this man. As another image is projected to everyone.</p><p>This is Semarel. He is knight guard captain of redcliff and loyal to Lord Ceowulf. The @[Silverhawks] failed to recruit him due to him due to his unwavering loyalty to Lord Ceowulf. Now I have received intelligence that he is currently inspecting the Garrisons nearby and will be returning to redcliff on the morrow. So we need to find him as soon as possible and capture him and bring him here for questioning. Or we can simply kill him if he refuses to co-operate. There are 2 Garrisons where he could be Twinpine Garrison and Stillwharf Garrison. As to where and when he will appear, the report did not include this vital or crucial information…. Since they are Garrisons, they will be heavily guarded. I would suggest stealthily entering. Otherwise charging head on might also work If you don't mind getting injured or worse... Death, I’ll leave these decisions up to you. Morilius, Umexidor, Marnan and Panaben. You will be one group, Zezur You will lead the 2nd group as there are a few newbies on the team.</p><h2>Gallery</h2><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Varyn_Traveling.png\" alt=\"Varyn Traveling.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Sylvian.png\" alt=\"Sylvian.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Katie_Standing_at_the_Door.png\" alt=\"Katie Standing at the Door.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Morilius_against_the_wall.png\" alt=\"Morilius against the wall.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Umexidor.png\" alt=\"Umexidor.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_zezur_walking_at_night.png\" alt=\"zezur walking at night.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Eleas_Prawn_as_a_shadow.png\" alt=\"Eleas Prawn as a shadow.png\" /></p><p><img src=\"/images/dalari/characters/Lord_Ceowulf.png\" alt=\"Lord Ceowulf.png\" /></p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Semarel.png\" alt=\"Semarel.png\" /></p>",
+      "tags": [
+        "Generic article",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022",
+      "coverImageUrl": "/images/dalari/world/The_Gathering_of_the_Silverhawks.png",
+      "coverImagePrompt": "The Gathering of the Silverhawks, Lore illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-the_gathering_of_the_silverhawks-1",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks.png",
+          "caption": "The Gathering of the Silverhawks",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-2",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Eleas_Prawn_as_a_shadow.png",
+          "caption": "The Gathering of the Silverhawks Eleas Prawn as a shadow",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Eleas Prawn as a shadow",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-3",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Katie_Standing_at_the_Door.png",
+          "caption": "The Gathering of the Silverhawks Katie Standing at the Door",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Katie Standing at the Door",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-4",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Morilius_against_the_wall.png",
+          "caption": "The Gathering of the Silverhawks Morilius against the wall",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Morilius against the wall",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-5",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Semarel.png",
+          "caption": "The Gathering of the Silverhawks Semarel",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Semarel",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-6",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Sylvian.png",
+          "caption": "The Gathering of the Silverhawks Sylvian",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Sylvian",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-7",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Umexidor.png",
+          "caption": "The Gathering of the Silverhawks Umexidor",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Umexidor",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-8",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Varyn_Traveling.png",
+          "caption": "The Gathering of the Silverhawks Varyn Traveling",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks Varyn Traveling",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-9",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_zezur_walking_at_night.png",
+          "caption": "The Gathering of the Silverhawks zezur walking at night",
+          "prompt": "The Gathering of the Silverhawks illustration: The Gathering of the Silverhawks zezur walking at night",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-the_gathering_of_the_silverhawks-10",
+          "url": "/images/dalari/characters/Lord_Ceowulf.png",
+          "caption": "Lord Ceowulf",
+          "prompt": "The Gathering of the Silverhawks illustration: Lord Ceowulf",
+          "createdAt": "10 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-bfcbbb08-b3ba-4fd8-a4aa-2afb132ad2f7",
+      "worldId": "world-silverhawks-campaign",
+      "title": "The Shadow Stalker",
+      "category": "Event",
+      "summary": "As you watch aaron and the other party members sail away, you wait around patiently for a few mins. However you start to hear a short distance away a dog barking faintly, the noise seems to be coming ",
+      "content": "<p>As you watch aaron and the other party members sail away, you wait around patiently for a few mins. However you start to hear a short distance away a dog barking faintly, the noise seems to be coming from behind you in the direction of the town.</p>",
+      "tags": [
+        "Military Conflict",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022",
+      "coverImageUrl": "/images/dalari/world/Travelers_in_the_night_raven_on_a_tree.png",
+      "coverImagePrompt": "The Shadow Stalker, Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-the_shadow_stalker-1",
+          "url": "/images/dalari/world/Travelers_in_the_night_raven_on_a_tree.png",
+          "caption": "Travelers in the night raven on a tree",
+          "prompt": "The Shadow Stalker illustration: Travelers in the night raven on a tree",
+          "createdAt": "10 Sep, 2022"
+        },
+        {
+          "id": "img-the_shadow_stalker-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "The Shadow Stalker illustration: Dalari World Cover",
+          "createdAt": "10 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-c37fcf73-3103-4d31-ae45-153f7c96a602",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Travelers in the night",
+      "category": "Lore",
+      "summary": "After being debriefed, you all decide that the best course of action is to use the cover of night to figure out the whereabouts of this Sameral person in hopes of extracting crucial information. You m",
+      "content": "<p>After being debriefed, you all decide that the best course of action is to use the cover of night to figure out the whereabouts of this Sameral person in hopes of extracting crucial information. You make your way out of the house. As Zezur walks out the door he ducks to avoid hitting his head, however the tip of his helmet clips the door frame almost bring the helmet clean off. However he is able to react in quick fashion, making sure that the helmet stays firmly on his head. You all begin your journey northwards following the road in front of you.</p><p>As you travel the road the comfort of light begins to fade as you walk past the outskirts of the town of thistle wood into the forested path. The night which was clear when you had arrived was suddenly becoming cloudier and the lights from the moon and stars begin to dim leaving the road ahead cloaked in darkness.</p><p>The well worn cobbled road stretches before you. The road curves and bends and a times the road hugs the treeline letting those of you who have darkvision to see into the forest a small distance. As you come to a crossroad with another road branching off to the right of you and a road leading straight ahead, you are able to look down the road to the right which leads to one of the nearby fisherman’s village along the bank of the river. If you look up you are able to see lots of little specks of light almost floating beneath the night sky and if you spend some time focusing on those lights you can begin to only just barely make out the silhouette of Fort Redcliff.</p><p>As you continue down the road and find yourselves going uphill as you pass more trees you see that on your left the trees begin to part and notice a small footpath veering of into the same direction the footpath seems to lead to a collapsed platform filled with overgrown weeds vines and foliage. The platform is on a slight lean as you see thick tree roots elevating the right side of the platform. As you you hear a sudden rustle from the bushes next to you. You peer into the bush and can see movement and out of the bush pops a startled cat which begins to hiss at you before suddenly taking off around the party and into the forest.</p><p>The party investigate further only to find a Raven pearched in the trees looking towards the party</p><p>Ahead you can the road come to the foot of a small set of stone stairs leading upwards. As you begin to climb the stairs you hear footsteps from up ahead and 3 humanoids appear at the top of the stairs, and they stop immediately right at the top of the stairs. You see what looks to be 3 Humanoids with pointy ears 2 female and 1 male, They bear a close resemblance to that of elves, however unlike high elves they have ashen grey skin and dark black hair. Although they look similar to both elves and drow these 3 seem as though they are somewhat different. One is wearing a hood and the other 2 have their faces showing. You engage in conversation with these mysterious travellers and come to find out that they are actually on their way to where you had come from, one of the figures says “Sister, don’t be like that….Lets just kill them all and be done with it, we have no time to waste. We need to make it to thistle wood to take care of that Drow bastard.”  Realizing the implications this had Ignis decides to cut her off and attack.</p><p>And as she says this you hear the sound of a raven crow and this crow echoes through the forest and you can see as out of the forests nearby 2 groups of humanoids emerge from the forests wearing studded leather armor tailored elegantly to each person’s body, they emerge carrying what looks to be blades of pure shadow and you some of them begin swinging the swords around and with each swing the sword leaves behind a trail of darkness through in the air which slowly disperses. These humanoids all bear the same resemblance to the ones on the stairs, however there is a ferocity in this group that is unnerving, and it is aimed directly at the party.</p><p>Eleas then hears in his mind the following words “Tsssk Tssk the Shadar-Kai Puppets of the Raven Queen, Dwellers of the Shadowfel how amusing the Shadow blades they wield are but a poor application of shadow magic…. My servant show them what it really means to wield the power of shadows”</p><p>The battle ensues and the agents quickly dispose of the mysterious groups leader with a combination of restrictive magic and the powerful swings of Zezurs mighty greatsword, enraging the remaining enemies. In order to end the battle swiftly Ignis wild shaped into a young dragon and caused carnage on the battlefield. The enemy spellcaster (Named ethavos) seeing his companions being decimated decided to go invisible and make a run for it. However as Ethavos was about to make his escape, Jminy ultized his powerful magic to cast \"mind lance\" sending a pysicic shockwave through the forest killing Ethavos before he could taste the sweet air of freedom.</p><p>The Silverhawks once again emerge victorous and take a breather to consider their next move.</p><h2>Gallery</h2><p><img src=\"/images/dalari/world/Travelers_in_the_night_Cat_emerging_from_the_forest.png\" alt=\"Cat emerging from the forest.png\" /></p><p><img src=\"/images/dalari/world/Travelers_in_the_night_raven_on_a_tree.png\" alt=\"raven on a tree.png\" /></p><p><img src=\"/images/dalari/world/Travelers_in_the_night_mind_blast.png\" alt=\"mind blast.png\" /></p>",
+      "tags": [
+        "Generic article",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022",
+      "coverImageUrl": "/images/dalari/world/Travelers_in_the_night.png",
+      "coverImagePrompt": "Travelers in the night, Lore illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-travelers_in_the_night-1",
+          "url": "/images/dalari/world/Travelers_in_the_night.png",
+          "caption": "Travelers in the night",
+          "prompt": "Travelers in the night illustration: Travelers in the night",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-travelers_in_the_night-2",
+          "url": "/images/dalari/world/Travelers_in_the_night_Cat_emerging_from_the_forest.png",
+          "caption": "Travelers in the night Cat emerging from the forest",
+          "prompt": "Travelers in the night illustration: Travelers in the night Cat emerging from the forest",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-travelers_in_the_night-3",
+          "url": "/images/dalari/world/Travelers_in_the_night_mind_blast.png",
+          "caption": "Travelers in the night mind blast",
+          "prompt": "Travelers in the night illustration: Travelers in the night mind blast",
+          "createdAt": "10 Aug, 2022"
+        },
+        {
+          "id": "img-travelers_in_the_night-4",
+          "url": "/images/dalari/world/Travelers_in_the_night_raven_on_a_tree.png",
+          "caption": "Travelers in the night raven on a tree",
+          "prompt": "Travelers in the night illustration: Travelers in the night raven on a tree",
+          "createdAt": "10 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-d430f052-a430-450a-acfb-54a294a17f89",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Stark",
+      "category": "Character",
+      "summary": "@[Lord Ceowulf]'s eldest son and his fathers successor.",
+      "content": "<p>@[Lord Ceowulf]'s eldest son and his fathers successor.</p><h2>Relationships</h2><ul><li><strong>@[Alwin]</strong> (Brother)</li><li><strong>@[Lord Ceowulf]</strong> (Parent)</li></ul>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022",
+      "coverImageUrl": "/images/dalari/characters/Stark.png",
+      "coverImagePrompt": "Stark, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-stark-1",
+          "url": "/images/dalari/characters/Stark.png",
+          "caption": "Stark",
+          "prompt": "Stark illustration: Stark",
+          "createdAt": "19 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-db4c831a-634f-4ab2-8f0c-95a0072a267f",
+      "worldId": "world-silverhawks-campaign",
+      "title": "The House of Ceowulf",
+      "category": "Lore",
+      "summary": "Article on The House of Ceowulf in the world of Dalari.",
+      "content": "<p><em>This article was recorded as a lore stub in World Anvil.</em></p>",
+      "tags": [
+        "Generic article",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022",
+      "coverImageUrl": "/images/dalari/world/Duke_of_Redcliff_Coat_of_arms_Redcliff.png",
+      "coverImagePrompt": "The House of Ceowulf, Lore illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-the_house_of_ceowulf-1",
+          "url": "/images/dalari/world/Duke_of_Redcliff_Coat_of_arms_Redcliff.png",
+          "caption": "Duke of Redcliff Coat of arms Redcliff",
+          "prompt": "The House of Ceowulf illustration: Duke of Redcliff Coat of arms Redcliff",
+          "createdAt": "19 Aug, 2022"
+        },
+        {
+          "id": "img-the_house_of_ceowulf-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "The House of Ceowulf illustration: Dalari World Cover",
+          "createdAt": "19 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-e7a9bc68-4bf9-4e9d-99ff-0d5f94530d86",
+      "worldId": "world-silverhawks-campaign",
+      "title": "The Guarded Bridge",
+      "category": "Event",
+      "summary": "As you leave the poor girl to fend for own. She looks at you with hopelessness in her eyes, she wipes her tears and snot before turning around and you watch as she walks back into the house, you see h",
+      "content": "<p>As you leave the poor girl to fend for own. She looks at you with hopelessness in her eyes, she wipes her tears and snot before turning around and you watch as she walks back into the house, you see her crawl back into the hole in the floorboards which thanks to you has now been drenched in fresh blood and she disappears into the darkness, Perception check (DC 10) you can also hear the faint sound of her sobbing. As you exit the house you see some ravens pecking on some of the dead corpses on the ground before they notice your approach and they fly off, however one of the ravens is immediately attacked by a familiar silver falcon who digs its claws deep into the ravens neck causing it to fall dead on the ground.</p><p>You walk for another 30 mins down the quiet road and you notice nothing of note. As you come round a corner in the road you can see the long stone bridge spanning the length of the river which is faintly lit by a few torches on both sides of the river. At your end of the bridge you see 2 guards relaxing against the side of the bridge being engaged in conversation. As you approach, they notice your parties presence and immediately stand up in attention whilst grasping their spears. You can see that they are only outfitted with studded leather armor a spear and not much else. They look a bit apprehensive as you approach. They patiently wait for you to get closer before saying. “Halt who goes there?” “What do you want?” “Orders from the knight captain Semarel states that this bridge is to be closed during the night. Therefore, I must ask you politely to leave. Come back on the morrow.” “To be frank with you, I don’t care the reason. It’s my head on the block if I let you lot in at this time of night. Can’t you just set up camp and come tomorrow.” “Knight captain Semarel. Yes he was at twinpine garrison earlier this evening. Not so sure now, I heard he had business to attend to down at stillwharf garrison before returning to Redcliff on the morrow”</p><p>(Deception check of 16) “I guess if you have business with him, we can let you through. Just make sure you put in a good word for us right friend”</p><p>\"I find that hard to believe to be honest, otherwise we would have been notified of it when he visited earlier this evening\"</p><p>\"I suggest you turn around friend\" Although he said this you can clearly tell he in apprehensive as your group looks very menacing. You look over his shoulder and can see towards the other side of the bridge two guards with their bows at the ready looking towards the party.</p><p>https://www.dndbeyond.com/encounters/37f6fb6b-2d4d-4ba8-8d16-546ec8d4d185 If they choose to fight then the archers will light a beacon a reinforcements will come in 10 mins.</p>",
+      "tags": [
+        "Military Conflict",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "9 Sep, 2022",
+      "coverImageUrl": "/images/dalari/locations/Belrund_Bridge.png",
+      "coverImagePrompt": "The Guarded Bridge, Event illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-the_guarded_bridge-1",
+          "url": "/images/dalari/locations/Belrund_Bridge.png",
+          "caption": "Belrund Bridge",
+          "prompt": "The Guarded Bridge illustration: Belrund Bridge",
+          "createdAt": "9 Sep, 2022"
+        },
+        {
+          "id": "img-the_guarded_bridge-2",
+          "url": "/images/dalari/world/Dalari_World_Cover.png",
+          "caption": "Dalari World Cover",
+          "prompt": "The Guarded Bridge illustration: Dalari World Cover",
+          "createdAt": "9 Sep, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-e8d82bbf-0c56-4051-b9e5-f3cba36b4e40",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Redcliff Silverhawks Safehouse",
+      "category": "Location",
+      "summary": "Redcliff Silverhawks Safehouse",
+      "content": "<p>Redcliff Silverhawks Safehouse</p>",
+      "tags": [
+        "Building / Landmark",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022",
+      "coverImageUrl": "/images/dalari/locations/Redcliff_Silverhawks_Safehouse.png",
+      "coverImagePrompt": "Redcliff Silverhawks Safehouse, Location illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-redcliff_silverhawks_safehouse-1",
+          "url": "/images/dalari/locations/Redcliff_Silverhawks_Safehouse.png",
+          "caption": "Redcliff Silverhawks Safehouse",
+          "prompt": "Redcliff Silverhawks Safehouse illustration: Redcliff Silverhawks Safehouse",
+          "createdAt": "10 Aug, 2022"
+        }
+      ]
+    },
+    {
+      "id": "article-ef50c62f-9bc9-4f7a-bffd-66438c454184",
+      "worldId": "world-silverhawks-campaign",
+      "title": "Semarel",
+      "category": "Character",
+      "summary": "Semarel is the knight guard captain. He is a 7ft tall solid build. He has a greyish skin tone and a bald head. He is a Paladin loyal to @[Lord Ceowulf]. He is a devout follower of @[Khemos] and has a ",
+      "content": "<p>Semarel is the knight guard captain. He is a 7ft tall solid build. He has a greyish skin tone and a bald head. He is a Paladin loyal to @[Lord Ceowulf]. He is a devout follower of @[Khemos] and has a good relationship with the clerical order at the @[Temple of Khemos Redcliff].</p>",
+      "tags": [
+        "Character",
+        "Campaign",
+        "Silverhawks"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Aug, 2022",
+      "coverImageUrl": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Semarel.png",
+      "coverImagePrompt": "Semarel, Character illustration in Dalari dark fantasy campaign setting",
+      "images": [
+        {
+          "id": "img-semarel-1",
+          "url": "/images/dalari/world/The_Gathering_of_the_Silverhawks_Semarel.png",
+          "caption": "The Gathering of the Silverhawks Semarel",
+          "prompt": "Semarel illustration: The Gathering of the Silverhawks Semarel",
+          "createdAt": "24 Aug, 2022"
+        }
+      ]
+    }
+  ],
+  "mapPins": [
+    {
+      "id": "pin-sh-safehouse",
+      "mapId": "map-dalari-main",
+      "worldId": "world-silverhawks-campaign",
+      "articleId": "article-e9c565d7-f494-4bfe-9896-cf9e334df58d",
+      "label": "Redcliff Silverhawks Safehouse",
+      "xPct": 52.5,
+      "yPct": 45.0,
+      "category": "Settlement",
+      "icon": "GiCastle",
+      "color": "#10b981",
+      "isSecret": false
+    },
+    {
+      "id": "pin-sh-twinpine",
+      "mapId": "map-dalari-main",
+      "worldId": "world-silverhawks-campaign",
+      "label": "Twinpine Garrison",
+      "xPct": 65.0,
+      "yPct": 38.0,
+      "category": "Danger",
+      "icon": "GiBroadsword",
+      "color": "#ef4444",
+      "isSecret": false
+    },
+    {
+      "id": "pin-sh-merton",
+      "mapId": "map-dalari-main",
+      "worldId": "world-silverhawks-campaign",
+      "label": "Merton Ambush Site",
+      "xPct": 48.0,
+      "yPct": 58.0,
+      "category": "Danger",
+      "icon": "GiBroadsword",
+      "color": "#ef4444",
+      "isSecret": false
+    }
+  ],
+  "statblocks": [],
+  "novelChapters": []
+}
