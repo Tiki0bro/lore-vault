@@ -1,0 +1,2285 @@
+{
+  "version": "2.0",
+  "worlds": [
+    {
+      "id": "world-dalari-primary",
+      "name": "Dalari",
+      "description": "Dalari is a world where the gods once walked among mortals, leaving behind the sacred frequencies of the Godpulse, towering monoliths, and the Duchy of Redcliff.",
+      "genre": "Dark Fantasy",
+      "createdAt": "2022-08-02T00:00:00.000Z"
+    }
+  ],
+  "articles": [
+    {
+      "id": "article-01ebc462-0f1e-46bb-87b3-f86e08b87be0",
+      "worldId": "world-dalari-primary",
+      "title": "Ethos",
+      "category": "Character",
+      "summary": "Ethos is a Greater God and is the God of the Sun and Light, he is the twin brother of @[Khemos] the God of the Moon and Night.",
+      "content": "<h2>Ethos</h2><p>Ethos is a Greater God and is the God of the Sun and Light, he is the twin brother of @[Khemos] the God of the Moon and Night.</p><p><img src=\"/images/dalari/characters/Ethos.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-028feb06-e9e5-46df-9c21-e385d5ff8f2b",
+      "worldId": "world-dalari-primary",
+      "title": "Lady Amelia",
+      "category": "Character",
+      "summary": "Article on Lady Amelia in the world of Dalari.",
+      "content": "<h2>Lady Amelia</h2><p>Article on Lady Amelia in the world of Dalari.</p><p><img src=\"/images/dalari/characters/Lady_Amelia.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Aug, 2022"
+    },
+    {
+      "id": "article-05ced15d-e5c3-4d5c-a975-b2f7187f639d",
+      "worldId": "world-dalari-primary",
+      "title": "Sama'la",
+      "category": "Location",
+      "summary": "Article on Sama'la in the world of Dalari.",
+      "content": "<h2>Sama'la</h2><p>Article on Sama'la in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Oct, 2025"
+    },
+    {
+      "id": "article-08cb3eb5-08a9-420b-9455-3c80f153b4c7",
+      "worldId": "world-dalari-primary",
+      "title": "Dwende",
+      "category": "Lore",
+      "summary": "The origins of these little creatures are unknown, however it is speculated that an evil wizard used some goblins as an experiment for genetic mutation, however this has not yet been verified as no on",
+      "content": "<h2>Dwende</h2><p>The origins of these little creatures are unknown, however it is speculated that an evil wizard used some goblins as an experiment for genetic mutation, however this has not yet been verified as no on</p><p><img src=\"/images/dalari/species/Dwende.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Aug, 2022"
+    },
+    {
+      "id": "article-0aa0441c-5c80-458a-a7bb-dcbf3ed98097",
+      "worldId": "world-dalari-primary",
+      "title": "Silverhawk Emblem",
+      "category": "Item",
+      "summary": "The Silverhawk Emblem is an emblem given to those who serve under the @[Silverhawks] corp. Those who bear this emblem are under direct orders from the King himself, this emblem provides rights and aut",
+      "content": "<h2>Silverhawk Emblem</h2><p>The Silverhawk Emblem is an emblem given to those who serve under the @[Silverhawks] corp. Those who bear this emblem are under direct orders from the King himself, this emblem provides rights and aut</p><p><img src=\"/images/dalari/items/Silverhawk_Emblem.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "7 Aug, 2022"
+    },
+    {
+      "id": "article-0c485ca9-8af8-4950-ba1a-e342d466fda5",
+      "worldId": "world-dalari-primary",
+      "title": "Somarth, School of the Arcane",
+      "category": "Location",
+      "summary": "The Somarth, School of the Arcane is a branch of the great @[Imperium] organization. This is a local hub for Wizards, Sorcerers and Mages in Redcliff. This is a great place for those who are wanting t",
+      "content": "<h2>Somarth, School of the Arcane</h2><p>The Somarth, School of the Arcane is a branch of the great @[Imperium] organization. This is a local hub for Wizards, Sorcerers and Mages in Redcliff. This is a great place for those who are wanting t</p><p><img src=\"/images/dalari/locations/Somarth,_School_of_the_Arcane.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-0f121674-bc28-4ecb-ad4e-cbcd991b3a32",
+      "worldId": "world-dalari-primary",
+      "title": "Southern Isles",
+      "category": "Location",
+      "summary": "Article on Southern Isles in the world of Dalari.",
+      "content": "<h2>Southern Isles</h2><p>Article on Southern Isles in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Southern_Isles.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-100741c4-0cce-4f3d-a20b-b1f4a7e02164",
+      "worldId": "world-dalari-primary",
+      "title": "Chaos Lord",
+      "category": "Lore",
+      "summary": "Beings formed within the chaos of space, born outside the fabric of the mortal realm, formed from chaos they are born formless and with an automatic affinty towards chaos magic, chaos lords use the ch",
+      "content": "<h2>Chaos Lord</h2><p>Beings formed within the chaos of space, born outside the fabric of the mortal realm, formed from chaos they are born formless and with an automatic affinty towards chaos magic, chaos lords use the ch</p><p><img src=\"/images/dalari/species/Chaos_Lord.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "8 Aug, 2022"
+    },
+    {
+      "id": "article-11b07ea1-f4df-4a42-9cd5-fd0f59027a30",
+      "worldId": "world-dalari-primary",
+      "title": "The Pulse Divine",
+      "category": "Lore",
+      "summary": "> \u201cThe Pulse is the breath of the universe; the Divine is the melody the gods hum as they exhale.\u201d \u2014  \u2014 High Cantor Solas The Pulse Divine is the specialized, sacred frequency of the @[Godpulse](artic",
+      "content": "<h2>The Pulse Divine</h2><p>> \u201cThe Pulse is the breath of the universe; the Divine is the melody the gods hum as they exhale.\u201d \u2014  \u2014 High Cantor Solas The Pulse Divine is the specialized, sacred frequency of the @[Godpulse](artic</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "3 Mar, 2026"
+    },
+    {
+      "id": "article-127517a1-5749-4a39-a78d-bb03041486ee",
+      "worldId": "world-dalari-primary",
+      "title": "Delune Point",
+      "category": "Location",
+      "summary": "Article on Delune Point in the world of Dalari.",
+      "content": "<h2>Delune Point</h2><p>Article on Delune Point in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Delune_Point.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-12bf2cd0-109f-44ce-aab1-47fba6798694",
+      "worldId": "world-dalari-primary",
+      "title": "Temple of Khemos Redcliff",
+      "category": "Location",
+      "summary": "Temple dedicated to the worship of @[Khemos].",
+      "content": "<h2>Temple of Khemos Redcliff</h2><p>Temple dedicated to the worship of @[Khemos].</p><p><img src=\"/images/dalari/locations/Temple_of_Khemos_Redcliff.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-1370bc48-2d00-4a11-a03e-978bd6efdadb",
+      "worldId": "world-dalari-primary",
+      "title": "Oakhaven",
+      "category": "Location",
+      "summary": "> \u201cIn Oakhaven, the earth is merely a suggestion. Life happens in the span between the root and the leaf.\u201d \u2014  \u2014 Overseer Bran of the High-Walks Oakhaven is a strategic settlement situated within the A",
+      "content": "<h2>Oakhaven</h2><p>> \u201cIn Oakhaven, the earth is merely a suggestion. Life happens in the span between the root and the leaf.\u201d \u2014  \u2014 Overseer Bran of the High-Walks Oakhaven is a strategic settlement situated within the A</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Geographic Location",
+        "settlement",
+        "Artilian",
+        "Redcliff-Region",
+        "Iron-Oak"
+      ],
+      "isSecret": false,
+      "updatedAt": "26 Feb, 2026"
+    },
+    {
+      "id": "article-13820673-ab06-479b-b7f4-be7d5e3b8322",
+      "worldId": "world-dalari-primary",
+      "title": "Sun Stone",
+      "category": "Item",
+      "summary": "Was the result of @[Aristol Memphis]'s experiments which was successful. The Sunstone had been infused with the essence of Sun and Light. Although no one knows how he was able to do so and none have b",
+      "content": "<h2>Sun Stone</h2><p>Was the result of @[Aristol Memphis]'s experiments which was successful. The Sunstone had been infused with the essence of Sun and Light. Although no one knows how he was able to do so and none have b</p><p><img src=\"/images/dalari/items/Sun_Stone.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-14c24ca8-5329-42b6-ab18-af2a531c6e98",
+      "worldId": "world-dalari-primary",
+      "title": "Theurges",
+      "category": "Lore",
+      "summary": "The Theurges are the intellectual and spiritual core of The Conclave, responsible for divine interpretation, healing, blessings, and moral guidance. They are the primary petitioners to the gods, seeki",
+      "content": "<h2>Theurges</h2><p>The Theurges are the intellectual and spiritual core of The Conclave, responsible for divine interpretation, healing, blessings, and moral guidance. They are the primary petitioners to the gods, seeki</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-188b4c94-2a65-48bb-b2f7-1353a06f2004",
+      "worldId": "world-dalari-primary",
+      "title": "Aristol Memphis",
+      "category": "Character",
+      "summary": "Known as the \"First Enchanter\" he is the creator of the first purely enchanted human weapon @[Dawn]. Was able to harnass the power of the sun using a special and lost method that up until now has not ",
+      "content": "<h2>Aristol Memphis</h2><p>Known as the \"First Enchanter\" he is the creator of the first purely enchanted human weapon @[Dawn]. Was able to harnass the power of the sun using a special and lost method that up until now has not </p><p><img src=\"/images/dalari/characters/Aristol_Memphis.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-1c5cc255-34fd-4863-8158-040ec5a050de",
+      "worldId": "world-dalari-primary",
+      "title": "Chaos Lands",
+      "category": "Location",
+      "summary": "A cursed land of death and decay. Before death and destruction altered its landscape this land was a fertile mountain range filled with fauna and flora. Sama'la which was originally what this land was",
+      "content": "<h2>Chaos Lands</h2><p>A cursed land of death and decay. Before death and destruction altered its landscape this land was a fertile mountain range filled with fauna and flora. Sama'la which was originally what this land was</p><p><img src=\"/images/dalari/locations/Chaos_Lands.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-20a05482-11fd-4953-ab6a-176b7bf3de8b",
+      "worldId": "world-dalari-primary",
+      "title": "Realmcore",
+      "category": "Item",
+      "summary": "Article on Realmcore in the world of Dalari.",
+      "content": "<h2>Realmcore</h2><p>Article on Realmcore in the world of Dalari.</p><p><img src=\"/images/dalari/items/Realmcore.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-21c6c974-aec5-46e5-ac46-4fce07d372ff",
+      "worldId": "world-dalari-primary",
+      "title": "Conclave of the Pulse",
+      "category": "Faction",
+      "summary": "The Conclave of the Pulse is the dominant spiritual authority in the Artilian Kingdom, serving as the unifying body for human worship and the arbiter of divine law. It is served by two distinct, yet a",
+      "content": "<h2>Conclave of the Pulse</h2><p>The Conclave of the Pulse is the dominant spiritual authority in the Artilian Kingdom, serving as the unifying body for human worship and the arbiter of divine law. It is served by two distinct, yet a</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Organization"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-22a74c4e-99e3-4103-9d1e-b2d9f225c901",
+      "worldId": "world-dalari-primary",
+      "title": "Runes",
+      "category": "Lore",
+      "summary": "Article on Runes in the world of Dalari.",
+      "content": "<h2>Runes</h2><p>Article on Runes in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-25e2946b-f272-43fa-9a05-7f8fbd28db93",
+      "worldId": "world-dalari-primary",
+      "title": "Crossing the Ingerrey River",
+      "category": "Event",
+      "summary": "\"Sure, i'll take you across the river, i owe you that much, please wait a while as i get the boat ready.\" You watch as he unties the boat from the wharf and grab his oar: \"I can only take 3 at a time,",
+      "content": "<h2>Crossing the Ingerrey River</h2><p>\"Sure, i'll take you across the river, i owe you that much, please wait a while as i get the boat ready.\" You watch as he unties the boat from the wharf and grab his oar: \"I can only take 3 at a time,</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Military Conflict"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022"
+    },
+    {
+      "id": "article-271cd07b-b0ae-4169-b0e4-35ad7c82a352",
+      "worldId": "world-dalari-primary",
+      "title": "Loot 1",
+      "category": "Event",
+      "summary": "Staff of adder : https://www.dndbeyond.com/magic-items/5406-staff-of-the-adder Jade Ring Of resistance (Psychic resistance) : https://www.dndbeyond.com/magic-items/5420-ring-of-resistance @[Letter to ",
+      "content": "<h2>Loot 1</h2><p>Staff of adder : https://www.dndbeyond.com/magic-items/5406-staff-of-the-adder Jade Ring Of resistance (Psychic resistance) : https://www.dndbeyond.com/magic-items/5420-ring-of-resistance @[Letter to </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Report"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022"
+    },
+    {
+      "id": "article-28a43fd7-9ad6-4215-ae90-fd026e1951f4",
+      "worldId": "world-dalari-primary",
+      "title": "Sovereign",
+      "category": "Lore",
+      "summary": "Sovereigns represent the pinnacle of a Chaos lords evolution. Sovereigns have devoured entire worlds and killed countless Dieties accross the universe. Sovereigns can seldom be destroyed as their affi",
+      "content": "<h2>Sovereign</h2><p>Sovereigns represent the pinnacle of a Chaos lords evolution. Sovereigns have devoured entire worlds and killed countless Dieties accross the universe. Sovereigns can seldom be destroyed as their affi</p><p><img src=\"/images/dalari/species/Chaos_Lord.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "8 Aug, 2022"
+    },
+    {
+      "id": "article-28ef822c-bc90-4ece-9025-3e515a039e59",
+      "worldId": "world-dalari-primary",
+      "title": "Southern Gate",
+      "category": "Location",
+      "summary": "Article on Southern Gate in the world of Dalari.",
+      "content": "<h2>Southern Gate</h2><p>Article on Southern Gate in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Southern_Gate.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "12 Aug, 2022"
+    },
+    {
+      "id": "article-29a0c28d-66d7-43ef-8d48-553d9e4ffcaa",
+      "worldId": "world-dalari-primary",
+      "title": "Coldwall",
+      "category": "Location",
+      "summary": "Article on Coldwall in the world of Dalari.",
+      "content": "<h2>Coldwall</h2><p>Article on Coldwall in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Coldwall.png\" /></p>",
+      "tags": [
+        "Settlement"
+      ],
+      "isSecret": false,
+      "updatedAt": "16 Aug, 2022"
+    },
+    {
+      "id": "article-29d29782-890a-473c-b467-4d5aaba3f0e7",
+      "worldId": "world-dalari-primary",
+      "title": "Crested Prowler",
+      "category": "Lore",
+      "summary": "> \u201cQuiet as a falling leaf, but heavy as a mountain's shadow. The Prowler hears the song of your heart before you even know you are being watched.\u201d The Crested Prowler is a terrifying fusion of feline",
+      "content": "<h2>Crested Prowler</h2><p>> \u201cQuiet as a falling leaf, but heavy as a mountain's shadow. The Prowler hears the song of your heart before you even know you are being watched.\u201d The Crested Prowler is a terrifying fusion of feline</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Feb, 2026"
+    },
+    {
+      "id": "article-2a9b7e52-0451-443c-865f-23517e8bd53e",
+      "worldId": "world-dalari-primary",
+      "title": "The Undertide",
+      "category": "Lore",
+      "summary": "In the endless deeps, the Meranth (Sea Peoples) hear no beat, song, or resonance. To them, the Godpulse manifests as The Undertide\u2014invisible currents and flows beneath the ocean's skin. They believe t",
+      "content": "<h2>The Undertide</h2><p>In the endless deeps, the Meranth (Sea Peoples) hear no beat, song, or resonance. To them, the Godpulse manifests as The Undertide\u2014invisible currents and flows beneath the ocean's skin. They believe t</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-2f95f2b2-e6af-4fd0-8010-4dcc9d1740ad",
+      "worldId": "world-dalari-primary",
+      "title": "Hammer Time",
+      "category": "Location",
+      "summary": "A two story, lilac trimmed, mortar building with a thick metal door that looks as though it belongs on a vault. FORGE MASTER Tapnaibess Benibnu (Gnome) You see a average height, emanipated, sunkissed ",
+      "content": "<h2>Hammer Time</h2><p>A two story, lilac trimmed, mortar building with a thick metal door that looks as though it belongs on a vault. FORGE MASTER Tapnaibess Benibnu (Gnome) You see a average height, emanipated, sunkissed </p><p><img src=\"/images/dalari/locations/Hammer_Time.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": true,
+      "updatedAt": "22 Aug, 2022"
+    },
+    {
+      "id": "article-2fb7fd89-0e02-4e47-bef5-bf09bcc4e52b",
+      "worldId": "world-dalari-primary",
+      "title": "Magic",
+      "category": "Lore",
+      "summary": "Magic in Dalari is a blanket term for the various powers that exist in this world. The source of all magic is a cosmic force known as the Godpulse, which is perceived and expressed differently by each",
+      "content": "<h2>Magic</h2><p>Magic in Dalari is a blanket term for the various powers that exist in this world. The source of all magic is a cosmic force known as the Godpulse, which is perceived and expressed differently by each</p><p><img src=\"/images/dalari/world/Magic.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-32838e3b-c82d-4acd-957e-071ab39883c8",
+      "worldId": "world-dalari-primary",
+      "title": "The Primal Breath",
+      "category": "Lore",
+      "summary": "Dragons perceive the Godpulse as The Primal Breath\u2014the slow, deep, life-sustaining expansion and contraction of the universe . Their magic is tied to elemental totality and time, giving them power tha",
+      "content": "<h2>The Primal Breath</h2><p>Dragons perceive the Godpulse as The Primal Breath\u2014the slow, deep, life-sustaining expansion and contraction of the universe . Their magic is tied to elemental totality and time, giving them power tha</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-3acb8dc3-69a2-4695-9a94-c4eb9f0a3a9e",
+      "worldId": "world-dalari-primary",
+      "title": "Throne of Darkness",
+      "category": "Location",
+      "summary": "Deep within the heart of the @[Chaos lands] stands the Throne of Darkness. A 1000 ft tall tower made of pure black Obsidian. The Throne of Darkness was built overlooking a huge crater. Legend has it t",
+      "content": "<h2>Throne of Darkness</h2><p>Deep within the heart of the @[Chaos lands] stands the Throne of Darkness. A 1000 ft tall tower made of pure black Obsidian. The Throne of Darkness was built overlooking a huge crater. Legend has it t</p><p><img src=\"/images/dalari/locations/Throne_of_Darkness.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "8 Aug, 2022"
+    },
+    {
+      "id": "article-3d9c2749-d0f2-4969-8842-53ff6b0de2e6",
+      "worldId": "world-dalari-primary",
+      "title": "Wizards",
+      "category": "Lore",
+      "summary": "Article on Wizards in the world of Dalari.",
+      "content": "<h2>Wizards</h2><p>Article on Wizards in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-3dbbdd19-e327-49ce-9eb0-e594b479d352",
+      "worldId": "world-dalari-primary",
+      "title": "Bastillian",
+      "category": "Location",
+      "summary": "Article on Bastillian in the world of Dalari.",
+      "content": "<h2>Bastillian</h2><p>Article on Bastillian in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Bastillian.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-3ea8ecb8-9508-4055-920d-4dadc4d25630",
+      "worldId": "world-dalari-primary",
+      "title": "Lord Ceowulf",
+      "category": "Character",
+      "summary": "Maximilain Ceowulf. A distinguished commander and current @[Duke of Redcliff]",
+      "content": "<h2>Lord Ceowulf</h2><p>Maximilain Ceowulf. A distinguished commander and current @[Duke of Redcliff]</p><p><img src=\"/images/dalari/characters/Lord_Ceowulf.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "13 Aug, 2022"
+    },
+    {
+      "id": "article-471f609b-d1d2-4c5a-880d-19afac944b5e",
+      "worldId": "world-dalari-primary",
+      "title": "Sailissa Tabor",
+      "category": "Character",
+      "summary": "A young half-elf girl, 8 years old. Her house was attacked by @[Raven Warriors] and she was left hidden under the floor boards. Her father is a fisherman down at @[Whitefront Fisheries] named @[Aaron ",
+      "content": "<h2>Sailissa Tabor</h2><p>A young half-elf girl, 8 years old. Her house was attacked by @[Raven Warriors] and she was left hidden under the floor boards. Her father is a fisherman down at @[Whitefront Fisheries] named @[Aaron </p><p><img src=\"/images/dalari/characters/Sailissa_Tabor.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-48667299-c260-43c5-9dde-7ce41d0127d8",
+      "worldId": "world-dalari-primary",
+      "title": "Belrund Mine",
+      "category": "Location",
+      "summary": "The Belrund Mine is Redcliffs largest and only Mithril Mine, the Mine is large and there are multiple entries into the Belrund mine. The Belrund Mining town, is where most of the Miners enjoy their sp",
+      "content": "<h2>Belrund Mine</h2><p>The Belrund Mine is Redcliffs largest and only Mithril Mine, the Mine is large and there are multiple entries into the Belrund mine. The Belrund Mining town, is where most of the Miners enjoy their sp</p><p><img src=\"/images/dalari/locations/Belrund_Mine.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "12 Aug, 2022"
+    },
+    {
+      "id": "article-4d5c9bb1-02db-402a-a849-342ebcfcf945",
+      "worldId": "world-dalari-primary",
+      "title": "Lesser gods",
+      "category": "Lore",
+      "summary": "Article on Lesser gods in the world of Dalari.",
+      "content": "<h2>Lesser gods</h2><p>Article on Lesser gods in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-4db351c9-18ff-41db-a6d9-6887aa490947",
+      "worldId": "world-dalari-primary",
+      "title": "Words of Power",
+      "category": "Lore",
+      "summary": "Article on Words of Power in the world of Dalari.",
+      "content": "<h2>Words of Power</h2><p>Article on Words of Power in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-4f6d7507-ba43-4a63-9d83-278dc1dbfcaa",
+      "worldId": "world-dalari-primary",
+      "title": "Druids",
+      "category": "Lore",
+      "summary": "Article on Druids in the world of Dalari.",
+      "content": "<h2>Druids</h2><p>Article on Druids in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-512e60fe-525f-4d14-8e41-5bfcd3d5607e",
+      "worldId": "world-dalari-primary",
+      "title": "The Old Pegleg Inn",
+      "category": "Location",
+      "summary": "Article on The Old Pegleg Inn in the world of Dalari.",
+      "content": "<h2>The Old Pegleg Inn</h2><p>Article on The Old Pegleg Inn in the world of Dalari.</p><p><img src=\"/images/dalari/locations/The_Old_Pegleg_Inn.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-5173b240-1fed-4a71-9340-1a04640dcb89",
+      "worldId": "world-dalari-primary",
+      "title": "Western Gate",
+      "category": "Location",
+      "summary": "Article on Western Gate in the world of Dalari.",
+      "content": "<h2>Western Gate</h2><p>Article on Western Gate in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Western_Gate.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-51e80323-544c-4ef2-8f88-64ca00a86d67",
+      "worldId": "world-dalari-primary",
+      "title": "Dawn",
+      "category": "Item",
+      "summary": "Dawn is a shortsword created by the Enchanter @[Aristol Memphis] and was one of the first magic weapons to be created by humans without a blessing from the gods. This weapon is able to channel the pow",
+      "content": "<h2>Dawn</h2><p>Dawn is a shortsword created by the Enchanter @[Aristol Memphis] and was one of the first magic weapons to be created by humans without a blessing from the gods. This weapon is able to channel the pow</p><p><img src=\"/images/dalari/characters/Aristol_Memphis_Magic_Sword_Schematics.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-5501e305-89a4-44bb-a172-08b4416b1f58",
+      "worldId": "world-dalari-primary",
+      "title": "Duke of Redcliff",
+      "category": "Lore",
+      "summary": "Title given to the current Lord of Redcliff. This title is bestowed by the king and the one who bears this title will become the sovereign ruler of the Duchy of Redcliff. The House of Ceowulf has been",
+      "content": "<h2>Duke of Redcliff</h2><p>Title given to the current Lord of Redcliff. This title is bestowed by the king and the one who bears this title will become the sovereign ruler of the Duchy of Redcliff. The House of Ceowulf has been</p><p><img src=\"/images/dalari/world/Duke_of_Redcliff.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "12 Aug, 2022"
+    },
+    {
+      "id": "article-5582f340-4807-4040-9964-3bd0d521750c",
+      "worldId": "world-dalari-primary",
+      "title": "Introduction to the Encyclopedia",
+      "category": "Lore",
+      "summary": "For most worldbuilders this is where the real fun begins. Your encyclopedia is the core of your world. Simply put, if it's not about the geography or your world, or strictly related to your campaign, ",
+      "content": "<h2>Introduction to the Encyclopedia</h2><p>For most worldbuilders this is where the real fun begins. Your encyclopedia is the core of your world. Simply put, if it's not about the geography or your world, or strictly related to your campaign, </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-587396f7-b0c6-4284-872f-5a30d648758c",
+      "worldId": "world-dalari-primary",
+      "title": "Twinpine Garrison",
+      "category": "Location",
+      "summary": "Situated South East of @[Fort Redcliff] The Twinpine Garrison guards the @[Belrund Bridge] bridge leading towards Thitslewood and the Belrund Mines. They patrol the surrounding region esspecially the ",
+      "content": "<h2>Twinpine Garrison</h2><p>Situated South East of @[Fort Redcliff] The Twinpine Garrison guards the @[Belrund Bridge] bridge leading towards Thitslewood and the Belrund Mines. They patrol the surrounding region esspecially the </p><p><img src=\"/images/dalari/locations/Twinpine_Garrison.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "16 Nov, 2022"
+    },
+    {
+      "id": "article-591a5a16-0dc5-4468-aee7-5fdc45ff2055",
+      "worldId": "world-dalari-primary",
+      "title": "Gods",
+      "category": "Lore",
+      "summary": "The gods are not as divine or perfect as you would expect them to be. The gods of Dalari all ascended to their positions after attaining their God Spark, which means that all gods of Dalari were once ",
+      "content": "<h2>Gods</h2><p>The gods are not as divine or perfect as you would expect them to be. The gods of Dalari all ascended to their positions after attaining their God Spark, which means that all gods of Dalari were once </p><p><img src=\"/images/dalari/species/Gods.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-59587f72-a21c-481f-8d14-0469afd6a25b",
+      "worldId": "world-dalari-primary",
+      "title": "The Shaded Isles",
+      "category": "Location",
+      "summary": "Home to the @[Raven Queen] her children the Aya-la. After stealing a portion of the First Shadows power, the @[Raven Queen] created the Aya-la-mua (Her first born offspring) these children possessed a",
+      "content": "<h2>The Shaded Isles</h2><p>Home to the @[Raven Queen] her children the Aya-la. After stealing a portion of the First Shadows power, the @[Raven Queen] created the Aya-la-mua (Her first born offspring) these children possessed a</p><p><img src=\"/images/dalari/locations/The_Shaded_Isles.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-59d3717c-81a5-4562-89c7-45a73210fb73",
+      "worldId": "world-dalari-primary",
+      "title": "Stillwharf",
+      "category": "Location",
+      "summary": "Article on Stillwharf in the world of Dalari.",
+      "content": "<h2>Stillwharf</h2><p>Article on Stillwharf in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Stillwharf.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "12 Aug, 2022"
+    },
+    {
+      "id": "article-59ff101c-a0bb-4e8c-8008-5efb106cd720",
+      "worldId": "world-dalari-primary",
+      "title": "Graveyard of Gods",
+      "category": "Location",
+      "summary": "Article on Graveyard of Gods in the world of Dalari.",
+      "content": "<h2>Graveyard of Gods</h2><p>Article on Graveyard of Gods in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-5a4dd25a-0ef1-4fc1-85b8-8de8b2d884e3",
+      "worldId": "world-dalari-primary",
+      "title": "Fort Redcliff",
+      "category": "Location",
+      "summary": "Fort Redcliff, what once was a small garrison to guard against the Dwarves in Dwargen has sinced turned into a trading hub of massive potential not shortly after signing a peace treaty with the Dwarve",
+      "content": "<h2>Fort Redcliff</h2><p>Fort Redcliff, what once was a small garrison to guard against the Dwarves in Dwargen has sinced turned into a trading hub of massive potential not shortly after signing a peace treaty with the Dwarve</p><p><img src=\"/images/dalari/locations/Fort_Redcliff.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Aug, 2022"
+    },
+    {
+      "id": "article-5c8c1f8c-5bb6-456e-ae82-ed0d17c8baaf",
+      "worldId": "world-dalari-primary",
+      "title": "Raven Warriors",
+      "category": "Lore",
+      "summary": "Loyal soldiers to the @[Raven Queen], the souls of these Raven Warriors manifest into the mortal realm through the use of Shadow Magic, when they are defeated their souls return to the warm embrace of",
+      "content": "<h2>Raven Warriors</h2><p>Loyal soldiers to the @[Raven Queen], the souls of these Raven Warriors manifest into the mortal realm through the use of Shadow Magic, when they are defeated their souls return to the warm embrace of</p><p><img src=\"/images/dalari/world/Raven_Warriors.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Nov, 2022"
+    },
+    {
+      "id": "article-5cc3db10-e323-41f2-a6ca-942cba5c45f6",
+      "worldId": "world-dalari-primary",
+      "title": "Meeting Aaron Tabor",
+      "category": "Event",
+      "summary": "You can see the reflection of the moon dance on the surface of the water, you can see the lights of the few makeshift houses that sit along the bank of the river, you also can see wooden platforms and",
+      "content": "<h2>Meeting Aaron Tabor</h2><p>You can see the reflection of the moon dance on the surface of the water, you can see the lights of the few makeshift houses that sit along the bank of the river, you also can see wooden platforms and</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Plot"
+      ],
+      "isSecret": false,
+      "updatedAt": "9 Sep, 2022"
+    },
+    {
+      "id": "article-5dae67da-f394-4571-97e9-3cb8abb2e0a8",
+      "worldId": "world-dalari-primary",
+      "title": "Silverhawks",
+      "category": "Faction",
+      "summary": "Silverhawks are an elite and secretive army corp for the kingdom of Artilian. Silverhawks are selected and recruited from some of the best warriors in the kingdom. Silverhawks undertake dangerous miss",
+      "content": "<h2>Silverhawks</h2><p>Silverhawks are an elite and secretive army corp for the kingdom of Artilian. Silverhawks are selected and recruited from some of the best warriors in the kingdom. Silverhawks undertake dangerous miss</p><p><img src=\"/images/dalari/factions/Silverhawks.png\" /></p>",
+      "tags": [
+        "Organization"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-5e73bb5e-9fb1-44b4-91b9-135dcbc42c90",
+      "worldId": "world-dalari-primary",
+      "title": "Aether's Perch: The Sky-Crest Eyrie",
+      "category": "Location",
+      "summary": "> \u201cThe wind does not scream here; it sings. And if you listen closely enough, you can hear the heartbeat of the sky.\u201d \u2014  \u2014 Elara Whisper-Wind, Beast-Caller of the Third Octave Aether\u2019s Perch is a spec",
+      "content": "<h2>Aether's Perch: The Sky-Crest Eyrie</h2><p>> \u201cThe wind does not scream here; it sings. And if you listen closely enough, you can hear the heartbeat of the sky.\u201d \u2014  \u2014 Elara Whisper-Wind, Beast-Caller of the Third Octave Aether\u2019s Perch is a spec</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Settlement"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Feb, 2026"
+    },
+    {
+      "id": "article-62e35290-d486-4e8f-823d-85b77a983bb5",
+      "worldId": "world-dalari-primary",
+      "title": "How to stage your world",
+      "category": "Lore",
+      "summary": "A staging area is a place for you to store and organize articles which are not completed yet or articles which are not necessarily canon to your lore. These can include random inspiration, competition",
+      "content": "<h2>How to stage your world</h2><p>A staging area is a place for you to store and organize articles which are not completed yet or articles which are not necessarily canon to your lore. These can include random inspiration, competition</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-6375f1b0-7638-464a-85ae-413f72d69a45",
+      "worldId": "world-dalari-primary",
+      "title": "Aya-la",
+      "category": "Lore",
+      "summary": "Children of the @[Raven Queen], the Aya-la live in a matriarchal society where the females hold all the authority. Female Aya-la have a higher affinity for their mothers magic. All Aya-la refer to the",
+      "content": "<h2>Aya-la</h2><p>Children of the @[Raven Queen], the Aya-la live in a matriarchal society where the females hold all the authority. Female Aya-la have a higher affinity for their mothers magic. All Aya-la refer to the</p><p><img src=\"/images/dalari/species/Aya-la.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-672a4aa2-0dab-4f16-9311-26ac0d529ac4",
+      "worldId": "world-dalari-primary",
+      "title": "Greater Gods",
+      "category": "Lore",
+      "summary": "Greater Gods are Gods who have amassed both personal power and large followers.",
+      "content": "<h2>Greater Gods</h2><p>Greater Gods are Gods who have amassed both personal power and large followers.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "8 Aug, 2022"
+    },
+    {
+      "id": "article-6789f62b-7d98-4b2f-83a1-598ecad6b075",
+      "worldId": "world-dalari-primary",
+      "title": "Aaron Tabor",
+      "category": "Character",
+      "summary": "Is a fisherman down at @[Whitefront Fisheries]. He is @[Sailissa Tabor]'s Human Father. He is a tubby man around 45 years of age with grey hair and a grey beard, he has small beady eyes and a rugged l",
+      "content": "<h2>Aaron Tabor</h2><p>Is a fisherman down at @[Whitefront Fisheries]. He is @[Sailissa Tabor]'s Human Father. He is a tubby man around 45 years of age with grey hair and a grey beard, he has small beady eyes and a rugged l</p><p><img src=\"/images/dalari/characters/Aaron_Tabor.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": true,
+      "updatedAt": "9 Sep, 2022"
+    },
+    {
+      "id": "article-681a786d-2f95-4c19-886a-f8c6cb8b2f8a",
+      "worldId": "world-dalari-primary",
+      "title": "Emberflow",
+      "category": "Lore",
+      "summary": "The Emberflow is the Ashen League's (Orcs, Hobgoblins, Ogres) interpretation of the Godpulse: a burning current that fuels strength, rage, and vitality. Their magic is a dynamic, two-way process where",
+      "content": "<h2>Emberflow</h2><p>The Emberflow is the Ashen League's (Orcs, Hobgoblins, Ogres) interpretation of the Godpulse: a burning current that fuels strength, rage, and vitality. Their magic is a dynamic, two-way process where</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-699e4222-a222-4203-aee6-7a6ea4d6dd45",
+      "worldId": "world-dalari-primary",
+      "title": "Twinpine Garrison (Encounter)",
+      "category": "Event",
+      "summary": "You walk along the stoney road up to the Garrison you notice the walls are a mix of both wooden beams and stone blocks. You can see 2 guards standing at attention in front of an open gate. On top of t",
+      "content": "<h2>Twinpine Garrison (Encounter)</h2><p>You walk along the stoney road up to the Garrison you notice the walls are a mix of both wooden beams and stone blocks. You can see 2 guards standing at attention in front of an open gate. On top of t</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Military Conflict"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022"
+    },
+    {
+      "id": "article-6c89d9b7-cee8-4338-be6f-05267cfac297",
+      "worldId": "world-dalari-primary",
+      "title": "Whitefront Fisheries",
+      "category": "Location",
+      "summary": "Small fishing village situated along the river. Good place to buy fresh fish at a decent price. A man by the name of \"Aaron\" is rumored to offer safe passage across the river for a fee.",
+      "content": "<h2>Whitefront Fisheries</h2><p>Small fishing village situated along the river. Good place to buy fresh fish at a decent price. A man by the name of \"Aaron\" is rumored to offer safe passage across the river for a fee.</p><p><img src=\"/images/dalari/locations/Whitefront_Fisheries.png\" /></p>",
+      "tags": [
+        "Settlement"
+      ],
+      "isSecret": true,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-6d504b09-1388-46c7-a9f4-89ac46be7352",
+      "worldId": "world-dalari-primary",
+      "title": "True Dragons",
+      "category": "Lore",
+      "summary": "Article on True Dragons in the world of Dalari.",
+      "content": "<h2>True Dragons</h2><p>Article on True Dragons in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-6e599e6b-8fbc-4713-b3e8-638ca3599077",
+      "worldId": "world-dalari-primary",
+      "title": "Introduction to the Atlas",
+      "category": "Lore",
+      "summary": "The atlas is intended as a place to explore and write about your physical locations, like universes, galaxies, solar systems, planets, continents, islands, mountain ranges, forests, rivers, cities, ru",
+      "content": "<h2>Introduction to the Atlas</h2><p>The atlas is intended as a place to explore and write about your physical locations, like universes, galaxies, solar systems, planets, continents, islands, mountain ranges, forests, rivers, cities, ru</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-703b8466-a52b-4ce3-abf4-71d28869ff04",
+      "worldId": "world-dalari-primary",
+      "title": "Altharian Forest",
+      "category": "Location",
+      "summary": "Article on Altharian Forest in the world of Dalari.",
+      "content": "<h2>Altharian Forest</h2><p>Article on Altharian Forest in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Altharian_Forest.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-75a6d496-519a-4db0-b752-38d4816c228d",
+      "worldId": "world-dalari-primary",
+      "title": "Broadriver Manor",
+      "category": "Location",
+      "summary": "Article on Broadriver Manor in the world of Dalari.",
+      "content": "<h2>Broadriver Manor</h2><p>Article on Broadriver Manor in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Broadriver_Manor.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-762b2e63-dc7c-4f1a-814f-70f588b7d9b4",
+      "worldId": "world-dalari-primary",
+      "title": "Ambushed in Merton",
+      "category": "Event",
+      "summary": "You once again embark on your way towards redcliff. As you follow the road you begin to make out lights as you notice some houses up ahead. You notice bloody footprints along the road as you get close",
+      "content": "<h2>Ambushed in Merton</h2><p>You once again embark on your way towards redcliff. As you follow the road you begin to make out lights as you notice some houses up ahead. You notice bloody footprints along the road as you get close</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Military Conflict"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Nov, 2022"
+    },
+    {
+      "id": "article-762bed00-b3d7-4f2d-ba07-4d8275605066",
+      "worldId": "world-dalari-primary",
+      "title": "Spell Formations",
+      "category": "Lore",
+      "summary": "Article on Spell Formations in the world of Dalari.",
+      "content": "<h2>Spell Formations</h2><p>Article on Spell Formations in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-78c0e0f6-7e28-492c-827e-6ac666e7763d",
+      "worldId": "world-dalari-primary",
+      "title": "Letter to Vadith",
+      "category": "Item",
+      "summary": "\u201cVadith my love, The Drow, Sylvian was seen in thistle wood by an agent of ours, investigate and eliminate him, We can\u2019t have the silver hawks interfering with our plan. Once I return to redcliff I wi",
+      "content": "<h2>Letter to Vadith</h2><p>\u201cVadith my love, The Drow, Sylvian was seen in thistle wood by an agent of ours, investigate and eliminate him, We can\u2019t have the silver hawks interfering with our plan. Once I return to redcliff I wi</p><p><img src=\"/images/dalari/items/Letter_to_Vadith.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "1 Sep, 2022"
+    },
+    {
+      "id": "article-7d72fd7c-aad1-4991-9b78-9d4df68bc505",
+      "worldId": "world-dalari-primary",
+      "title": "Eel Pond",
+      "category": "Location",
+      "summary": "A family owned Eel farm, where they grow and kill eels, despite the fact that this pond is quite large, there seems to be an uncanny number of eels being farmed from this place. With hundreds of eels ",
+      "content": "<h2>Eel Pond</h2><p>A family owned Eel farm, where they grow and kill eels, despite the fact that this pond is quite large, there seems to be an uncanny number of eels being farmed from this place. With hundreds of eels </p><p><img src=\"/images/dalari/locations/Eel_Pond.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-7d9dd325-8d50-4fd3-b4c7-2e7ab76e3347",
+      "worldId": "world-dalari-primary",
+      "title": "Arcane Gifts",
+      "category": "Location",
+      "summary": "A small and unassuming local magical shop with a small stock of items, however they have a decent stock of potions at affordable prices. This store is owned and managed by the @[Somarth, School of the",
+      "content": "<h2>Arcane Gifts</h2><p>A small and unassuming local magical shop with a small stock of items, however they have a decent stock of potions at affordable prices. This store is owned and managed by the @[Somarth, School of the</p><p><img src=\"/images/dalari/locations/Arcane_Gifts.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": true,
+      "updatedAt": "25 Aug, 2022"
+    },
+    {
+      "id": "article-8013e209-ad7a-4633-a7f9-4585505f3053",
+      "worldId": "world-dalari-primary",
+      "title": "Deimos Murkwood",
+      "category": "Character",
+      "summary": "Deimos Murkwood was born in Thundertree, a small town east of Neverwinter. He was raised by his loving parents, who instilled in him a strong sense of justice and compassion for others. One day, while",
+      "content": "<h2>Deimos Murkwood</h2><p>Deimos Murkwood was born in Thundertree, a small town east of Neverwinter. He was raised by his loving parents, who instilled in him a strong sense of justice and compassion for others. One day, while</p><p><img src=\"/images/dalari/characters/Deimos_Murkwood.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-81977bee-fa60-4bb5-80df-1457897ee369",
+      "worldId": "world-dalari-primary",
+      "title": "Pantheon of God's",
+      "category": "Character",
+      "summary": "The gods of Dalari are the highest wielders of the Godpulse, the cosmic source of all magic. Each deity, having ascended from mortality by attaining a God Spark, perceives and filters this raw energy ",
+      "content": "<h2>Pantheon of God's</h2><p>The gods of Dalari are the highest wielders of the Godpulse, the cosmic source of all magic. Each deity, having ascended from mortality by attaining a God Spark, perceives and filters this raw energy </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-8277ad11-4c20-435c-ad5c-15a8f5fd0d72",
+      "worldId": "world-dalari-primary",
+      "title": "Redcliff Keep",
+      "category": "Location",
+      "summary": "Article on Redcliff Keep in the world of Dalari.",
+      "content": "<h2>Redcliff Keep</h2><p>Article on Redcliff Keep in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Redcliff_Keep.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "1 Sep, 2022"
+    },
+    {
+      "id": "article-838a6aeb-9b31-4863-a23c-3d90d91486c4",
+      "worldId": "world-dalari-primary",
+      "title": "Thalenis Vane, Grand Chanter",
+      "category": "Character",
+      "summary": "Thalenis Vane is a prominent figure in Luminaris, serving as the Grand Chanter of the Resonant Spire and a Voice of the Chorus. As the Overseer of the Lumin (Life-Weavers Guild), he is responsible for",
+      "content": "<h2>Thalenis Vane, Grand Chanter</h2><p>Thalenis Vane is a prominent figure in Luminaris, serving as the Grand Chanter of the Resonant Spire and a Voice of the Chorus. As the Overseer of the Lumin (Life-Weavers Guild), he is responsible for</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "20 Feb, 2026"
+    },
+    {
+      "id": "article-846d2060-eb73-472c-97cc-ef25b11a52ba",
+      "worldId": "world-dalari-primary",
+      "title": "Pulsaris",
+      "category": "Lore",
+      "summary": "The Radiant Host is the martial arm of The Conclave, comprised of elite warriors known as Pulsaris. They are the Vanguard of the Pulse, acting as the physical manifestation of divine justice and prote",
+      "content": "<h2>Pulsaris</h2><p>The Radiant Host is the martial arm of The Conclave, comprised of elite warriors known as Pulsaris. They are the Vanguard of the Pulse, acting as the physical manifestation of divine justice and prote</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-8575247c-f649-4462-b757-e4904bf17784",
+      "worldId": "world-dalari-primary",
+      "title": "Dwargen",
+      "category": "Location",
+      "summary": "Article on Dwargen in the world of Dalari.",
+      "content": "<h2>Dwargen</h2><p>Article on Dwargen in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Dwargen.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Nov, 2025"
+    },
+    {
+      "id": "article-875055c4-75f7-41a4-a2a9-8fc4ddef0975",
+      "worldId": "world-dalari-primary",
+      "title": "First Shadow",
+      "category": "Character",
+      "summary": "An entity born from the @[Shadow Realm]'s @[Realmcore] the first intelligent life to be born in the @[Shadow Realm], He has existed since the birth of the Shadow Realm and held unfathomable power, how",
+      "content": "<h2>First Shadow</h2><p>An entity born from the @[Shadow Realm]'s @[Realmcore] the first intelligent life to be born in the @[Shadow Realm], He has existed since the birth of the Shadow Realm and held unfathomable power, how</p><p><img src=\"/images/dalari/characters/First_Shadow.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-8c21bdd0-c091-4267-9958-053d833999c7",
+      "worldId": "world-dalari-primary",
+      "title": "The Inheritance",
+      "category": "Lore",
+      "summary": "Bloodline Magic, known to its practitioners as The Inheritance, is a primary branch of magic in Dalari. It is defined by the belief that magical power is not external energy to be learned or measured,",
+      "content": "<h2>The Inheritance</h2><p>Bloodline Magic, known to its practitioners as The Inheritance, is a primary branch of magic in Dalari. It is defined by the belief that magical power is not external energy to be learned or measured,</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-93e167d2-b700-4de5-9610-b25325e1f5ef",
+      "worldId": "world-dalari-primary",
+      "title": "The Hands of Judgement",
+      "category": "Faction",
+      "summary": "The Hands of Judgement are a small group of self righteous \"Do Gooders\" who take acts of justice into their own hands. Disregarding the processes of the law and making \"Judgement\" themselves. They hav",
+      "content": "<h2>The Hands of Judgement</h2><p>The Hands of Judgement are a small group of self righteous \"Do Gooders\" who take acts of justice into their own hands. Disregarding the processes of the law and making \"Judgement\" themselves. They hav</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Organization"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Aug, 2022"
+    },
+    {
+      "id": "article-9534426a-df9a-4710-b06a-18f66fb866b5",
+      "worldId": "world-dalari-primary",
+      "title": "Dave Dobyn",
+      "category": "Character",
+      "summary": "A guard stationed down in Twinpine garrison. Was born and raised in Redcliff and had big dreams of being a Knight and defending the realm, however he has really bad hand eye co-ordination however, he ",
+      "content": "<h2>Dave Dobyn</h2><p>A guard stationed down in Twinpine garrison. Was born and raised in Redcliff and had big dreams of being a Knight and defending the realm, however he has really bad hand eye co-ordination however, he </p><p><img src=\"/images/dalari/characters/Dave_Dobyn.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "27 Sep, 2022"
+    },
+    {
+      "id": "article-9db609f7-2ce9-4339-8ace-578f61973684",
+      "worldId": "world-dalari-primary",
+      "title": "Trash Monster: name to be decided",
+      "category": "Lore",
+      "summary": "Describe a predator in your setting with an unusual killing method This predator lives in Rubbish bins and also travels through rubbish bins feeding on rubbish and attacking nearby travelers",
+      "content": "<h2>Trash Monster: name to be decided</h2><p>Describe a predator in your setting with an unusual killing method This predator lives in Rubbish bins and also travels through rubbish bins feeding on rubbish and attacking nearby travelers</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-a15b0947-cb2d-44bf-9101-f360c3f3b1dc",
+      "worldId": "world-dalari-primary",
+      "title": "Alwin",
+      "category": "Character",
+      "summary": "@[Lord Ceowulf]s youngest son. He is 14 years old.",
+      "content": "<h2>Alwin</h2><p>@[Lord Ceowulf]s youngest son. He is 14 years old.</p><p><img src=\"/images/dalari/characters/Alwin.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022"
+    },
+    {
+      "id": "article-a1c8eb4d-d362-4ceb-8a82-f464b6abe7f4",
+      "worldId": "world-dalari-primary",
+      "title": "The Gathering of the Silverhawks",
+      "category": "Lore",
+      "summary": "Night Its darkness covers this land like a thin velvet blanket. Although it was night upon the land, the moon was out in all its glory. Shedding dim light to those unfortunate enough to be travelling ",
+      "content": "<h2>The Gathering of the Silverhawks</h2><p>Night Its darkness covers this land like a thin velvet blanket. Although it was night upon the land, the moon was out in all its glory. Shedding dim light to those unfortunate enough to be travelling </p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-a2248dce-9e28-44be-aab3-f6d9f516203f",
+      "worldId": "world-dalari-primary",
+      "title": "Fortress of the Undershadow",
+      "category": "Location",
+      "summary": "Article on Fortress of the Undershadow in the world of Dalari.",
+      "content": "<h2>Fortress of the Undershadow</h2><p>Article on Fortress of the Undershadow in the world of Dalari.</p><p><img src=\"/images/dalari/locations/The_Shaded_Isles_Raven_queens_castle.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-a30a5bc4-265c-432b-8dbe-e170cdf27ff2",
+      "worldId": "world-dalari-primary",
+      "title": "The Norgn",
+      "category": "Lore",
+      "summary": "> \u201cIn the silence between breaths, the world reveals itself. Do not seek to create; seek to behold.\u201d \u2014  \u2014 High Seer Kaelen of Vorstgrad The Norgn are a tall, pale-skinned human ethnicity inhabiting th",
+      "content": "<h2>The Norgn</h2><p>> \u201cIn the silence between breaths, the world reveals itself. Do not seek to create; seek to behold.\u201d \u2014  \u2014 High Seer Kaelen of Vorstgrad The Norgn are a tall, pale-skinned human ethnicity inhabiting th</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Ethnicity",
+        "Norgn",
+        "Tundra",
+        "Ice-Seers",
+        "The-Stillness",
+        "Shiverspeak"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Mar, 2026"
+    },
+    {
+      "id": "article-a7edbcc0-56fa-423e-ae5a-ebc18240f1bb",
+      "worldId": "world-dalari-primary",
+      "title": "Mages",
+      "category": "Lore",
+      "summary": "Article on Mages in the world of Dalari.",
+      "content": "<h2>Mages</h2><p>Article on Mages in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-aab31700-df61-41ae-aa9a-229ef3ebebd7",
+      "worldId": "world-dalari-primary",
+      "title": "Ildara'ven: The Cascading Canopy",
+      "category": "Location",
+      "summary": "> \u201cLuminaris is the still pond; Ildara'ven is the rushing waterfall. One reflects the light, the other creates the rainbow.\u201d \u2014  \u2014 Arch-Shaper Vaelen Ildara'ven is the wild, living heart of the Elven t",
+      "content": "<h2>Ildara'ven: The Cascading Canopy</h2><p>> \u201cLuminaris is the still pond; Ildara'ven is the rushing waterfall. One reflects the light, the other creates the rainbow.\u201d \u2014  \u2014 Arch-Shaper Vaelen Ildara'ven is the wild, living heart of the Elven t</p><p><img src=\"/images/dalari/locations/Ildaraven_The_Cascading_Canopy.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "26 Feb, 2026"
+    },
+    {
+      "id": "article-aad428b0-2979-44a0-b32d-416d53841630",
+      "worldId": "world-dalari-primary",
+      "title": "Yew Mill",
+      "category": "Location",
+      "summary": "Article on Yew Mill in the world of Dalari.",
+      "content": "<h2>Yew Mill</h2><p>Article on Yew Mill in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Yew_Mill.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-aafdc9b6-94b6-46bf-bbe5-c6db133e30ee",
+      "worldId": "world-dalari-primary",
+      "title": "The Stillness",
+      "category": "Lore",
+      "summary": "> \u201cThe world is a song that hasn't been sung yet. If you are quiet enough, you can hear the silence that holds the notes.\u201d \u2014  \u2014 High Seer Kaelen of Vorstgrad To the @[Norgn](article:a30a5bc4-265c-432b",
+      "content": "<h2>The Stillness</h2><p>> \u201cThe world is a song that hasn't been sung yet. If you are quiet enough, you can hear the silence that holds the notes.\u201d \u2014  \u2014 High Seer Kaelen of Vorstgrad To the @[Norgn](article:a30a5bc4-265c-432b</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Mar, 2026"
+    },
+    {
+      "id": "article-ad3ed6da-9b79-4b12-bdc8-c2392362b398",
+      "worldId": "world-dalari-primary",
+      "title": "Goblinkind",
+      "category": "Lore",
+      "summary": "Article on Goblinkind in the world of Dalari.",
+      "content": "<h2>Goblinkind</h2><p>Article on Goblinkind in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Aug, 2022"
+    },
+    {
+      "id": "article-add773c7-4d67-4607-a335-bb94b32a5d19",
+      "worldId": "world-dalari-primary",
+      "title": "Lifesong",
+      "category": "Lore",
+      "summary": "The Lifesong To the Elves, magic is not a force to be commanded, but a melody to be joined . They call the Godpulse the Lifesong, the eternal harmony between life, death, and rebirth . For them, every",
+      "content": "<h2>Lifesong</h2><p>The Lifesong To the Elves, magic is not a force to be commanded, but a melody to be joined . They call the Godpulse the Lifesong, the eternal harmony between life, death, and rebirth . For them, every</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-b91794b7-47a0-443b-aedd-3f944944816f",
+      "worldId": "world-dalari-primary",
+      "title": "Welcome to World Anvil - READ ME FIRST",
+      "category": "Lore",
+      "summary": "Welcome to the very beginning of your world! It's going to be an exciting adventure Take it slow, there is a lot to do and nothing great has been built in a single day We have created an introductory ",
+      "content": "<h2>Welcome to World Anvil - READ ME FIRST</h2><p>Welcome to the very beginning of your world! It's going to be an exciting adventure Take it slow, there is a lot to do and nothing great has been built in a single day We have created an introductory </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Aug, 2022"
+    },
+    {
+      "id": "article-bac0795a-9384-48d7-8723-aa960a3b804d",
+      "worldId": "world-dalari-primary",
+      "title": "Tideless Isles",
+      "category": "Location",
+      "summary": "Article on Tideless Isles in the world of Dalari.",
+      "content": "<h2>Tideless Isles</h2><p>Article on Tideless Isles in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Tideless_Isles.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-bec79615-5020-4e51-9851-cbbd666747a8",
+      "worldId": "world-dalari-primary",
+      "title": "Lesser Lord",
+      "category": "Lore",
+      "summary": "Article on Lesser Lord in the world of Dalari.",
+      "content": "<h2>Lesser Lord</h2><p>Article on Lesser Lord in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-becd3629-4a75-4748-9eba-5471df7c7b3e",
+      "worldId": "world-dalari-primary",
+      "title": "Spring Fountain",
+      "category": "Lore",
+      "summary": "An enchanted fountain that draws water from an underground river. This fountain uses gravitational magic to force the water upstream out of the fountain, whilst purifying it at the same time. The foun",
+      "content": "<h2>Spring Fountain</h2><p>An enchanted fountain that draws water from an underground river. This fountain uses gravitational magic to force the water upstream out of the fountain, whilst purifying it at the same time. The foun</p><p><img src=\"/images/dalari/world/Spring_Fountain.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": true,
+      "updatedAt": "12 Aug, 2022"
+    },
+    {
+      "id": "article-bfcbbb08-b3ba-4fd8-a4aa-2afb132ad2f7",
+      "worldId": "world-dalari-primary",
+      "title": "The Shadow Stalker",
+      "category": "Event",
+      "summary": "As you watch aaron and the other party members sail away, you wait around patiently for a few mins. However you start to hear a short distance away a dog barking faintly, the noise seems to be coming ",
+      "content": "<h2>The Shadow Stalker</h2><p>As you watch aaron and the other party members sail away, you wait around patiently for a few mins. However you start to hear a short distance away a dog barking faintly, the noise seems to be coming </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Military Conflict"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022"
+    },
+    {
+      "id": "article-c0074d9a-8593-4bf4-91a0-13b927ff0733",
+      "worldId": "world-dalari-primary",
+      "title": "Marike O Here",
+      "category": "Lore",
+      "summary": "Deep within the Altharian forest lives the a village of humans known as the \u201cMarike O Here\u201d or the \u201cMarike\u201d (Ma-ree-keh-Or-He-reh) which in their native translates into common as the \u201cChildren of the ",
+      "content": "<h2>Marike O Here</h2><p>Deep within the Altharian forest lives the a village of humans known as the \u201cMarike O Here\u201d or the \u201cMarike\u201d (Ma-ree-keh-Or-He-reh) which in their native translates into common as the \u201cChildren of the </p><p><img src=\"/images/dalari/species/Marike_O_Here.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "20 Nov, 2022"
+    },
+    {
+      "id": "article-c06deb4a-d426-4e3f-879a-ac7aa7afd5f1",
+      "worldId": "world-dalari-primary",
+      "title": "Roland Braxton",
+      "category": "Character",
+      "summary": "Roland is the current Dean for the @[Somarth, School of the Arcane] He is a well respected teacher and also an @[Archmage]. He is a grandmaster of Transmutation @[Magic] and also a master of Evocation",
+      "content": "<h2>Roland Braxton</h2><p>Roland is the current Dean for the @[Somarth, School of the Arcane] He is a well respected teacher and also an @[Archmage]. He is a grandmaster of Transmutation @[Magic] and also a master of Evocation</p><p><img src=\"/images/dalari/characters/Roland_Braxton.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": true,
+      "updatedAt": "29 Aug, 2022"
+    },
+    {
+      "id": "article-c37fcf73-3103-4d31-ae45-153f7c96a602",
+      "worldId": "world-dalari-primary",
+      "title": "Travelers in the night",
+      "category": "Lore",
+      "summary": "After being debriefed, you all decide that the best course of action is to use the cover of night to figure out the whereabouts of this Sameral person in hopes of extracting crucial information. You m",
+      "content": "<h2>Travelers in the night</h2><p>After being debriefed, you all decide that the best course of action is to use the cover of night to figure out the whereabouts of this Sameral person in hopes of extracting crucial information. You m</p><p><img src=\"/images/dalari/world/Travelers_in_the_night.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-c4189859-9fcb-4aee-a1bc-29b594ba3d16",
+      "worldId": "world-dalari-primary",
+      "title": "Brum Montague",
+      "category": "Character",
+      "summary": "Brom Montagu is a 62 year old male human fighter. He has short, straight, gray hair and brown eyes. He has rugged black skin. He stands 184cm (6'0\") tall and has a regular build. He has a square, ordi",
+      "content": "<h2>Brum Montague</h2><p>Brom Montagu is a 62 year old male human fighter. He has short, straight, gray hair and brown eyes. He has rugged black skin. He stands 184cm (6'0\") tall and has a regular build. He has a square, ordi</p><p><img src=\"/images/dalari/characters/Brum_Montague.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Sep, 2022"
+    },
+    {
+      "id": "article-c7fa385e-3ca6-4160-8ee5-9135444e9ca5",
+      "worldId": "world-dalari-primary",
+      "title": "Belrund Bridge",
+      "category": "Location",
+      "summary": "Bridge leading east to the belrund mine.",
+      "content": "<h2>Belrund Bridge</h2><p>Bridge leading east to the belrund mine.</p><p><img src=\"/images/dalari/locations/Belrund_Bridge.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "13 Nov, 2022"
+    },
+    {
+      "id": "article-ce743c06-eb87-422c-9893-837984642a1c",
+      "worldId": "world-dalari-primary",
+      "title": "Chaos Minion",
+      "category": "Lore",
+      "summary": "Article on Chaos Minion in the world of Dalari.",
+      "content": "<h2>Chaos Minion</h2><p>Article on Chaos Minion in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-ceb01bd5-ef66-4f4a-b5f0-d1193d790cbd",
+      "worldId": "world-dalari-primary",
+      "title": "Oakwood Mill",
+      "category": "Location",
+      "summary": "Article on Oakwood Mill in the world of Dalari.",
+      "content": "<h2>Oakwood Mill</h2><p>Article on Oakwood Mill in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Oakwood_Mill.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-d3db39c4-b2d0-43e2-b147-9d514c1e2215",
+      "worldId": "world-dalari-primary",
+      "title": "The Deepbeat",
+      "category": "Lore",
+      "summary": "To the Dwarves, the Godpulse is a tangible, physical force of creation known as The Deepbeat. They feel it as sustained pressure and resonance vibrating through the bedrock and metal, a constant, low-",
+      "content": "<h2>The Deepbeat</h2><p>To the Dwarves, the Godpulse is a tangible, physical force of creation known as The Deepbeat. They feel it as sustained pressure and resonance vibrating through the bedrock and metal, a constant, low-</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-d430f052-a430-450a-acfb-54a294a17f89",
+      "worldId": "world-dalari-primary",
+      "title": "Stark",
+      "category": "Character",
+      "summary": "@[Lord Ceowulf]'s eldest son and his fathers successor.",
+      "content": "<h2>Stark</h2><p>@[Lord Ceowulf]'s eldest son and his fathers successor.</p><p><img src=\"/images/dalari/characters/Stark.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022"
+    },
+    {
+      "id": "article-d6728f12-d6e6-480f-aad9-1743d7b836fc",
+      "worldId": "world-dalari-primary",
+      "title": "Stillwharf Garrison",
+      "category": "Lore",
+      "summary": "Stillwharf Garrison is a large garrison south of @[Fort Redcliff] this garrison is right next to the southern ports and patrols take care of the surrounding areas. In charge of security at the port. H",
+      "content": "<h2>Stillwharf Garrison</h2><p>Stillwharf Garrison is a large garrison south of @[Fort Redcliff] this garrison is right next to the southern ports and patrols take care of the surrounding areas. In charge of security at the port. H</p><p><img src=\"/images/dalari/world/Stillwharf_Garrison.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-d76ed8fb-3786-46da-8ddf-4587d071e3e9",
+      "worldId": "world-dalari-primary",
+      "title": "Aether-Hawk",
+      "category": "Lore",
+      "summary": "> \u201cTo ride an Aether-Hawk is to forget the weight of the earth and become a note in the song of the gale.\u201d \u2014  \u2014 Common Beast-Caller Saying The Aether-Hawk is a biological marvel\u2014a massive, sky-blue pr",
+      "content": "<h2>Aether-Hawk</h2><p>> \u201cTo ride an Aether-Hawk is to forget the weight of the earth and become a note in the song of the gale.\u201d \u2014  \u2014 Common Beast-Caller Saying The Aether-Hawk is a biological marvel\u2014a massive, sky-blue pr</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Feb, 2026"
+    },
+    {
+      "id": "article-d834b984-7678-4e4f-b49c-fa9a235a0ddb",
+      "worldId": "world-dalari-primary",
+      "title": "Khemos",
+      "category": "Character",
+      "summary": "Khemos is a Greater god and is the Human god of the Moon and Night. His twin brother is @[Ethos] the god of the Sun and Light.",
+      "content": "<h2>Khemos</h2><p>Khemos is a Greater god and is the Human god of the Moon and Night. His twin brother is @[Ethos] the god of the Sun and Light.</p><p><img src=\"/images/dalari/characters/Khemos.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-db4c831a-634f-4ab2-8f0c-95a0072a267f",
+      "worldId": "world-dalari-primary",
+      "title": "The House of Ceowulf",
+      "category": "Lore",
+      "summary": "Article on The House of Ceowulf in the world of Dalari.",
+      "content": "<h2>The House of Ceowulf</h2><p>Article on The House of Ceowulf in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "19 Aug, 2022"
+    },
+    {
+      "id": "article-dc3e4209-c3e5-4387-80e2-2f2bc08fd045",
+      "worldId": "world-dalari-primary",
+      "title": "Archmage",
+      "category": "Lore",
+      "summary": "Archmagi are powerful wielders of elemental magic. These powerful mages can rearrange the very fabric of reality on a small scale. Archmage is a Kingdom title to those who have become a grandmaster in",
+      "content": "<h2>Archmage</h2><p>Archmagi are powerful wielders of elemental magic. These powerful mages can rearrange the very fabric of reality on a small scale. Archmage is a Kingdom title to those who have become a grandmaster in</p><p><img src=\"/images/dalari/world/Archmage.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "1 Sep, 2022"
+    },
+    {
+      "id": "article-dd4cd49b-903c-418c-90a9-8eda253e88d7",
+      "worldId": "world-dalari-primary",
+      "title": "Empyrean",
+      "category": "Lore",
+      "summary": "Article on Empyrean in the world of Dalari.",
+      "content": "<h2>Empyrean</h2><p>Article on Empyrean in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-e7121771-773a-48c3-98b2-0f5fd9741cee",
+      "worldId": "world-dalari-primary",
+      "title": "Primordial ones",
+      "category": "Lore",
+      "summary": "Article on Primordial ones in the world of Dalari.",
+      "content": "<h2>Primordial ones</h2><p>Article on Primordial ones in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "25 Aug, 2023"
+    },
+    {
+      "id": "article-e7163be4-1169-4552-84c3-8d380ae80ff5",
+      "worldId": "world-dalari-primary",
+      "title": "The Grave-Stalker: Abomination of the Deep",
+      "category": "Lore",
+      "summary": "The Grave-Stalker is the preeminent biological terror haunting the deep, mineral-rich mines of Dwargen. It is a massive, flesh-and-bone apex predator whose body resembles a terrifying fusion of a subt",
+      "content": "<h2>The Grave-Stalker: Abomination of the Deep</h2><p>The Grave-Stalker is the preeminent biological terror haunting the deep, mineral-rich mines of Dwargen. It is a massive, flesh-and-bone apex predator whose body resembles a terrifying fusion of a subt</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Species"
+      ],
+      "isSecret": false,
+      "updatedAt": "20 Feb, 2026"
+    },
+    {
+      "id": "article-e7a9bc68-4bf9-4e9d-99ff-0d5f94530d86",
+      "worldId": "world-dalari-primary",
+      "title": "The Guarded Bridge",
+      "category": "Event",
+      "summary": "As you leave the poor girl to fend for own. She looks at you with hopelessness in her eyes, she wipes her tears and snot before turning around and you watch as she walks back into the house, you see h",
+      "content": "<h2>The Guarded Bridge</h2><p>As you leave the poor girl to fend for own. She looks at you with hopelessness in her eyes, she wipes her tears and snot before turning around and you watch as she walks back into the house, you see h</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Military Conflict"
+      ],
+      "isSecret": false,
+      "updatedAt": "9 Sep, 2022"
+    },
+    {
+      "id": "article-e899cc7c-6853-4d73-a5f7-999aae797d0c",
+      "worldId": "world-dalari-primary",
+      "title": "semarel",
+      "category": "Character",
+      "summary": "Article on semarel in the world of Dalari.",
+      "content": "<h2>semarel</h2><p>Article on semarel in the world of Dalari.</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Aug, 2022"
+    },
+    {
+      "id": "article-e8b03e79-78c8-453a-b146-118f79027f7e",
+      "worldId": "world-dalari-primary",
+      "title": "Sewer",
+      "category": "Location",
+      "summary": "Article on Sewer in the world of Dalari.",
+      "content": "<h2>Sewer</h2><p>Article on Sewer in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Sewer.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "1 Sep, 2022"
+    },
+    {
+      "id": "article-e8d82bbf-0c56-4051-b9e5-f3cba36b4e40",
+      "worldId": "world-dalari-primary",
+      "title": "Redcliff Silverhawks Safehouse",
+      "category": "Location",
+      "summary": "Redcliff Silverhawks Safehouse",
+      "content": "<h2>Redcliff Silverhawks Safehouse</h2><p>Redcliff Silverhawks Safehouse</p><p><img src=\"/images/dalari/locations/Redcliff_Silverhawks_Safehouse.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Aug, 2022"
+    },
+    {
+      "id": "article-eab4652d-235b-4aa5-b1ae-e592ee8df26f",
+      "worldId": "world-dalari-primary",
+      "title": "Artilian",
+      "category": "Location",
+      "summary": "The Human capital city of Artilian rests at the very heart of Dalari. The city is situated on the north side of the Shenola Isle. Artilian refers to not only to the city, but is also the very name of ",
+      "content": "<h2>Artilian</h2><p>The Human capital city of Artilian rests at the very heart of Dalari. The city is situated on the north side of the Shenola Isle. Artilian refers to not only to the city, but is also the very name of </p><p><img src=\"/images/dalari/locations/Artilian.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "11 Aug, 2022"
+    },
+    {
+      "id": "article-eba00d00-ea51-4051-bcee-604d114fa8a2",
+      "worldId": "world-dalari-primary",
+      "title": "Merton",
+      "category": "Location",
+      "summary": "Merton is a small village just north on the Belrund bridge and South of Thistlewood. A village that most people just passby, Nothing of note here.",
+      "content": "<h2>Merton</h2><p>Merton is a small village just north on the Belrund bridge and South of Thistlewood. A village that most people just passby, Nothing of note here.</p><p><img src=\"/images/dalari/locations/Merton.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "21 Nov, 2022"
+    },
+    {
+      "id": "article-ebcd3adb-4d99-458e-98d5-401743b8bbdb",
+      "worldId": "world-dalari-primary",
+      "title": "Shiverspeak",
+      "category": "Location",
+      "summary": "Article on Shiverspeak in the world of Dalari.",
+      "content": "<h2>Shiverspeak</h2><p>Article on Shiverspeak in the world of Dalari.</p><p><img src=\"/images/dalari/locations/Shiverspeak.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "17 Aug, 2022"
+    },
+    {
+      "id": "article-edd359eb-b463-48e6-b261-41c2b961f05d",
+      "worldId": "world-dalari-primary",
+      "title": "Night Crystal",
+      "category": "Item",
+      "summary": "Cyrstal of pure darkness.",
+      "content": "<h2>Night Crystal</h2><p>Cyrstal of pure darkness.</p><p><img src=\"/images/dalari/items/Night_Crystal.png\" /></p>",
+      "tags": [
+        "Item"
+      ],
+      "isSecret": false,
+      "updatedAt": "2 Sep, 2022"
+    },
+    {
+      "id": "article-ef50c62f-9bc9-4f7a-bffd-66438c454184",
+      "worldId": "world-dalari-primary",
+      "title": "Semarel",
+      "category": "Character",
+      "summary": "Semarel is the knight guard captain. He is a 7ft tall solid build. He has a greyish skin tone and a bald head. He is a Paladin loyal to @[Lord Ceowulf]. He is a devout follower of @[Khemos] and has a ",
+      "content": "<h2>Semarel</h2><p>Semarel is the knight guard captain. He is a 7ft tall solid build. He has a greyish skin tone and a bald head. He is a Paladin loyal to @[Lord Ceowulf]. He is a devout follower of @[Khemos] and has a </p><p><img src=\"/images/dalari/world/The_Gathering_of_the_Silverhawks_Semarel.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Aug, 2022"
+    },
+    {
+      "id": "article-efbd63c7-83c9-49c8-b003-8cfb0665c8a4",
+      "worldId": "world-dalari-primary",
+      "title": "The Thal-Kora",
+      "category": "Faction",
+      "summary": "> \u201cWe are the echo between the summit and the root. We do not command the beast; we join the song it was already singing.\u201d \u2014  \u2014 Elder Cantor Vaelen The Thal-Kora (The Dual-Chant) is an ancient Elven d",
+      "content": "<h2>The Thal-Kora</h2><p>> \u201cWe are the echo between the summit and the root. We do not command the beast; we join the song it was already singing.\u201d \u2014  \u2014 Elder Cantor Vaelen The Thal-Kora (The Dual-Chant) is an ancient Elven d</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Organization"
+      ],
+      "isSecret": false,
+      "updatedAt": "24 Feb, 2026"
+    },
+    {
+      "id": "article-f0b5530f-347c-4467-81fb-3688af0bd6fc",
+      "worldId": "world-dalari-primary",
+      "title": "Imperium",
+      "category": "Faction",
+      "summary": "The Imperium is the central authority for all arcane study and practice within the Artilian Kingdom. Once a simple network of scholastic hubs, the organization was fundamentally reshaped by the human ",
+      "content": "<h2>Imperium</h2><p>The Imperium is the central authority for all arcane study and practice within the Artilian Kingdom. Once a simple network of scholastic hubs, the organization was fundamentally reshaped by the human </p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Organization"
+      ],
+      "isSecret": false,
+      "updatedAt": "5 Oct, 2025"
+    },
+    {
+      "id": "article-f19a6e2f-ef62-4a26-a177-9ae77e1d48a1",
+      "worldId": "world-dalari-primary",
+      "title": "Raven Queen",
+      "category": "Character",
+      "summary": "Born from the shadow and resident of the @[Shadow Realm], she attained her power through seducing the @[First Shadow] and stealing a portion of his power, weakening him in the process, she used her ne",
+      "content": "<h2>Raven Queen</h2><p>Born from the shadow and resident of the @[Shadow Realm], she attained her power through seducing the @[First Shadow] and stealing a portion of his power, weakening him in the process, she used her ne</p><p><img src=\"/images/dalari/characters/Raven_Queen.png\" /></p>",
+      "tags": [
+        "Character"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-f69bfa35-abd9-4a83-bc9b-2e5e95a66fe1",
+      "worldId": "world-dalari-primary",
+      "title": "Luminaris",
+      "category": "Location",
+      "summary": "Luminaris is the capital of the Elven lands, a living testament to the divine artistry of Auralis, Goddess of Beauty, Form, and Harmony. It is not merely a city; it is an organic marvel, meticulously ",
+      "content": "<h2>Luminaris</h2><p>Luminaris is the capital of the Elven lands, a living testament to the divine artistry of Auralis, Goddess of Beauty, Form, and Harmony. It is not merely a city; it is an organic marvel, meticulously </p><p><img src=\"/images/dalari/locations/Luminaris.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "10 Oct, 2025"
+    },
+    {
+      "id": "article-fb360efd-f437-4fb8-996a-1e5e41963a0a",
+      "worldId": "world-dalari-primary",
+      "title": "Godpulse",
+      "category": "Lore",
+      "summary": "The Godpulse is the omnipresent force that is the source of all magic in the world of Dalari . It is described as the original heartbeat of creation that occurred when the First Light shattered the vo",
+      "content": "<h2>Godpulse</h2><p>The Godpulse is the omnipresent force that is the source of all magic in the world of Dalari . It is described as the original heartbeat of creation that occurred when the First Light shattered the vo</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    },
+    {
+      "id": "article-fc24f94d-20e2-4ed5-9b1c-1ec45db12892",
+      "worldId": "world-dalari-primary",
+      "title": "Shadow Realm",
+      "category": "Location",
+      "summary": "Is a realm of darkness, a land forsaken by the @[Gods], a land where @[Magic] and divine power is restrained by the Shadow Realms @[Realmcore] meaning that the Laws of Power a different here than the ",
+      "content": "<h2>Shadow Realm</h2><p>Is a realm of darkness, a land forsaken by the @[Gods], a land where @[Magic] and divine power is restrained by the Shadow Realms @[Realmcore] meaning that the Laws of Power a different here than the </p><p><img src=\"/images/dalari/locations/Shadow_Realm.png\" /></p>",
+      "tags": [
+        "Geographic Location"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Sep, 2022"
+    },
+    {
+      "id": "article-fe501a16-4cd8-460f-bd24-115cc39513bb",
+      "worldId": "world-dalari-primary",
+      "title": "The Gentle Eel",
+      "category": "Location",
+      "summary": "Article on The Gentle Eel in the world of Dalari.",
+      "content": "<h2>The Gentle Eel</h2><p>Article on The Gentle Eel in the world of Dalari.</p><p><img src=\"/images/dalari/locations/The_Gentle_Eel.png\" /></p>",
+      "tags": [
+        "Building / Landmark"
+      ],
+      "isSecret": false,
+      "updatedAt": "18 Aug, 2022"
+    },
+    {
+      "id": "article-ff44f881-61f4-470e-943e-eeafaddd5962",
+      "worldId": "world-dalari-primary",
+      "title": "Divine Magic",
+      "category": "Lore",
+      "summary": "Divine Magic is the type of magic that draws power from the Godpulse through the deities and their consecrated domains. Practitioners, known as @[Theurges] or @[Pulsaris], wield this power as a channe",
+      "content": "<h2>Divine Magic</h2><p>Divine Magic is the type of magic that draws power from the Godpulse through the deities and their consecrated domains. Practitioners, known as @[Theurges] or @[Pulsaris], wield this power as a channe</p><p><img src=\"/images/dalari/world/Dalari_World_Cover.png\" /></p>",
+      "tags": [
+        "Generic article"
+      ],
+      "isSecret": false,
+      "updatedAt": "6 Oct, 2025"
+    }
+  ],
+  "mapPins": [
+    {
+      "id": "pin-dalari-1",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-05ced15d-e5c3-4d5c-a975-b2f7187f639d",
+      "label": "Sama'la",
+      "xPct": 27.3,
+      "yPct": 34.1,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-2",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-0c485ca9-8af8-4950-ba1a-e342d466fda5",
+      "label": "Somarth, School of the Arcane",
+      "xPct": 34.6,
+      "yPct": 43.2,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-3",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-0f121674-bc28-4ecb-ad4e-cbcd991b3a32",
+      "label": "Southern Isles",
+      "xPct": 41.9,
+      "yPct": 52.3,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-4",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-127517a1-5749-4a39-a78d-bb03041486ee",
+      "label": "Delune Point",
+      "xPct": 49.2,
+      "yPct": 61.4,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-5",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-12bf2cd0-109f-44ce-aab1-47fba6798694",
+      "label": "Temple of Khemos Redcliff",
+      "xPct": 56.5,
+      "yPct": 70.5,
+      "category": "Dungeon",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-6",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-1370bc48-2d00-4a11-a03e-978bd6efdadb",
+      "label": "Oakhaven",
+      "xPct": 63.8,
+      "yPct": 79.6,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-7",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-1c5cc255-34fd-4863-8158-040ec5a050de",
+      "label": "Chaos Lands",
+      "xPct": 71.1,
+      "yPct": 28.7,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-8",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-28ef822c-bc90-4ece-9025-3e515a039e59",
+      "label": "Southern Gate",
+      "xPct": 78.4,
+      "yPct": 37.8,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-9",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-29a0c28d-66d7-43ef-8d48-553d9e4ffcaa",
+      "label": "Coldwall",
+      "xPct": 20.7,
+      "yPct": 46.9,
+      "category": "Settlement",
+      "icon": "GiCastle",
+      "color": "#f59e0b",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-10",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-2f95f2b2-e6af-4fd0-8010-4dcc9d1740ad",
+      "label": "Hammer Time",
+      "xPct": 28.0,
+      "yPct": 56.0,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": true
+    },
+    {
+      "id": "pin-dalari-11",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-3acb8dc3-69a2-4695-9a94-c4eb9f0a3a9e",
+      "label": "Throne of Darkness",
+      "xPct": 35.3,
+      "yPct": 65.1,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-12",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-3dbbdd19-e327-49ce-9eb0-e594b479d352",
+      "label": "Bastillian",
+      "xPct": 42.6,
+      "yPct": 74.2,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-13",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-48667299-c260-43c5-9dde-7ce41d0127d8",
+      "label": "Belrund Mine",
+      "xPct": 49.9,
+      "yPct": 83.3,
+      "category": "Dungeon",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-14",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-512e60fe-525f-4d14-8e41-5bfcd3d5607e",
+      "label": "The Old Pegleg Inn",
+      "xPct": 57.2,
+      "yPct": 32.4,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-15",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-5173b240-1fed-4a71-9340-1a04640dcb89",
+      "label": "Western Gate",
+      "xPct": 64.5,
+      "yPct": 41.5,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-16",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-587396f7-b0c6-4284-872f-5a30d648758c",
+      "label": "Twinpine Garrison",
+      "xPct": 71.8,
+      "yPct": 50.6,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-17",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-59587f72-a21c-481f-8d14-0469afd6a25b",
+      "label": "The Shaded Isles",
+      "xPct": 79.1,
+      "yPct": 59.7,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-18",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-59d3717c-81a5-4562-89c7-45a73210fb73",
+      "label": "Stillwharf",
+      "xPct": 21.4,
+      "yPct": 68.8,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-19",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-59ff101c-a0bb-4e8c-8008-5efb106cd720",
+      "label": "Graveyard of Gods",
+      "xPct": 28.7,
+      "yPct": 77.9,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-20",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-5a4dd25a-0ef1-4fc1-85b8-8de8b2d884e3",
+      "label": "Fort Redcliff",
+      "xPct": 36.0,
+      "yPct": 27.0,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-21",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-5e73bb5e-9fb1-44b4-91b9-135dcbc42c90",
+      "label": "Aether's Perch: The Sky-Crest Eyrie",
+      "xPct": 43.3,
+      "yPct": 36.1,
+      "category": "Settlement",
+      "icon": "GiCastle",
+      "color": "#f59e0b",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-22",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-6c89d9b7-cee8-4338-be6f-05267cfac297",
+      "label": "Whitefront Fisheries",
+      "xPct": 50.6,
+      "yPct": 45.2,
+      "category": "Settlement",
+      "icon": "GiCastle",
+      "color": "#f59e0b",
+      "isSecret": true
+    },
+    {
+      "id": "pin-dalari-23",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-703b8466-a52b-4ce3-abf4-71d28869ff04",
+      "label": "Altharian Forest",
+      "xPct": 57.9,
+      "yPct": 54.3,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-24",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-75a6d496-519a-4db0-b752-38d4816c228d",
+      "label": "Broadriver Manor",
+      "xPct": 65.2,
+      "yPct": 63.4,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-25",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-7d72fd7c-aad1-4991-9b78-9d4df68bc505",
+      "label": "Eel Pond",
+      "xPct": 72.5,
+      "yPct": 72.5,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-26",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-7d9dd325-8d50-4fd3-b4c7-2e7ab76e3347",
+      "label": "Arcane Gifts",
+      "xPct": 79.8,
+      "yPct": 81.6,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": true
+    },
+    {
+      "id": "pin-dalari-27",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-8277ad11-4c20-435c-ad5c-15a8f5fd0d72",
+      "label": "Redcliff Keep",
+      "xPct": 22.1,
+      "yPct": 30.7,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-28",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-8575247c-f649-4462-b757-e4904bf17784",
+      "label": "Dwargen",
+      "xPct": 29.4,
+      "yPct": 39.8,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-29",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-a2248dce-9e28-44be-aab3-f6d9f516203f",
+      "label": "Fortress of the Undershadow",
+      "xPct": 36.7,
+      "yPct": 48.9,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-30",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-aab31700-df61-41ae-aa9a-229ef3ebebd7",
+      "label": "Ildara'ven: The Cascading Canopy",
+      "xPct": 44.0,
+      "yPct": 58.0,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-31",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-aad428b0-2979-44a0-b32d-416d53841630",
+      "label": "Yew Mill",
+      "xPct": 51.3,
+      "yPct": 67.1,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-32",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-bac0795a-9384-48d7-8723-aa960a3b804d",
+      "label": "Tideless Isles",
+      "xPct": 58.6,
+      "yPct": 76.2,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-33",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-c7fa385e-3ca6-4160-8ee5-9135444e9ca5",
+      "label": "Belrund Bridge",
+      "xPct": 65.9,
+      "yPct": 25.3,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-34",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-ceb01bd5-ef66-4f4a-b5f0-d1193d790cbd",
+      "label": "Oakwood Mill",
+      "xPct": 73.2,
+      "yPct": 34.4,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-35",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-e8b03e79-78c8-453a-b146-118f79027f7e",
+      "label": "Sewer",
+      "xPct": 80.5,
+      "yPct": 43.5,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-36",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-e8d82bbf-0c56-4051-b9e5-f3cba36b4e40",
+      "label": "Redcliff Silverhawks Safehouse",
+      "xPct": 22.8,
+      "yPct": 52.6,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-37",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-eab4652d-235b-4aa5-b1ae-e592ee8df26f",
+      "label": "Artilian",
+      "xPct": 30.1,
+      "yPct": 61.7,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-38",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-eba00d00-ea51-4051-bcee-604d114fa8a2",
+      "label": "Merton",
+      "xPct": 37.4,
+      "yPct": 70.8,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-39",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-ebcd3adb-4d99-458e-98d5-401743b8bbdb",
+      "label": "Shiverspeak",
+      "xPct": 44.7,
+      "yPct": 79.9,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-40",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-f69bfa35-abd9-4a83-bc9b-2e5e95a66fe1",
+      "label": "Luminaris",
+      "xPct": 52.0,
+      "yPct": 29.0,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-41",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-fc24f94d-20e2-4ed5-9b1c-1ec45db12892",
+      "label": "Shadow Realm",
+      "xPct": 59.3,
+      "yPct": 38.1,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    },
+    {
+      "id": "pin-dalari-42",
+      "mapId": "map-dalari-main",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-fe501a16-4cd8-460f-bd24-115cc39513bb",
+      "label": "The Gentle Eel",
+      "xPct": 66.6,
+      "yPct": 47.2,
+      "category": "Monolith",
+      "icon": "GiTempleDoor",
+      "color": "#8b5cf6",
+      "isSecret": false
+    }
+  ],
+  "statblocks": [
+    {
+      "id": "sb-dwende-1",
+      "worldId": "world-dalari-primary",
+      "articleId": "article-08cb3eb5-08a9-420b-9455-3c80f153b4c7",
+      "system": "dnd5e",
+      "name": "Dwende",
+      "size": "Small",
+      "creatureType": "Humanoid (Goblinoid)",
+      "alignment": "Chaotic Neutral",
+      "cr": "1/2",
+      "ac": 13,
+      "acType": "leather armor",
+      "hp": 22,
+      "hpFormula": "4d6 + 8",
+      "speed": "25 ft.",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 14,
+        "int": 10,
+        "wis": 12,
+        "cha": 8
+      },
+      "actions": [
+        {
+          "id": "act-dwende-1",
+          "name": "Dagger",
+          "desc": "Melee or Ranged Weapon Attack: +4 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage.",
+          "attackBonus": 4,
+          "formula": "1d4+2"
+        }
+      ],
+      "isSecret": false
+    }
+  ],
+  "novelChapters": []
+}
