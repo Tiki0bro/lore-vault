@@ -13,6 +13,18 @@ import type {
 
 import dalariBundle from './dalariBundle.json';
 
+export const resolveAssetUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  // For relative asset URLs on GitHub Pages (e.g. /lore-vault/), prefix with base URL
+  const base = import.meta.env.BASE_URL || '/';
+  const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  return `${cleanBase}${cleanPath}`;
+};
+
 const STORAGE_KEYS = {
   WORLDS: 'lorevault_worlds_v2',
   ARTICLES: 'lorevault_articles_v2',

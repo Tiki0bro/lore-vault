@@ -6,6 +6,7 @@ import { TerritoryPolygonLayer } from '../cartography/TerritoryPolygonLayer';
 import { ExpeditionRouteLayer } from '../cartography/ExpeditionRouteLayer';
 import { TerritoryLoreDrawer } from '../cartography/TerritoryLoreDrawer';
 import type { MapPin, TerritoryPolygon } from '../../types/lore';
+import { resolveAssetUrl } from '../../lib/storage/vaultStorage';
 import { 
   GiCastle, 
   GiCaveEntrance, 
@@ -82,9 +83,9 @@ export const AtlasView: React.FC = () => {
   // Update map background when mapStyle or seed changes
   useEffect(() => {
     if (mapStyle === 'dalari') {
-      setMapImageSrc('/images/dalari/world/Dalari_Splitting_The_World.png');
+      setMapImageSrc(resolveAssetUrl('/images/dalari/world/Dalari_Splitting_The_World.png'));
     } else if (mapStyle === 'dalari_clouds') {
-      setMapImageSrc('/images/dalari/world/Dalari_Standing_In_The_Clouds.png');
+      setMapImageSrc(resolveAssetUrl('/images/dalari/world/Dalari_Standing_In_The_Clouds.png'));
     } else {
       const engine = new PerlinCartographyEngine(mapSeed);
       const dataUrl = engine.generateMapDataUrl({

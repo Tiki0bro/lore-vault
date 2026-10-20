@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Article, World } from '../../types/lore';
 import { useLoreStore } from '../../store/useLoreStore';
+import { resolveAssetUrl } from '../../lib/storage/vaultStorage';
 import { 
   Copy, 
   Check, 
@@ -112,6 +113,11 @@ export const PublishedArticleView: React.FC<PublishedArticleViewProps> = ({
       (_match, name) =>
         `<span class="wa-mention-link inline-flex items-center gap-1 cursor-pointer text-amber-400 hover:text-amber-200 underline decoration-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded text-xs font-semibold tracking-wide transition-colors" data-mention="${name}" title="Jump to codex article: ${name}">📖 ${name}</span>`
     );
+
+    // Resolve relative image URLs for production base paths
+    processed = processed.replace(/<img([^>]+)src=["']([^"']+)["']/gi, (_m, attrs, src) => {
+      return `<img${attrs}src="${resolveAssetUrl(src)}"`;
+    });
 
     return processed;
   };
@@ -228,7 +234,7 @@ export const PublishedArticleView: React.FC<PublishedArticleViewProps> = ({
           }`}
         >
           <img
-            src={article.coverImageUrl}
+            src={resolveAssetUrl(article.coverImageUrl)}
             alt={article.title}
             className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-700"
           />
@@ -372,7 +378,7 @@ export const PublishedArticleView: React.FC<PublishedArticleViewProps> = ({
                 onClick={() => setLightboxImg(featuredImage)}
               >
                 <img
-                  src={featuredImage}
+                  src={resolveAssetUrl(featuredImage)}
                   alt={article.title}
                   className="w-full h-56 object-cover object-top group-hover:scale-105 transition-transform duration-500"
                 />

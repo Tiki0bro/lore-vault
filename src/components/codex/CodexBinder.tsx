@@ -28,6 +28,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { ImageGenerator } from '../../lib/ai/imageGenerator';
+import { resolveAssetUrl } from '../../lib/storage/vaultStorage';
 
 export type GroupByMode = 'category' | 'tag' | 'flat';
 export type SortMode = 'name-asc' | 'name-desc' | 'updated' | 'category';
@@ -787,7 +788,7 @@ export const CodexBinder: React.FC<CodexBinderProps> = ({ onArticleSelect, class
           {art.coverImageUrl ? (
             <div className="mt-0.5 w-7 h-7 rounded-md overflow-hidden border border-amber-500/30 flex-shrink-0 bg-zinc-900 relative shadow-sm">
               <img 
-                src={art.coverImageUrl} 
+                src={resolveAssetUrl(art.coverImageUrl)} 
                 alt={art.title} 
                 className="w-full h-full object-cover" 
                 onError={(e) => {
